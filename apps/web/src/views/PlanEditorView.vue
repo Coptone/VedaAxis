@@ -42,7 +42,6 @@ const route = useRoute()
 const router = useRouter()
 const planId = ref(typeof route.params.planId === 'string' ? route.params.planId : '')
 const name = ref('O8S 自动战斗 PoC')
-const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 const abilities = ref<AbilityDefinition[]>([])
 const selectedMechanicId = ref('0d80a50c-cd3a-4569-a7ce-4766612e3316')
 const selectedTrackId = ref('')
@@ -67,6 +66,7 @@ const DEFAULT_MECHANICS: TimelineMechanic[] = [
   { mechanicId: '223e1b3c-ceca-4b62-86b7-90cd7c83b995', externalId: null, phase: 'P1', name: '重力弹', plannedAtMs: 105_000, durationMs: 0, type: 'MECHANIC', damageType: 'MAGICAL', target: '分组', actionId: null, confidence: 'UNVERIFIED' },
   { mechanicId: 'dffb0bc5-77da-4aa5-9490-71b44804f89e', externalId: null, phase: 'P1', name: '强重力', plannedAtMs: 121_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'UNVERIFIED' },
 ]
+const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 
 const mechanics = computed(() => snapshot.value.mechanics)
 const selectedMechanic = computed(() => mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value) ?? mechanics.value[0] ?? DEFAULT_MECHANICS[0]!)

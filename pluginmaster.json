@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.3.0",
+    "AssemblyVersion": "0.1.5.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "修复 active-plan.json 中 allowedJobIds 无法反序列化，计划现在可正常加载并启动高亮预览。",
+    "Changelog": "兼容入口已指向 0.1.5：支持计划契约 1.2；管理端新增 M-Spec 时间轴候选导入；保留 O8S 自动生命周期与只读热键栏高亮。后续请改用 https://cdn.jsdelivr.net/gh/Coptone/VedaAxis@latest/pluginmaster.json。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1785923485,
+    "LastUpdate": 1785941380,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

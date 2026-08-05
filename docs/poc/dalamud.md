@@ -31,7 +31,7 @@
 
 1. 在游戏中执行 `/xlsettings`，打开 `Experimental`。
 2. 在 `Custom Plugin Repositories` 中添加：
-   `https://cdn.jsdelivr.net/gh/Coptone/VedaAxis@codex/mvp-foundation/pluginmaster.json`
+   `https://cdn.jsdelivr.net/gh/Coptone/VedaAxis@latest/pluginmaster.json`
 3. 保存设置，执行 `/xlplugins`，搜索并安装 `VedaAxis`。
 4. 新版本发布后，Dalamud 会通过同一仓库地址获取更新。
 

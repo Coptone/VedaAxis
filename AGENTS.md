@@ -9,6 +9,7 @@ The repository intentionally has no open-source license. Do not add one unless t
 ## Source of truth
 
 - Product requirements: `FFXIV_Mitigation_Planner_PRD_v0.1.docx` supplied by the owner; it is not committed to this repository.
+- Curated handoff context for every new local or cloud Codex task: `docs/CODEX_CONTEXT.md`. Read it before planning work.
 - Verified project status and current blockers: `docs/PROGRESS.md`.
 - Architecture and product decisions: `docs/architecture.md` and `docs/decisions.md`.
 - PoC evidence and acceptance boundaries: `docs/poc/fflogs.md` and `docs/poc/dalamud.md`.

@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: vedaaxis-api
+  datasource:
+    url: ${VEDAAXIS_DB_URL:jdbc:postgresql://localhost:5432/vedaaxis}
+    username: ${VEDAAXIS_DB_USER:vedaaxis}
+    password: ${VEDAAXIS_DB_PASSWORD:vedaaxis_dev}
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+  threads:
+    virtual:
+      enabled: true
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    arg-name-based-constructor-auto-mapping: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+vedaaxis:
+  security:
+    jwt-secret: ${VEDAAXIS_JWT_SECRET:local-development-secret-change-before-deploy}
+    access-token-minutes: 15
+    refresh-token-days: 30
+    device-code-minutes: 10
+  web-origin: ${VEDAAXIS_WEB_ORIGIN:http://localhost:5173}
+  ai:
+    base-url: ${VEDAAXIS_AI_BASE_URL:https://api.deepseek.com}
+    api-key: ${VEDAAXIS_AI_API_KEY:}
+    model: ${VEDAAXIS_AI_MODEL:deepseek-v4-pro}

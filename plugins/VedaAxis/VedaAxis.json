@@ -1,0 +1,9 @@
+{
+  "Author": "Coptone",
+  "Name": "VedaAxis",
+  "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
+  "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
+  "InternalName": "VedaAxis",
+  "ApplicableVersion": "any",
+  "Tags": ["mitigation", "timeline", "utility"]
+}

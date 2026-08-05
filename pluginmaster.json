@@ -1,0 +1,29 @@
+[
+  {
+    "Author": "Coptone",
+    "Name": "VedaAxis",
+    "InternalName": "VedaAxis",
+    "AssemblyVersion": "0.1.0.0",
+    "TestingAssemblyVersion": null,
+    "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
+    "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
+    "ApplicableVersion": "any",
+    "Tags": [
+      "mitigation",
+      "timeline",
+      "utility"
+    ],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
+    "AcceptsFeedback": true,
+    "RepoUrl": "https://github.com/Coptone/VedaAxis",
+    "DownloadLinkInstall": "https://github.com/Coptone/VedaAxis/releases/latest/download/VedaAxis.zip",
+    "DownloadLinkUpdate": "https://github.com/Coptone/VedaAxis/releases/latest/download/VedaAxis.zip",
+    "DownloadLinkTesting": null,
+    "IsHide": false,
+    "IsTestingExclusive": false
+  }
+]

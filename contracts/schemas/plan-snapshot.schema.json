@@ -16,12 +16,14 @@
     "strategyTag",
     "trackMode",
     "source",
+    "phases",
+    "mechanics",
     "anchors",
     "tracks",
     "assignments"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.1" },
+    "schemaVersion": { "const": "1.2" },
     "minimumPluginVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "planId": { "type": "string", "format": "uuid" },
     "planVersion": { "type": "integer", "minimum": 1 },
@@ -32,6 +34,14 @@
     "strategyTag": { "type": "string", "minLength": 1, "maxLength": 80 },
     "trackMode": { "enum": ["FOUR", "EIGHT"] },
     "source": { "$ref": "#/$defs/source" },
+    "phases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/phase" }
+    },
+    "mechanics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/mechanic" }
+    },
     "anchors": {
       "type": "array",
       "items": { "$ref": "#/$defs/anchor" }
@@ -71,6 +81,48 @@
           "items": { "type": "integer", "minimum": 1 }
         },
         "displayName": { "type": ["string", "null"], "maxLength": 80 }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseId", "externalId", "name", "plannedAtMs", "confidence"],
+      "properties": {
+        "phaseId": { "type": "string", "format": "uuid" },
+        "externalId": { "type": ["string", "null"], "maxLength": 120 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "plannedAtMs": { "type": "integer", "minimum": 0 },
+        "confidence": { "enum": ["POC_PENDING", "UNVERIFIED", "REVIEWED", "VERIFIED"] }
+      }
+    },
+    "mechanic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanicId",
+        "externalId",
+        "phase",
+        "name",
+        "plannedAtMs",
+        "durationMs",
+        "type",
+        "damageType",
+        "target",
+        "actionId",
+        "confidence"
+      ],
+      "properties": {
+        "mechanicId": { "type": "string", "format": "uuid" },
+        "externalId": { "type": ["string", "null"], "maxLength": 120 },
+        "phase": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "plannedAtMs": { "type": "integer", "minimum": 0 },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "type": { "enum": ["MECHANIC", "TANK_BUSTER", "RAIDWIDE"] },
+        "damageType": { "enum": ["UNKNOWN", "MAGICAL", "PHYSICAL", "SPECIAL"] },
+        "target": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "actionId": { "type": ["integer", "null"], "minimum": 1, "maximum": 4294967295 },
+        "confidence": { "enum": ["POC_PENDING", "UNVERIFIED", "REVIEWED", "VERIFIED"] }
       }
     },
     "fallback": {

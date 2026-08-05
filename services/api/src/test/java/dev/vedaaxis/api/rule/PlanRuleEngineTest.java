@@ -55,6 +55,25 @@ class PlanRuleEngineTest {
         assertThat(result.issues()).extracting(RuleIssue::code).contains("COVERAGE_GAP");
     }
 
+    @Test
+    void rejectsAssignmentThatReferencesUnknownImportedMechanic() {
+        PlanSnapshot base = snapshot(List.of(assignment(20_000, 25_000, 30_000, 38_000)));
+        PlanSnapshot withMechanic = new PlanSnapshot(
+                base.schemaVersion(), base.minimumPluginVersion(), base.planId(), base.planVersion(),
+                base.timelineId(), base.timelineVersion(), base.encounterId(), base.territoryId(), base.strategyTag(),
+                base.trackMode(), base.source(), List.of(),
+                List.of(new PlanSnapshot.TimelineMechanic(
+                        UUID.randomUUID(), "m-1", "P1", "机制", 38_000, 0,
+                        PlanSnapshot.MechanicType.RAIDWIDE, PlanSnapshot.DamageType.UNKNOWN, "全体", null,
+                        PlanSnapshot.Confidence.POC_PENDING)),
+                base.anchors(), base.tracks(), base.assignments());
+
+        RuleValidationResult result = engine.validate(withMechanic, catalog);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(RuleIssue::code).contains("UNKNOWN_MECHANIC");
+    }
+
     private PlanSnapshot snapshot(List<PlanSnapshot.Assignment> assignments) {
         List<PlanSnapshot.ExecutionTrack> tracks = new ArrayList<>();
         for (TrackSlot slot : TrackMode.EIGHT.orderedSlots()) {
@@ -64,10 +83,10 @@ class PlanRuleEngineTest {
                     slot, jobs, slot.name()));
         }
         return new PlanSnapshot(
-                "1.1", "0.1.4", UUID.randomUUID(), 1, UUID.randomUUID(), 1, UUID.randomUUID(),
+                "1.2", "0.1.5", UUID.randomUUID(), 1, UUID.randomUUID(), 1, UUID.randomUUID(),
                 755, "test", TrackMode.EIGHT,
                 new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
-                List.of(), tracks, assignments);
+                List.of(), List.of(), List.of(), tracks, assignments);
     }
 
     private PlanSnapshot.Assignment assignment(long highlight, long earliest, long latest, long impact) {

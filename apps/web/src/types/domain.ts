@@ -37,7 +37,7 @@ export interface Assignment {
 }
 
 export interface PlanSnapshot {
-  schemaVersion: '1.0' | '1.1'
+  schemaVersion: '1.0' | '1.1' | '1.2'
   minimumPluginVersion: string
   planId: string
   planVersion: number
@@ -48,9 +48,33 @@ export interface PlanSnapshot {
   strategyTag: string
   trackMode: TrackMode
   source: PlanSource
+  phases: TimelinePhase[]
+  mechanics: TimelineMechanic[]
   anchors: TimelineAnchor[]
   tracks: ExecutionTrack[]
   assignments: Assignment[]
+}
+
+export interface TimelinePhase {
+  phaseId: string
+  externalId: string | null
+  name: string
+  plannedAtMs: number
+  confidence: Confidence
+}
+
+export interface TimelineMechanic {
+  mechanicId: string
+  externalId: string | null
+  phase: string
+  name: string
+  plannedAtMs: number
+  durationMs: number
+  type: 'MECHANIC' | 'TANK_BUSTER' | 'RAIDWIDE'
+  damageType: 'UNKNOWN' | 'MAGICAL' | 'PHYSICAL' | 'SPECIAL'
+  target: string
+  actionId: number | null
+  confidence: Confidence
 }
 
 export interface TimelineAnchor {
@@ -122,14 +146,40 @@ export interface PlanDetails {
   snapshot: PlanSnapshot
 }
 
-export interface Mechanic {
-  id: string
+export interface CooldownWindow {
+  spellId: number
+  spellName: string
+  category: 'RAID_MIT' | 'SINGLE_MIT'
   phase: string
-  name: string
-  timeMs: number
-  damageType: '魔法' | '物理' | '特殊'
-  target: string
+  occurrence: number
+  sampleCount: number
+  medianPhaseTimeMs: number
+  p25PhaseTimeMs: number
+  p75PhaseTimeMs: number
   confidence: Confidence
+}
+
+export interface TimelineImportCandidate {
+  schemaVersion: '1.0'
+  sourceUrl: string
+  bossSlug: string
+  specSlug: string
+  bossDataUrl: string
+  rankingDataUrl: string | null
+  fetchedAt: string
+  phases: TimelinePhase[]
+  mechanics: TimelineMechanic[]
+  recommendations: CooldownWindow[]
+  stats: {
+    bossEventCount: number
+    phaseCount: number
+    mechanicCount: number
+    actionIdCount: number
+    reportCount: number
+    anonymizedCastCount: number
+    recommendationCount: number
+  }
+  warnings: string[]
 }
 
 export interface ExecutionSummary {

@@ -7,6 +7,7 @@ import type {
   PlanSnapshot,
   PlanSummary,
   RuleValidationResult,
+  TimelineImportCandidate,
   TrackMode,
 } from '../types/domain'
 
@@ -101,6 +102,11 @@ export const api = {
     request<AiCandidate>(`/plans/${planId}/ai-candidates`, {
       method: 'POST',
       body: JSON.stringify({ instruction }),
+    }),
+  importMSpecTimeline: (sourceUrl: string, includeRecommendations: boolean) =>
+    request<TimelineImportCandidate>('/timeline-imports/m-spec', {
+      method: 'POST',
+      body: JSON.stringify({ sourceUrl, includeRecommendations }),
     }),
   executions: (limit = 20) => request<ExecutionSummary[]>(`/fight-executions?limit=${limit}`),
   executionStats: (limit = 100) => request<ExecutionStats>(`/fight-executions/stats?limit=${limit}`),

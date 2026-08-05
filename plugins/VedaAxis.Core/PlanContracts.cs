@@ -38,9 +38,31 @@ public sealed record PlanSnapshot(
     PlanSource Source,
     IReadOnlyList<TimelineAnchor> Anchors,
     IReadOnlyList<ExecutionTrack> Tracks,
-    IReadOnlyList<Assignment> Assignments);
+    IReadOnlyList<Assignment> Assignments,
+    IReadOnlyList<TimelinePhase>? Phases = null,
+    IReadOnlyList<TimelineMechanic>? Mechanics = null);
 
 public sealed record PlanSource(string Kind, string? Reference, string Confidence);
+
+public sealed record TimelinePhase(
+    Guid PhaseId,
+    string? ExternalId,
+    string Name,
+    long PlannedAtMs,
+    string Confidence);
+
+public sealed record TimelineMechanic(
+    Guid MechanicId,
+    string? ExternalId,
+    string Phase,
+    string Name,
+    long PlannedAtMs,
+    long DurationMs,
+    string Type,
+    string DamageType,
+    string Target,
+    uint? ActionId,
+    string Confidence);
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AnchorKind

@@ -62,7 +62,7 @@ public class AiCandidateService {
                         PlanSnapshot.SourceKind.AI_CANDIDATE,
                         "DeepSeek " + model,
                         PlanSnapshot.Confidence.UNVERIFIED),
-                base.anchors(), base.tracks(), payload.assignments());
+                base.phases(), base.mechanics(), base.anchors(), base.tracks(), payload.assignments());
         RuleValidationResult validation = ruleEngine.validate(candidateSnapshot);
         String confidence = validation.valid() ? "RULE_VALIDATED" : "UNVERIFIED";
         return new AiCandidate(

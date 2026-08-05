@@ -22,9 +22,19 @@ public record PlanSnapshot(
         @NotBlank @Size(max = 80) String strategyTag,
         @NotNull TrackMode trackMode,
         @NotNull @Valid Source source,
+        @NotNull @Valid List<TimelinePhase> phases,
+        @NotNull @Valid List<TimelineMechanic> mechanics,
         @NotNull @Valid List<TimelineAnchor> anchors,
         @NotNull @Valid List<ExecutionTrack> tracks,
         @NotNull @Valid List<Assignment> assignments) {
+
+    public PlanSnapshot {
+        phases = phases == null ? List.of() : List.copyOf(phases);
+        mechanics = mechanics == null ? List.of() : List.copyOf(mechanics);
+        anchors = anchors == null ? List.of() : List.copyOf(anchors);
+        tracks = tracks == null ? List.of() : List.copyOf(tracks);
+        assignments = assignments == null ? List.of() : List.copyOf(assignments);
+    }
 
     public record Source(SourceKind kind, @Size(max = 500) String reference, Confidence confidence) {
     }
@@ -41,6 +51,41 @@ public record PlanSnapshot(
         UNVERIFIED,
         REVIEWED,
         VERIFIED
+    }
+
+    public record TimelinePhase(
+            @NotNull UUID phaseId,
+            @Size(max = 120) String externalId,
+            @NotBlank @Size(max = 120) String name,
+            @Min(0) long plannedAtMs,
+            @NotNull Confidence confidence) {
+    }
+
+    public record TimelineMechanic(
+            @NotNull UUID mechanicId,
+            @Size(max = 120) String externalId,
+            @NotBlank @Size(max = 40) String phase,
+            @NotBlank @Size(max = 160) String name,
+            @Min(0) long plannedAtMs,
+            @Min(0) long durationMs,
+            @NotNull MechanicType type,
+            @NotNull DamageType damageType,
+            @NotBlank @Size(max = 80) String target,
+            @Min(1) Long actionId,
+            @NotNull Confidence confidence) {
+    }
+
+    public enum MechanicType {
+        MECHANIC,
+        TANK_BUSTER,
+        RAIDWIDE
+    }
+
+    public enum DamageType {
+        UNKNOWN,
+        MAGICAL,
+        PHYSICAL,
+        SPECIAL
     }
 
     public record TimelineAnchor(

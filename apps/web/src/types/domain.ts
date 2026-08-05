@@ -37,13 +37,14 @@ export interface Assignment {
 }
 
 export interface PlanSnapshot {
-  schemaVersion: '1.0'
+  schemaVersion: '1.0' | '1.1'
   minimumPluginVersion: string
   planId: string
   planVersion: number
   timelineId: string
   timelineVersion: number
   encounterId: string
+  territoryId: number
   strategyTag: string
   trackMode: TrackMode
   source: PlanSource
@@ -104,6 +105,7 @@ export interface PlanSummary {
   id: string
   name: string
   encounterId: string
+  territoryId: number
   strategyTag: string
   trackMode: TrackMode
   latestVersion: number

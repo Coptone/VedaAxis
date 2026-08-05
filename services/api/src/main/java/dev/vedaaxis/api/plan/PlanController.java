@@ -4,7 +4,9 @@ import dev.vedaaxis.api.rule.AbilityCatalog;
 import dev.vedaaxis.api.rule.AbilityDefinition;
 import dev.vedaaxis.api.rule.RuleValidationResult;
 import dev.vedaaxis.api.security.CurrentUser;
+import dev.vedaaxis.api.common.ApiException;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
 
 import java.util.Collection;
 import java.util.List;
@@ -35,7 +38,7 @@ public class PlanController {
     @PostMapping("/plans")
     PlanService.PlanDetails create(@Valid @RequestBody CreateRequest request) {
         return planService.create(CurrentUser.id(), new PlanService.CreatePlanRequest(
-                request.name(), request.encounterId(), request.strategyTag(), request.trackMode()));
+                request.name(), request.encounterId(), request.territoryId(), request.strategyTag(), request.trackMode()));
     }
 
     @GetMapping("/plans")
@@ -93,15 +96,24 @@ public class PlanController {
 
     @GetMapping("/runtime/plans/match")
     PlanService.RuntimePlan matchRuntimePlan(
-            @RequestParam UUID encounterId,
+            @RequestParam(required = false) Long territoryId,
+            @RequestParam(required = false) UUID encounterId,
             @RequestParam @NotBlank String strategyTag,
             @RequestParam TrackMode trackMode) {
-        return planService.matchRuntimePlan(CurrentUser.id(), encounterId, strategyTag, trackMode);
+        if (territoryId != null) {
+            return planService.matchRuntimePlan(CurrentUser.id(), territoryId, strategyTag, trackMode);
+        }
+        if (encounterId != null) {
+            return planService.matchRuntimePlanByEncounter(CurrentUser.id(), encounterId, strategyTag, trackMode);
+        }
+        throw new ApiException(
+                HttpStatus.BAD_REQUEST, "PLAN_MATCH_TARGET_REQUIRED", "territoryId 或 encounterId 至少需要提供一个");
     }
 
     public record CreateRequest(
             @NotBlank @Size(max = 160) String name,
             @NotNull UUID encounterId,
+            @Min(1) long territoryId,
             @NotBlank @Size(max = 80) String strategyTag,
             @NotNull TrackMode trackMode) {
     }

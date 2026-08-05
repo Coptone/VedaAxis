@@ -29,12 +29,13 @@
 
 ## 3. 当前可依赖的已验证事实
 
-- 当前测试版是 `0.1.3`。
+- 当前测试版是 `0.1.4`。
 - GitHub [`Coptone/VedaAxis`](https://github.com/Coptone/VedaAxis) 的 `main` 是源代码真源；Gitee [`Need4Spd/VedaAxis`](https://gitee.com/Need4Spd/VedaAxis) 是国内镜像。
 - Dalamud 自定义仓库地址为 `https://cdn.jsdelivr.net/gh/Coptone/VedaAxis@latest/pluginmaster.json`。
 - FFLogs 国服 API `POC-03` 已完成：公开报告 `WdgtVGLAmj73Mbr8` 的 fight 2 已抽取 6 页、54,330 条规范化事件；凭据和生成数据不得提交。
 - Codex 云端环境名为 `Coptone/VedaAxis`，设置与维护命令均为 `bash tools/codex_setup.sh`，预安装 Node 22，并启用“普通依赖项”网络允许列表。
 - 2026-08-05 的 Codex 云端只读冒烟验证通过：Web 类型检查、3 个 Web 测试和生产构建通过；API 7 个测试通过；Python 4 个测试通过；Core 16 个测试通过；Dalamud Release 构建为 0 警告、0 错误。验证任务见 [云端报告](https://chatgpt.com/codex/cloud/tasks/task_e_6a73292376b8832b87566c0ac3604b57)。
+- 2026-08-05 的首个游戏内观察确认匹配技能槽会高亮、超时后会变红，证明覆盖层与提醒状态机主路径可运行；该样本是手动预览，未包含完整诊断矩阵，不能据此关闭 `POC-01` 或 `POC-02`。
 
 ## 4. 当前尚未关闭的关键问题
 
@@ -43,7 +44,8 @@
 1. `POC-01`：国服 Dalamud 完整事件链实机证据，包括进入副本、开战、Boss Action、本地 ActionEffect、团灭/结束和清理。
 2. `POC-02`：原生热键栏高亮实机矩阵，需要游戏版本、Dalamud API 版本、诊断 JSONL、截图或录像及结论。
 3. `POC-04`：DMU 阶段语义与绝对时间基准，需要 FFLogs 和至少一次插件实机回放交叉验证。
-4. Web、API 与插件仍需完成真实部署、在线计划匹配、设备授权、断线快照和个人复盘的端到端验收。
+4. 自动战斗生命周期：`0.1.4` 已把 Territory 加入计划契约 1.1，并实现 O8S Territory 755 测试计划、区域诊断、幂等开怪启动及脱战/团灭/完成/跨区结束；仍需 O8S 国服实机完成一次性结果闭环。
+5. Web、API 与插件仍需完成本地在线计划/设备授权/执行上传闭环，再完成 HTTPS 测试环境、断线快照和个人复盘的端到端验收。当前仓库没有 Web/API 生产镜像、反向代理或部署/回滚脚本。
 
 ## 5. 工作与交接规则
 
@@ -52,6 +54,7 @@
 - 修改跨端负载时，先更新 `contracts` 下的版本化 Schema，再同步 Java、TypeScript 和 C#。
 - 战斗路径只能读取本地不可变计划快照；网络请求、账户逻辑和 AI 调用不得进入战斗或绘制热路径。
 - 完成一项可复现验证后，同步更新 `docs/PROGRESS.md`；形成长期产品决策时更新 `docs/decisions.md`；架构边界变化时更新 `docs/architecture.md`。
+- 当前实施顺序以 `docs/PROGRESS.md` 的 MVP-1 为准：先 Territory/自动生命周期，再本地在线数据闭环，然后 HTTPS 测试环境和真实网络验收。用户倒计时触发不进入首版。
 - 发布前按 `AGENTS.md` 的完整检查与 GitHub/Gitee 同步流程执行。不要提交 `.env`、FFLogs/DeepSeek/OAuth 凭据、原始 PoC 数据或含角色/账号标识的日志。
 
 ## 6. 建议的新任务提示

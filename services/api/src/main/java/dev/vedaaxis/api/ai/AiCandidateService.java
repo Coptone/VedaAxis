@@ -57,7 +57,7 @@ public class AiCandidateService {
 
         PlanSnapshot candidateSnapshot = new PlanSnapshot(
                 base.schemaVersion(), base.minimumPluginVersion(), base.planId(), base.planVersion(),
-                base.timelineId(), base.timelineVersion(), base.encounterId(), base.strategyTag(), base.trackMode(),
+                base.timelineId(), base.timelineVersion(), base.encounterId(), base.territoryId(), base.strategyTag(), base.trackMode(),
                 new PlanSnapshot.Source(
                         PlanSnapshot.SourceKind.AI_CANDIDATE,
                         "DeepSeek " + model,

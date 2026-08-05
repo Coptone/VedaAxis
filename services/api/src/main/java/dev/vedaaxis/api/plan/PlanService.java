@@ -36,7 +36,7 @@ public class PlanService {
         String snapshotJson = write(snapshot);
         PlanRow row = new PlanRow(
                 planId.toString(), ownerId.toString(), request.name().trim(), request.encounterId().toString(),
-                request.strategyTag().trim(), request.trackMode().name(), snapshotJson, 0, now, now);
+                request.territoryId(), request.strategyTag().trim(), request.trackMode().name(), snapshotJson, 0, now, now);
         mapper.insertPlan(row);
         return new PlanDetails(row, snapshot);
     }
@@ -72,7 +72,7 @@ public class PlanService {
                 .toList();
         PlanSnapshot copy = new PlanSnapshot(
                 source.schemaVersion(), source.minimumPluginVersion(), newPlanId, 1,
-                source.timelineId(), source.timelineVersion(), source.encounterId(), source.strategyTag(),
+                source.timelineId(), source.timelineVersion(), source.encounterId(), source.territoryId(), source.strategyTag(),
                 source.trackMode(),
                 new PlanSnapshot.Source(
                         PlanSnapshot.SourceKind.PERSONAL,
@@ -82,7 +82,7 @@ public class PlanService {
         Instant now = Instant.now();
         PlanRow row = new PlanRow(
                 newPlanId.toString(), ownerId.toString(), sourcePlan.name() + " 副本", sourcePlan.encounterId(),
-                sourcePlan.strategyTag(), sourcePlan.trackMode(), write(copy), 0, now, now);
+                sourcePlan.territoryId(), sourcePlan.strategyTag(), sourcePlan.trackMode(), write(copy), 0, now, now);
         mapper.insertPlan(row);
         return new PlanDetails(row, copy);
     }
@@ -103,7 +103,7 @@ public class PlanService {
             throw conflict();
         }
         PlanRow updated = new PlanRow(
-                current.id(), current.ownerId(), request.name().trim(), current.encounterId(), authoritative.strategyTag(),
+                current.id(), current.ownerId(), request.name().trim(), current.encounterId(), current.territoryId(), authoritative.strategyTag(),
                 current.trackMode(), write(authoritative), current.latestVersion(), current.createdAt(), now);
         return new PlanDetails(updated, authoritative);
     }
@@ -170,8 +170,17 @@ public class PlanService {
     }
 
     public RuntimePlan matchRuntimePlan(
+            UUID ownerId, long territoryId, String strategyTag, TrackMode trackMode) {
+        PlanVersionRow version = mapper.findLatestActiveMatchByTerritory(
+                        ownerId.toString(), territoryId, strategyTag.trim(), trackMode.name())
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划"));
+        return new RuntimePlan(read(version.snapshotJson()), version.createdAt());
+    }
+
+    public RuntimePlan matchRuntimePlanByEncounter(
             UUID ownerId, UUID encounterId, String strategyTag, TrackMode trackMode) {
-        PlanVersionRow version = mapper.findLatestActiveMatch(
+        PlanVersionRow version = mapper.findLatestActiveMatchByEncounter(
                         ownerId.toString(), encounterId.toString(), strategyTag.trim(), trackMode.name())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划"));
@@ -183,7 +192,7 @@ public class PlanService {
                 .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, java.util.Set.of(), slot.name()))
                 .toList();
         return new PlanSnapshot(
-                "1.0", "0.1.0", planId, 1, UUID.randomUUID(), 1, request.encounterId(),
+                "1.1", "0.1.4", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
                 request.strategyTag().trim(), request.trackMode(),
                 new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
                 List.of(), tracks, List.of());
@@ -191,9 +200,9 @@ public class PlanService {
 
     private PlanSnapshot authoritativeSnapshot(PlanRow plan, PlanSnapshot submitted, int version) {
         return new PlanSnapshot(
-                "1.0", submitted.minimumPluginVersion(), UUID.fromString(plan.id()), version,
+                "1.1", "0.1.4", UUID.fromString(plan.id()), version,
                 submitted.timelineId(), submitted.timelineVersion(), UUID.fromString(plan.encounterId()),
-                submitted.strategyTag(), TrackMode.valueOf(plan.trackMode()), submitted.source(),
+                plan.territoryId(), submitted.strategyTag(), TrackMode.valueOf(plan.trackMode()), submitted.source(),
                 submitted.anchors(), submitted.tracks(), submitted.assignments());
     }
 
@@ -226,7 +235,8 @@ public class PlanService {
         return new ApiException(HttpStatus.CONFLICT, "PLAN_CONCURRENT_UPDATE", "计划已被其他操作更新，请刷新后重试");
     }
 
-    public record CreatePlanRequest(String name, UUID encounterId, String strategyTag, TrackMode trackMode) {
+    public record CreatePlanRequest(
+            String name, UUID encounterId, long territoryId, String strategyTag, TrackMode trackMode) {
     }
 
     public record UpdatePlanRequest(String name, PlanSnapshot snapshot) {
@@ -236,11 +246,11 @@ public class PlanService {
     }
 
     public record PlanSummary(
-            UUID id, String name, UUID encounterId, String strategyTag, TrackMode trackMode,
+            UUID id, String name, UUID encounterId, long territoryId, String strategyTag, TrackMode trackMode,
             int latestVersion, Instant updatedAt) {
         static PlanSummary from(PlanRow row) {
             return new PlanSummary(
-                    UUID.fromString(row.id()), row.name(), UUID.fromString(row.encounterId()), row.strategyTag(),
+                    UUID.fromString(row.id()), row.name(), UUID.fromString(row.encounterId()), row.territoryId(), row.strategyTag(),
                     TrackMode.valueOf(row.trackMode()), row.latestVersion(), row.updatedAt());
         }
     }

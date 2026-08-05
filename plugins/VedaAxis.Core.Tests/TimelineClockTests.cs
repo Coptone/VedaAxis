@@ -25,7 +25,7 @@ public sealed class TimelineClockTests
         var anchor = new TimelineAnchor(
             Guid.NewGuid(), 47858, 1, 10_000, 250, "P1", AnchorKind.ActionEffect);
         var plan = new PlanSnapshot(
-            "1.0", "0.1.0", Guid.NewGuid(), 1, Guid.NewGuid(), 1, Guid.NewGuid(), "test",
+            "1.1", "0.1.4", Guid.NewGuid(), 1, Guid.NewGuid(), 1, Guid.NewGuid(), 755, "test",
             TrackMode.Four, new PlanSource("PERSONAL", null, "UNVERIFIED"), [anchor],
             [
                 new ExecutionTrack(Guid.NewGuid(), "T1", new HashSet<uint>(), "T1"),

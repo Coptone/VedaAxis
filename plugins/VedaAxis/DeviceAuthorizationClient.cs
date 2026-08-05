@@ -76,12 +76,12 @@ internal sealed class DeviceAuthorizationClient : IDisposable
     public async Task<PlanSnapshot> MatchPlanAsync(
         string apiBaseUrl,
         string accessToken,
-        string encounterId,
+        uint territoryId,
         string strategyTag,
         string trackMode,
         CancellationToken cancellationToken)
     {
-        var query = $"encounterId={Uri.EscapeDataString(encounterId)}"
+        var query = $"territoryId={territoryId}"
                     + $"&strategyTag={Uri.EscapeDataString(strategyTag)}"
                     + $"&trackMode={Uri.EscapeDataString(trackMode)}";
         using var request = new HttpRequestMessage(

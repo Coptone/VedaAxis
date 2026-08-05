@@ -64,8 +64,8 @@ class PlanRuleEngineTest {
                     slot, jobs, slot.name()));
         }
         return new PlanSnapshot(
-                "1.0", "0.1.0", UUID.randomUUID(), 1, UUID.randomUUID(), 1, UUID.randomUUID(),
-                "test", TrackMode.EIGHT,
+                "1.1", "0.1.4", UUID.randomUUID(), 1, UUID.randomUUID(), 1, UUID.randomUUID(),
+                755, "test", TrackMode.EIGHT,
                 new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
                 List.of(), tracks, assignments);
     }

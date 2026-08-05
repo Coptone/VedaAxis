@@ -33,7 +33,7 @@
 - GitHub [`Coptone/VedaAxis`](https://github.com/Coptone/VedaAxis) 的 `main` 是源代码真源；Gitee [`Need4Spd/VedaAxis`](https://gitee.com/Need4Spd/VedaAxis) 是国内镜像。
 - Dalamud 自定义仓库地址为 `https://coptone.link/VedaAxis/pluginmaster.json`；插件包地址为 `https://coptone.link/VedaAxis/release/latest/VedaAxis.zip`。
 - HTTPS 测试环境已隔离部署在 `https://coptone.link/VedaAxis/`：Web 静态文件、仅回环监听的 API 与 PostgreSQL、独立 systemd/Compose 资源和路径级 Nginx 规则均未修改根站点业务。公网健康检查、注册、登录和 M-Spec 导入已通过；数据库备份演练与插件跨网完整闭环仍未完成。
-- 2026-08-06 已修复两个公网阻断：计划编辑器默认阶段/机制数据在初始快照前完成初始化，并使用兼容克隆；设备令牌的 `plugin:<UUID>` 受众不再受 32 字符数据库列限制。公网 API 级设备授权闭环已返回 `APPROVED`，但独立游戏电脑仍需实测绑定和后续同步。
+- 2026-08-06 已修复公网阻断：计划编辑器默认阶段/机制数据在初始快照前完成初始化，并使用兼容克隆；设备令牌的 `plugin:<UUID>` 受众不再受 32 字符数据库列限制；失效访问令牌对受保护接口返回 401，使 Web 能自动刷新令牌并重试。公网 API 级设备授权闭环已返回 `APPROVED`，但独立游戏电脑仍需实测绑定和后续同步。
 - FFLogs 国服 API `POC-03` 已完成：公开报告 `WdgtVGLAmj73Mbr8` 的 fight 2 已抽取 6 页、54,330 条规范化事件；凭据和生成数据不得提交。
 - Codex 云端环境名为 `Coptone/VedaAxis`，设置与维护命令均为 `bash tools/codex_setup.sh`，预安装 Node 22，并启用“普通依赖项”网络允许列表。
 - 2026-08-05 的 Codex 云端只读冒烟验证通过：Web 类型检查、3 个 Web 测试和生产构建通过；API 7 个测试通过；Python 4 个测试通过；Core 16 个测试通过；Dalamud Release 构建为 0 警告、0 错误。验证任务见 [云端报告](https://chatgpt.com/codex/cloud/tasks/task_e_6a73292376b8832b87566c0ac3604b57)。

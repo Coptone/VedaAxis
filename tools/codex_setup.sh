@@ -62,5 +62,14 @@ export DALAMUD_HOME="$dalamud_home"
 dotnet restore plugins/VedaAxis.Core.Tests/VedaAxis.Core.Tests.csproj
 dotnet restore plugins/VedaAxis/VedaAxis.csproj
 
+persist_shell_line() {
+  local line="$1"
+  touch "$HOME/.bashrc"
+  grep -Fqx "$line" "$HOME/.bashrc" || printf '%s\n' "$line" >> "$HOME/.bashrc"
+}
+
+persist_shell_line 'export PATH="$HOME/.local/bin:$PATH"'
+persist_shell_line 'export DALAMUD_HOME="$HOME/.xlcore/dalamud/Hooks/dev"'
+
 echo "VedaAxis Codex cloud environment is ready."
 echo "DALAMUD_HOME=$dalamud_home"

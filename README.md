@@ -26,7 +26,7 @@ FFXIV 团队减伤规划、个人执行提醒与复盘平台。项目按 PRD 的
 在 Dalamud 设置的 `Experimental` 页面，把下面的地址加入 `Custom Plugin Repositories`：
 
 ```text
-https://raw.githubusercontent.com/Coptone/VedaAxis/codex/mvp-foundation/pluginmaster.json
+https://gitee.com/Need4Spd/VedaAxis/raw/codex/mvp-foundation/pluginmaster.json
 ```
 
 保存后打开插件安装器，搜索 `VedaAxis` 并安装。仓库清单和插件 ZIP 均使用无重定向的 raw 地址，后续版本仍通过这个地址检查和安装更新。当前发布是实机 PoC 测试版，不代表热键栏矩阵已经验收通过。

@@ -9,7 +9,7 @@
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
-    <PackageProjectUrl>https://github.com/Coptone/VedaAxis</PackageProjectUrl>
+    <PackageProjectUrl>https://gitee.com/Need4Spd/VedaAxis</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\VedaAxis.Core\VedaAxis.Core.csproj" />

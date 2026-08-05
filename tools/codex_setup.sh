@@ -20,15 +20,17 @@ required_command curl
 required_command unzip
 
 java_major="$(java -version 2>&1 | awk -F '[\".]' '/version/ { print $2; exit }')"
-node_major="$(node --version | sed -E 's/^v([0-9]+).*/\1/')"
+node_version="$(node --version | sed -E 's/^v//')"
+node_major="${node_version%%.*}"
+node_minor="$(printf '%s' "$node_version" | cut -d. -f2)"
 
 if [[ -z "$java_major" || "$java_major" -lt 21 ]]; then
   echo "error: Java 21 or newer is required" >&2
   exit 1
 fi
 
-if [[ -z "$node_major" || "$node_major" -lt 22 ]]; then
-  echo "error: Node.js 22.12 or newer is required" >&2
+if [[ -z "$node_major" || -z "$node_minor" || "$node_major" -lt 22 || ( "$node_major" -eq 22 && "$node_minor" -lt 13 ) ]]; then
+  echo "error: Node.js 22.13 or newer is required" >&2
   exit 1
 fi
 

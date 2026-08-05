@@ -14,14 +14,17 @@ internal sealed unsafe class HotbarOverlay
     [
         "_ActionBar", "_ActionBar01", "_ActionBar02", "_ActionBar03", "_ActionBar04",
         "_ActionBar05", "_ActionBar06", "_ActionBar07", "_ActionBar08", "_ActionBar09",
-        "_ActionCross", "_ActionDoubleCrossL", "_ActionDoubleCrossR", "_ActionContents",
+        "_ActionCross", "_ActionDoubleCrossL", "_ActionDoubleCrossR",
     ];
 
     private readonly IGameGui gameGui;
+    private readonly IPluginLog log;
+    private readonly HashSet<string> invalidAddonsLogged = [];
 
-    public HotbarOverlay(IGameGui gameGui)
+    public HotbarOverlay(IGameGui gameGui, IPluginLog log)
     {
         this.gameGui = gameGui;
+        this.log = log;
     }
 
     public bool IsActionAvailable(uint actionId)
@@ -39,7 +42,10 @@ internal sealed unsafe class HotbarOverlay
             {
                 continue;
             }
-            var slots = addon->ActionBarSlotVector.AsSpan();
+            if (!TryGetSlots(addon, addonName, out var slots))
+            {
+                continue;
+            }
             for (var index = 0; index < slots.Length; index++)
             {
                 if ((uint)Math.Max(0, slots[index].ActionId) == actionId && slots[index].ComponentDragDrop != null)
@@ -53,6 +59,7 @@ internal sealed unsafe class HotbarOverlay
 
     public void Draw(IReadOnlyList<AssignmentRuntime> assignments, long elapsedMs, float opacity)
     {
+        opacity = OverlaySafety.NormalizeOpacity(opacity);
         var visibleStates = assignments
             .Where(item => item.ShouldDrawOverlay(elapsedMs))
             .GroupBy(item => item.Assignment.ActionId)
@@ -71,7 +78,10 @@ internal sealed unsafe class HotbarOverlay
                 continue;
             }
 
-            var slots = addon->ActionBarSlotVector.AsSpan();
+            if (!TryGetSlots(addon, addonName, out var slots))
+            {
+                continue;
+            }
             for (var index = 0; index < slots.Length; index++)
             {
                 ref var slot = ref slots[index];
@@ -95,10 +105,46 @@ internal sealed unsafe class HotbarOverlay
 
                 var start = new Vector2(node->ScreenX, node->ScreenY);
                 var end = start + new Vector2(node->GetWidth(), node->GetHeight());
+                if (!float.IsFinite(start.X) || !float.IsFinite(start.Y)
+                    || !float.IsFinite(end.X) || !float.IsFinite(end.Y)
+                    || end.X <= start.X || end.Y <= start.Y)
+                {
+                    continue;
+                }
                 var color = ColorFor(state, opacity);
                 drawList.AddRectFilled(start, end, ImGui.GetColorU32(color), 5f);
                 drawList.AddRect(start, end, ImGui.GetColorU32(color with { W = 1f }), 5f, ImDrawFlags.None, 3f);
             }
+        }
+    }
+
+    private bool TryGetSlots(AddonActionBarBase* addon, string addonName, out Span<ActionBarSlot> slots)
+    {
+        slots = Span<ActionBarSlot>.Empty;
+        try
+        {
+            var slotCount = addon->SlotCount;
+            if (!OverlaySafety.IsValidSlotCount(slotCount))
+            {
+                LogInvalidAddonOnce(addonName, $"invalid slot count {slotCount}");
+                return false;
+            }
+
+            slots = addon->ActionBarSlotVector.AsSpan(0, slotCount);
+            return true;
+        }
+        catch (Exception exception) when (exception is OverflowException or ArgumentOutOfRangeException)
+        {
+            LogInvalidAddonOnce(addonName, exception.Message);
+            return false;
+        }
+    }
+
+    private void LogInvalidAddonOnce(string addonName, string reason)
+    {
+        if (invalidAddonsLogged.Add(addonName))
+        {
+            log.Warning("Skipping hotbar addon {AddonName}: {Reason}", addonName, reason);
         }
     }
 

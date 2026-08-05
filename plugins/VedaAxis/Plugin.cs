@@ -56,7 +56,7 @@ public sealed class Plugin : IDalamudPlugin
         configuration = PluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
         planStore = new PlanFileStore(PluginInterface.GetPluginConfigDirectory());
         executionUploadQueue = new ExecutionUploadQueue(PluginInterface.GetPluginConfigDirectory());
-        overlay = new HotbarOverlay(GameGui);
+        overlay = new HotbarOverlay(GameGui, Log);
         ReloadPlan();
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)

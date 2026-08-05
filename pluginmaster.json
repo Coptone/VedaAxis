@@ -3,10 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.0.0",
+    "AssemblyVersion": "0.1.1.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
+    "Changelog": "修复读取非热键栏 UI 时导致的绘制溢出，并增加槽位、坐标和透明度边界保护。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -14,6 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
+    "LastUpdate": 1785917937,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

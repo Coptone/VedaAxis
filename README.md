@@ -19,7 +19,24 @@ FFXIV 团队减伤规划、个人执行提醒与复盘平台。项目按 PRD 的
 - 插件：4/8 轨通用状态机、时间锚点校时、ActionEffect 执行确认、贴合原生热键栏槽位的只读覆盖层与本地计划文件。
 - 数据：固定 DMU Ikuya Mitty / LPDU 上游修订与哈希，统一保留 `POC_PENDING`。
 
-当前仍有两项必须在游戏环境完成：国服/国际服最新版本的热键栏实机验证，以及 DMU Action/状态/锚点的完整回放验收。未完成前不会把来源标记为 `VERIFIED`。
+当前仍有三项必须在游戏环境完成：国服/国际服最新版本的热键栏实机验证、国服事件链诊断，以及 DMU Action/状态/锚点的完整回放验收。未完成前不会把来源标记为 `VERIFIED`。
+
+## 项目进度
+
+- 当前测试版：`0.1.3`。
+- FFLogs 国服 API PoC 已通过；原生热键栏高亮、国服事件链和 DMU 绝对时间轴仍在实机验收中。
+- 详细阶段、PoC 和 PRD 验收项映射见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
+- GitHub `main` 是源代码真源，Gitee 是国内镜像；发布后两个仓库应保持同一提交和标签。
+
+## Codex 云端开发
+
+仓库包含 [`AGENTS.md`](AGENTS.md)，Codex 会从中读取项目边界、验证命令和发布规则。创建 Codex 云端环境时，将环境设置脚本配置为：
+
+```bash
+bash tools/codex_setup.sh
+```
+
+脚本只安装公开依赖和官方 Dalamud 开发文件，不写入项目密钥。FFLogs、DeepSeek、数据库和 OAuth 凭据应通过 Codex 环境密钥注入，不得提交到仓库。
 
 ## Dalamud 安装与更新
 

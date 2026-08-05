@@ -64,7 +64,7 @@ public sealed record TimelineAnchor(
 public sealed record ExecutionTrack(
     Guid TrackId,
     string Slot,
-    IReadOnlySet<uint> AllowedJobIds,
+    IReadOnlyCollection<uint> AllowedJobIds,
     string? DisplayName);
 
 public sealed record Assignment(

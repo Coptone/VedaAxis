@@ -30,7 +30,7 @@ FFXIV 团队减伤规划、个人执行提醒与复盘平台。项目按 PRD 的
 
 ## Codex 云端开发
 
-仓库包含 [`AGENTS.md`](AGENTS.md)，Codex 会从中读取项目边界、验证命令和发布规则。创建 Codex 云端环境时，将环境设置脚本配置为：
+仓库包含 [`AGENTS.md`](AGENTS.md)，Codex 会从中读取项目边界、验证命令和发布规则；[`docs/CODEX_CONTEXT.md`](docs/CODEX_CONTEXT.md) 负责把已确认决策、可依赖事实、阻断项和交接规则带入每个本地或云端新任务。创建 Codex 云端环境时，将环境设置脚本配置为：
 
 ```bash
 bash tools/codex_setup.sh

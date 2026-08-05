@@ -58,6 +58,7 @@ VedaAxis 已形成可构建的 Web、API、Dalamud 插件和共享契约 MVP 基
 
 ## 最近里程碑
 
+- Codex 云端项目已完成环境配置与只读全量冒烟验证：Node 22、pnpm 11.9、Java 21、Python 3.12、.NET 10 和 Dalamud SDK 可用；Web、API、Python、Core 测试及 Dalamud Release 构建全部通过。项目上下文由 `AGENTS.md` 与 `docs/CODEX_CONTEXT.md` 共同承接。
 - `0.1.3`：修复 `allowedJobIds` 只读集合反序列化，活动计划可正常加载。
 - 插件仓库切换到无重定向的 jsDelivr 地址，降低国服网络环境读取 GitHub Release 重定向失败的概率。
 - GitHub 作为源代码与发布源，Gitee 作为国内镜像；两个仓库保持同一提交历史和标签。
@@ -68,4 +69,4 @@ VedaAxis 已形成可构建的 Web、API、Dalamud 插件和共享契约 MVP 基
 - POC-02 实机矩阵每项都有：游戏版本、Dalamud API 版本、诊断 JSONL、截图/录像和结论。
 - POC-01 可从一次完整战斗中复现：进入副本、开战、Boss Action、本地 ActionEffect、团灭/结束和清理。
 - POC-04 给出统一的阶段锚点定义，并用 FFLogs 与至少一次插件实机回放交叉验证。
-- GitHub `main` 的自动检查通过，Gitee 默认分支与标签同步，Codex 云端环境可从默认分支完成初始化。
+- GitHub `main` 的自动检查持续通过，Gitee 默认分支与标签保持同步。

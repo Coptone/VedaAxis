@@ -1,0 +1,259 @@
+package dev.vedaaxis.api.plan;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import dev.vedaaxis.api.common.ApiException;
+import dev.vedaaxis.api.rule.PlanRuleEngine;
+import dev.vedaaxis.api.rule.RuleValidationResult;
+import dev.vedaaxis.api.security.SecureTokens;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.UUID;
+
+@Service
+public class PlanService {
+    private final PlanMapper mapper;
+    private final ObjectMapper objectMapper;
+    private final PlanRuleEngine ruleEngine;
+
+    public PlanService(PlanMapper mapper, ObjectMapper objectMapper, PlanRuleEngine ruleEngine) {
+        this.mapper = mapper;
+        this.objectMapper = objectMapper;
+        this.ruleEngine = ruleEngine;
+    }
+
+    @Transactional
+    public PlanDetails create(UUID ownerId, CreatePlanRequest request) {
+        UUID planId = UUID.randomUUID();
+        Instant now = Instant.now();
+        PlanSnapshot snapshot = emptySnapshot(planId, request);
+        String snapshotJson = write(snapshot);
+        PlanRow row = new PlanRow(
+                planId.toString(), ownerId.toString(), request.name().trim(), request.encounterId().toString(),
+                request.strategyTag().trim(), request.trackMode().name(), snapshotJson, 0, now, now);
+        mapper.insertPlan(row);
+        return new PlanDetails(row, snapshot);
+    }
+
+    public List<PlanSummary> list(UUID ownerId) {
+        return mapper.listByOwner(ownerId.toString()).stream().map(PlanSummary::from).toList();
+    }
+
+    @Transactional
+    public PlanDetails copy(UUID ownerId, UUID sourcePlanId) {
+        PlanRow sourcePlan = ownedPlan(ownerId, sourcePlanId);
+        PlanSnapshot source = read(sourcePlan.draftJson());
+        UUID newPlanId = UUID.randomUUID();
+        Map<UUID, UUID> trackIds = new HashMap<>();
+        List<PlanSnapshot.ExecutionTrack> tracks = source.tracks().stream()
+                .map(track -> {
+                    UUID newTrackId = UUID.randomUUID();
+                    trackIds.put(track.trackId(), newTrackId);
+                    return new PlanSnapshot.ExecutionTrack(
+                            newTrackId, track.slot(), track.allowedJobIds(), track.displayName());
+                })
+                .toList();
+        List<PlanSnapshot.Assignment> assignments = source.assignments().stream()
+                .map(assignment -> new PlanSnapshot.Assignment(
+                        UUID.randomUUID(), assignment.mechanicId(), trackIds.get(assignment.trackId()),
+                        assignment.actionId(), assignment.anchorId(), assignment.highlightAtMs(),
+                        assignment.earliestUseAtMs(), assignment.latestUseAtMs(), assignment.impactAtMs(),
+                        assignment.locked(), assignment.confirmationStrategy(),
+                        assignment.fallbacks().stream()
+                                .map(fallback -> new PlanSnapshot.Fallback(
+                                        trackIds.get(fallback.trackId()), fallback.actionId()))
+                                .toList()))
+                .toList();
+        PlanSnapshot copy = new PlanSnapshot(
+                source.schemaVersion(), source.minimumPluginVersion(), newPlanId, 1,
+                source.timelineId(), source.timelineVersion(), source.encounterId(), source.strategyTag(),
+                source.trackMode(),
+                new PlanSnapshot.Source(
+                        PlanSnapshot.SourceKind.PERSONAL,
+                        "copied-from:" + sourcePlanId,
+                        PlanSnapshot.Confidence.UNVERIFIED),
+                source.anchors(), tracks, assignments);
+        Instant now = Instant.now();
+        PlanRow row = new PlanRow(
+                newPlanId.toString(), ownerId.toString(), sourcePlan.name() + " 副本", sourcePlan.encounterId(),
+                sourcePlan.strategyTag(), sourcePlan.trackMode(), write(copy), 0, now, now);
+        mapper.insertPlan(row);
+        return new PlanDetails(row, copy);
+    }
+
+    public PlanDetails get(UUID ownerId, UUID planId) {
+        PlanRow row = ownedPlan(ownerId, planId);
+        return new PlanDetails(row, read(row.draftJson()));
+    }
+
+    @Transactional
+    public PlanDetails updateDraft(UUID ownerId, UUID planId, UpdatePlanRequest request) {
+        PlanRow current = ownedPlan(ownerId, planId);
+        PlanSnapshot authoritative = authoritativeSnapshot(current, request.snapshot(), current.latestVersion() + 1);
+        Instant now = Instant.now();
+        if (mapper.updateDraft(
+                planId.toString(), ownerId.toString(), request.name().trim(), authoritative.strategyTag(),
+                write(authoritative), now) != 1) {
+            throw conflict();
+        }
+        PlanRow updated = new PlanRow(
+                current.id(), current.ownerId(), request.name().trim(), current.encounterId(), authoritative.strategyTag(),
+                current.trackMode(), write(authoritative), current.latestVersion(), current.createdAt(), now);
+        return new PlanDetails(updated, authoritative);
+    }
+
+    public RuleValidationResult validate(UUID ownerId, UUID planId) {
+        return ruleEngine.validate(get(ownerId, planId).snapshot());
+    }
+
+    @Transactional
+    public PublishedPlan publish(UUID ownerId, UUID planId) {
+        PlanRow current = ownedPlan(ownerId, planId);
+        int nextVersion = current.latestVersion() + 1;
+        PlanSnapshot snapshot = authoritativeSnapshot(current, read(current.draftJson()), nextVersion);
+        RuleValidationResult validation = ruleEngine.validate(snapshot);
+        if (!validation.valid()) {
+            throw new RuleValidationException(validation);
+        }
+        String snapshotJson = write(snapshot);
+        Instant now = Instant.now();
+        if (mapper.advanceVersion(
+                planId.toString(), ownerId.toString(), current.latestVersion(), nextVersion, snapshotJson, now) != 1) {
+            throw conflict();
+        }
+        mapper.supersedeActive(planId.toString());
+        String shareCode = SecureTokens.opaqueToken(12);
+        PlanVersionRow version = new PlanVersionRow(
+                UUID.randomUUID().toString(), planId.toString(), nextVersion, "ACTIVE", snapshotJson, shareCode, now);
+        mapper.insertVersion(version);
+        return new PublishedPlan(snapshot, shareCode, validation);
+    }
+
+    public List<PlanVersionSummary> versions(UUID ownerId, UUID planId) {
+        ownedPlan(ownerId, planId);
+        return mapper.listVersions(planId.toString()).stream()
+                .map(row -> new PlanVersionSummary(row.versionNumber(), row.status(), row.shareCode(), row.createdAt()))
+                .toList();
+    }
+
+    @Transactional
+    public PublishedPlan rollback(UUID ownerId, UUID planId, int sourceVersion) {
+        PlanRow current = ownedPlan(ownerId, planId);
+        PlanVersionRow source = mapper.findVersion(planId.toString(), sourceVersion)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAN_VERSION_NOT_FOUND", "计划版本不存在"));
+        int nextVersion = current.latestVersion() + 1;
+        PlanSnapshot snapshot = authoritativeSnapshot(current, read(source.snapshotJson()), nextVersion);
+        String snapshotJson = write(snapshot);
+        Instant now = Instant.now();
+        if (mapper.advanceVersion(planId.toString(), ownerId.toString(), current.latestVersion(), nextVersion, snapshotJson, now) != 1) {
+            throw conflict();
+        }
+        mapper.supersedeActive(planId.toString());
+        String shareCode = SecureTokens.opaqueToken(12);
+        mapper.insertVersion(new PlanVersionRow(
+                UUID.randomUUID().toString(), planId.toString(), nextVersion, "ACTIVE", snapshotJson, shareCode, now));
+        return new PublishedPlan(snapshot, shareCode, RuleValidationResult.from(List.of()));
+    }
+
+    public SharedPlan shared(String shareCode) {
+        PlanVersionRow version = mapper.findByShareCode(shareCode)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "SHARE_NOT_FOUND", "分享计划不存在"));
+        PlanRow plan = mapper.findPlan(version.planId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "计划不存在"));
+        return new SharedPlan(plan.name(), version.status(), read(version.snapshotJson()), version.createdAt());
+    }
+
+    public RuntimePlan matchRuntimePlan(
+            UUID ownerId, UUID encounterId, String strategyTag, TrackMode trackMode) {
+        PlanVersionRow version = mapper.findLatestActiveMatch(
+                        ownerId.toString(), encounterId.toString(), strategyTag.trim(), trackMode.name())
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划"));
+        return new RuntimePlan(read(version.snapshotJson()), version.createdAt());
+    }
+
+    private PlanSnapshot emptySnapshot(UUID planId, CreatePlanRequest request) {
+        List<PlanSnapshot.ExecutionTrack> tracks = request.trackMode().orderedSlots().stream()
+                .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, java.util.Set.of(), slot.name()))
+                .toList();
+        return new PlanSnapshot(
+                "1.0", "0.1.0", planId, 1, UUID.randomUUID(), 1, request.encounterId(),
+                request.strategyTag().trim(), request.trackMode(),
+                new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
+                List.of(), tracks, List.of());
+    }
+
+    private PlanSnapshot authoritativeSnapshot(PlanRow plan, PlanSnapshot submitted, int version) {
+        return new PlanSnapshot(
+                "1.0", submitted.minimumPluginVersion(), UUID.fromString(plan.id()), version,
+                submitted.timelineId(), submitted.timelineVersion(), UUID.fromString(plan.encounterId()),
+                submitted.strategyTag(), TrackMode.valueOf(plan.trackMode()), submitted.source(),
+                submitted.anchors(), submitted.tracks(), submitted.assignments());
+    }
+
+    private PlanRow ownedPlan(UUID ownerId, UUID planId) {
+        PlanRow plan = mapper.findPlan(planId.toString())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "计划不存在"));
+        if (!plan.ownerId().equals(ownerId.toString())) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "计划不存在");
+        }
+        return plan;
+    }
+
+    private String write(PlanSnapshot snapshot) {
+        try {
+            return objectMapper.writeValueAsString(snapshot);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Unable to serialize plan snapshot", exception);
+        }
+    }
+
+    private PlanSnapshot read(String json) {
+        try {
+            return objectMapper.readValue(json, PlanSnapshot.class);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Stored plan snapshot is invalid", exception);
+        }
+    }
+
+    private ApiException conflict() {
+        return new ApiException(HttpStatus.CONFLICT, "PLAN_CONCURRENT_UPDATE", "计划已被其他操作更新，请刷新后重试");
+    }
+
+    public record CreatePlanRequest(String name, UUID encounterId, String strategyTag, TrackMode trackMode) {
+    }
+
+    public record UpdatePlanRequest(String name, PlanSnapshot snapshot) {
+    }
+
+    public record PlanDetails(PlanRow plan, PlanSnapshot snapshot) {
+    }
+
+    public record PlanSummary(
+            UUID id, String name, UUID encounterId, String strategyTag, TrackMode trackMode,
+            int latestVersion, Instant updatedAt) {
+        static PlanSummary from(PlanRow row) {
+            return new PlanSummary(
+                    UUID.fromString(row.id()), row.name(), UUID.fromString(row.encounterId()), row.strategyTag(),
+                    TrackMode.valueOf(row.trackMode()), row.latestVersion(), row.updatedAt());
+        }
+    }
+
+    public record PublishedPlan(PlanSnapshot snapshot, String shareCode, RuleValidationResult validation) {
+    }
+
+    public record PlanVersionSummary(int version, String status, String shareCode, Instant createdAt) {
+    }
+
+    public record SharedPlan(String name, String status, PlanSnapshot snapshot, Instant publishedAt) {
+    }
+
+    public record RuntimePlan(PlanSnapshot snapshot, Instant publishedAt) {
+    }
+}

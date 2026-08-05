@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:vedaaxis;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: true
+
+vedaaxis:
+  security:
+    jwt-secret: test-secret-with-at-least-thirty-two-characters
+    access-token-minutes: 15
+    refresh-token-days: 30
+    device-code-minutes: 10
+  web-origin: http://localhost:5173

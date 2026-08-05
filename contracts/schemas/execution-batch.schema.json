@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vedaaxis.dev/contracts/execution-batch.schema.json",
+  "title": "VedaAxis Execution Batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "fightExecutionId", "planId", "planVersion", "startedAt", "endedAt", "result", "assignments"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "fightExecutionId": { "type": "string", "format": "uuid" },
+    "planId": { "type": "string", "format": "uuid" },
+    "planVersion": { "type": "integer", "minimum": 1 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "endedAt": { "type": "string", "format": "date-time" },
+    "result": { "enum": ["CLEAR", "WIPE", "ABANDONED"] },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assignmentId", "state", "observedOffsetMs", "confirmation"],
+        "properties": {
+          "assignmentId": { "type": "string", "format": "uuid" },
+          "state": { "enum": ["SUCCESS", "EARLY", "MISSED", "LATE", "INVALID", "CANCELLED"] },
+          "observedOffsetMs": { "type": ["integer", "null"] },
+          "confirmation": { "enum": ["ACTION_EFFECT", "STATUS_APPLY", "COOLDOWN_CHANGE", "NONE"] },
+          "availableAtHighlight": { "type": "boolean" },
+          "reason": { "type": ["string", "null"], "maxLength": 500 }
+        }
+      }
+    }
+  }
+}

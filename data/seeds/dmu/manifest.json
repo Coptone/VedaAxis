@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0",
+  "encounter": {
+    "id": "c97e8840-1697-476f-a4ac-8c7996df277b",
+    "name": "Dancing Mad Ultimate",
+    "territoryId": 1363
+  },
+  "reference": {
+    "repository": "https://github.com/Nainaiowo/dmu-mits",
+    "revision": "a8d5581486a576dbbce639a22a2c5e27ccf87849",
+    "capturedAt": "2026-08-05T00:00:00Z",
+    "timelineArtifact": {
+      "path": "DMUMits/DmuMitigationData.Generated.cs",
+      "sha256": "a5977f7a2970a0bd8f92be04a3f286d2c12259d7644ee60e372e3e0609992e22",
+      "eventCount": 222,
+      "generatedAt": "2026-07-12"
+    },
+    "lpduArtifact": {
+      "path": "DMUMits/DmuMitigationLpdu.Generated.cs",
+      "sha256": "96dc17833485bcacfcc9617bb56a759671acd69f104ecd791b147606999c7c8e",
+      "overrideCount": 98,
+      "generatedAt": "2026-07-22"
+    }
+  },
+  "strategies": [
+    {
+      "tag": "DMU-IKUYA-MITTY",
+      "displayName": "Ikuya Mitty",
+      "confidence": "POC_PENDING"
+    },
+    {
+      "tag": "DMU-LPDU",
+      "displayName": "LPDU",
+      "confidence": "POC_PENDING"
+    }
+  ],
+  "phaseStartsSeconds": {
+    "P1": 0.0,
+    "P2": 207.6,
+    "P3": 540.3,
+    "P4": 995.0,
+    "P5": 1255.6
+  },
+  "anchors": [
+    { "anchorId": "2ee2305f-9abb-48e6-9361-298fee9d7cd1", "actionId": 50179, "occurrence": 1, "plannedAtMs": 10600, "offsetMs": 0, "phase": "P1", "kind": "CAST_START" },
+    { "anchorId": "0d34f878-7dea-4a28-9cbf-eac5fc577884", "actionId": 49740, "occurrence": 1, "plannedAtMs": 215100, "offsetMs": 0, "phase": "P2", "kind": "CAST_START" },
+    { "anchorId": "a68ae1ce-2bd6-42c9-991d-3d9b5a18432b", "actionId": 49740, "occurrence": 2, "plannedAtMs": 371700, "offsetMs": 0, "phase": "P2", "kind": "CAST_START" },
+    { "anchorId": "06e0f972-bde2-48f1-b12f-8fc889205dd7", "actionId": 47858, "occurrence": 1, "plannedAtMs": 562900, "offsetMs": 0, "phase": "P3", "kind": "ACTION_EFFECT" },
+    { "anchorId": "204b033f-8b4e-4050-bea5-46a9757889b1", "actionId": 49884, "occurrence": 1, "plannedAtMs": 995000, "offsetMs": 0, "phase": "P4", "kind": "CAST_START" },
+    { "anchorId": "b7e59e24-e507-4865-ac17-ac80b2dd18dc", "actionId": 47936, "occurrence": 1, "plannedAtMs": 1300000, "offsetMs": 0, "phase": "P5", "kind": "ACTION_EFFECT" },
+    { "anchorId": "8c6e22e1-a102-41a2-93e6-8e622062cd1f", "actionId": 47936, "occurrence": 2, "plannedAtMs": 1382200, "offsetMs": 0, "phase": "P5", "kind": "ACTION_EFFECT" }
+  ],
+  "verification": {
+    "status": "POC_PENDING",
+    "referenceOnly": true,
+    "fflogs": {
+      "checkedAt": "2026-08-05",
+      "reportCode": "WdgtVGLAmj73Mbr8",
+      "fightId": 2,
+      "fightCount": 51,
+      "killCount": 1,
+      "matchedAnchors": 7,
+      "anchorsWithinTwoSecondsAbsolute": 3,
+      "result": "TIMING_MISMATCH",
+      "artifact": "data/fflogs-poc/WdgtVGLAmj73Mbr8/fight-2/anchor-verification.json"
+    },
+    "requirements": [
+      "国服或国际服最新版本内验证 territory、Action ID 和阶段锚点",
+      "使用 ActionEffect 或状态事件确认关键减伤实际生效",
+      "至少完成一次 8 轨实战回放，再提升 confidence"
+    ]
+  }
+}

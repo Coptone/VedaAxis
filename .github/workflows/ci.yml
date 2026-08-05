@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, codex/mvp-foundation]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm install --global pnpm@11.9.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:web
+      - run: pnpm test:web
+      - run: pnpm build:web
+
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn --batch-mode test
+
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tools/tests -v
+      - run: bash -n tools/codex_setup.sh
+
+  plugin:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Download official Dalamud development files
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'dalamud-latest.zip'
+          $dalamudHome = Join-Path $env:RUNNER_TEMP 'dalamud-dev'
+          Invoke-WebRequest 'https://goatcorp.github.io/dalamud-distrib/latest.zip' -OutFile $archive
+          Expand-Archive -LiteralPath $archive -DestinationPath $dalamudHome -Force
+          "DALAMUD_HOME=$dalamudHome" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - run: dotnet test plugins/VedaAxis.Core.Tests/VedaAxis.Core.Tests.csproj -c Release
+      - run: dotnet build plugins/VedaAxis/VedaAxis.csproj -c Release

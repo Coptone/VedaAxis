@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vedaaxis.dev/contracts/plan-snapshot.schema.json",
+  "title": "VedaAxis Plan Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "minimumPluginVersion",
+    "planId",
+    "planVersion",
+    "timelineId",
+    "timelineVersion",
+    "encounterId",
+    "strategyTag",
+    "trackMode",
+    "source",
+    "anchors",
+    "tracks",
+    "assignments"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "minimumPluginVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "planId": { "type": "string", "format": "uuid" },
+    "planVersion": { "type": "integer", "minimum": 1 },
+    "timelineId": { "type": "string", "format": "uuid" },
+    "timelineVersion": { "type": "integer", "minimum": 1 },
+    "encounterId": { "type": "string", "format": "uuid" },
+    "strategyTag": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "trackMode": { "enum": ["FOUR", "EIGHT"] },
+    "source": { "$ref": "#/$defs/source" },
+    "anchors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/anchor" }
+    },
+    "tracks": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/track" }
+    },
+    "assignments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/assignment" }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "confidence"],
+      "properties": {
+        "kind": { "enum": ["PERSONAL", "PUBLIC_TEMPLATE", "AI_CANDIDATE", "IMPORTED"] },
+        "reference": { "type": ["string", "null"], "maxLength": 500 },
+        "confidence": { "enum": ["POC_PENDING", "UNVERIFIED", "REVIEWED", "VERIFIED"] }
+      }
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trackId", "slot", "allowedJobIds"],
+      "properties": {
+        "trackId": { "type": "string", "format": "uuid" },
+        "slot": { "enum": ["T1", "MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"] },
+        "allowedJobIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "displayName": { "type": ["string", "null"], "maxLength": 80 }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trackId", "actionId"],
+      "properties": {
+        "trackId": { "type": "string", "format": "uuid" },
+        "actionId": { "type": "integer", "minimum": 1, "maximum": 4294967295 }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchorId", "actionId", "occurrence", "plannedAtMs", "offsetMs", "phase", "kind"],
+      "properties": {
+        "anchorId": { "type": "string", "format": "uuid" },
+        "actionId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "occurrence": { "type": "integer", "minimum": 1 },
+        "plannedAtMs": { "type": "integer", "minimum": 0 },
+        "offsetMs": { "type": "integer" },
+        "phase": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "kind": { "enum": ["CAST_START", "ACTION_EFFECT", "STATUS_GAIN"] }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignmentId",
+        "mechanicId",
+        "trackId",
+        "actionId",
+        "highlightAtMs",
+        "earliestUseAtMs",
+        "latestUseAtMs",
+        "impactAtMs",
+        "locked",
+        "confirmationStrategy",
+        "fallbacks"
+      ],
+      "properties": {
+        "assignmentId": { "type": "string", "format": "uuid" },
+        "mechanicId": { "type": "string", "format": "uuid" },
+        "trackId": { "type": "string", "format": "uuid" },
+        "actionId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "anchorId": { "type": ["string", "null"], "format": "uuid" },
+        "highlightAtMs": { "type": "integer" },
+        "earliestUseAtMs": { "type": "integer" },
+        "latestUseAtMs": { "type": "integer" },
+        "impactAtMs": { "type": "integer" },
+        "locked": { "type": "boolean" },
+        "confirmationStrategy": {
+          "enum": ["ACTION_EFFECT", "STATUS_APPLY", "COOLDOWN_CHANGE", "COMPOSITE"]
+        },
+        "fallbacks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fallback" }
+        }
+      }
+    }
+  }
+}

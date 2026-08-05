@@ -23,7 +23,8 @@ FFXIV 团队减伤规划、个人执行提醒与复盘平台。项目按 PRD 的
 
 ## 项目进度
 
-- 当前测试版：`0.1.5`。
+- 当前测试版：`0.1.6`。
+- 公网管理端：`https://coptone.link/VedaAxis/`；API、Web 和插件发布文件均隔离在 `/VedaAxis/` 路径下。
 - FFLogs 国服 API PoC 已通过；原生热键栏高亮、国服事件链和 DMU 绝对时间轴仍在实机验收中。
 - 详细阶段、PoC 和 PRD 验收项映射见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
 - GitHub `main` 是源代码真源，Gitee 是国内镜像；发布后两个仓库应保持同一提交和标签。
@@ -43,10 +44,10 @@ bash tools/codex_setup.sh
 在 Dalamud 设置的 `Experimental` 页面，把下面的地址加入 `Custom Plugin Repositories`：
 
 ```text
-https://cdn.jsdelivr.net/gh/Coptone/VedaAxis@latest/pluginmaster.json
+https://coptone.link/VedaAxis/pluginmaster.json
 ```
 
-保存后打开插件安装器，搜索 `VedaAxis` 并安装。仓库清单和插件 ZIP 均使用无重定向的 raw 地址，后续版本仍通过这个地址检查和安装更新。当前发布是实机 PoC 测试版，不代表热键栏矩阵已经验收通过。
+保存后打开插件安装器，搜索 `VedaAxis` 并安装。仓库清单与插件 ZIP 均由同一 HTTPS 域名直出，目录浏览已关闭；后续版本仍通过这个地址检查和安装更新。当前发布是实机 PoC 测试版，不代表热键栏矩阵已经验收通过。
 
 ## 本地启动
 

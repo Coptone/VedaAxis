@@ -1,0 +1,23 @@
+[Unit]
+Description=VedaAxis API
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/vedaaxis/api
+EnvironmentFile=/opt/vedaaxis/api/vedaaxis.env
+ExecStart=/www/server/java/jdk-21.0.2/bin/java -Xms128m -Xmx512m -jar /opt/vedaaxis/api/vedaaxis-api.jar
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/vedaaxis/api
+
+[Install]
+WantedBy=multi-user.target

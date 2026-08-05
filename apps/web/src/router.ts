@@ -8,7 +8,7 @@ import SharedPlanView from './views/SharedPlanView.vue'
 import ExecutionsView from './views/ExecutionsView.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', redirect: '/plans' },
     { path: '/login', component: LoginView, meta: { public: true } },

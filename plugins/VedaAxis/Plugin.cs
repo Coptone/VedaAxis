@@ -54,6 +54,7 @@ public sealed class Plugin : IDalamudPlugin
     public Plugin()
     {
         configuration = PluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
+        MigrateConfiguration(configuration);
         planStore = new PlanFileStore(PluginInterface.GetPluginConfigDirectory());
         executionUploadQueue = new ExecutionUploadQueue(PluginInterface.GetPluginConfigDirectory());
         overlay = new HotbarOverlay(GameGui, Log);
@@ -73,6 +74,27 @@ public sealed class Plugin : IDalamudPlugin
         Framework.Update += OnFrameworkUpdate;
         InstallActionEffectHook();
         _ = DrainExecutionQueueAsync();
+    }
+
+    private static void MigrateConfiguration(PluginConfiguration current)
+    {
+        if (current.Version >= PluginConfiguration.CurrentVersion)
+        {
+            return;
+        }
+
+        var normalizedApiBaseUrl = current.ApiBaseUrl?.Trim().TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(normalizedApiBaseUrl)
+            || string.Equals(
+                normalizedApiBaseUrl,
+                PluginConfiguration.LegacyLocalApiBaseUrl,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            current.ApiBaseUrl = PluginConfiguration.ProductionApiBaseUrl;
+        }
+
+        current.Version = PluginConfiguration.CurrentVersion;
+        PluginInterface.SavePluginConfig(current);
     }
 
     public void Dispose()

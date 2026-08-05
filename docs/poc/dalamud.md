@@ -28,7 +28,7 @@
 - 本次没有同时记录完整版本信息、诊断 JSONL、真实开怪/脱战事件和全场景矩阵，因此仅作为正向观察，不将 `POC-01` 或 `POC-02` 标记为已完成。
 - 项目所有者随后确认 O8S 自动战斗生命周期冒烟验证成功，证明真实 `InCombat` 自动启动主路径可用；尚未提交重复事件、脱战、团灭/重开、完成/退出、一次性执行批次及版本诊断材料，因此仍不将 `POC-01` 标记为完成。
 
-## 当前代码状态（0.1.5，2026-08-05）
+## 当前代码状态（0.1.6，2026-08-06）
 
 - `VedaAxis.Core` 已实现任务状态机、晚到补记、重置/取消、成功高亮自动清理和时间锚点纠偏。
 - 插件已按 SDK 15 / .NET 10 编译，通过 `AddonActionBarBase.ActionBarSlotVector` 定位可见槽位，以前景绘制层描边，不修改节点和输入。
@@ -36,15 +36,16 @@
 - `/vedaaxis start|reset|reload` 可加载配置目录中的 `active-plan.json` 并进行示例预览。
 - 计划契约 1.2 已携带 Territory、阶段与机制；O8S 测试计划使用 Territory 755。插件监听 `ConditionFlag.InCombat`、团灭/重新开始和副本完成事件，显示当前/计划区域和拒绝原因，重复开战事件不会重置正在运行的时间轴。
 - 脱战延迟、团灭/重开、副本完成和跨区都会结束或清理自动运行，并通过生命周期状态保证一把战斗最多生成一次执行批次；真实副本自动启停仍待实机闭环。
-- 本地 `0.1.5` Release 包 SHA-256：`654BB981621A3357AEA37795720F463D678E18184AE54C55AB3B7DE141F74288`；发布后还需核对远程 ZIP 与该值一致。
+- `0.1.6` 把新安装的 API 默认地址设为 `https://coptone.link/VedaAxis`；升级时仅迁移空地址或旧的 `http://localhost:8080` 默认值，用户自定义地址不会被覆盖。
+- Release 包的 SHA-256 在每次构建后记录并与公网下载文件核对；编译与哈希一致仍不等同于实机验收。
 - 编译通过不等于实机通过；上述实机矩阵尚未执行，故结论仍为 `POC_PENDING`。
 
 ## 从 GitHub 安装测试版
 
 1. 在游戏中执行 `/xlsettings`，打开 `Experimental`。
 2. 在 `Custom Plugin Repositories` 中添加：
-   `https://cdn.jsdelivr.net/gh/Coptone/VedaAxis@latest/pluginmaster.json`
+   `https://coptone.link/VedaAxis/pluginmaster.json`
 3. 保存设置，执行 `/xlplugins`，搜索并安装 `VedaAxis`。
 4. 新版本发布后，Dalamud 会通过同一仓库地址获取更新。
 
-根目录的 `pluginmaster.json` 是仓库索引，`repository/VedaAxis.zip` 是实际插件包。Dalamud 使用同一分支上的 raw 直链读取两者，避免国服环境访问 GitHub Release 重定向失败；正式 Release 仍保留用于版本归档和人工下载。
+根目录的 `pluginmaster.json` 是仓库索引，`repository/VedaAxis.zip` 是实际插件包。Dalamud 通过 `coptone.link` 的同源 HTTPS 直链读取两者，避免 GitHub Release 重定向和跨网可达性问题；正式 GitHub Release 仍保留用于版本归档和人工下载。

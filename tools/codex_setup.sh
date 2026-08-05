@@ -14,7 +14,7 @@ required_command() {
 required_command java
 required_command mvn
 required_command node
-required_command corepack
+required_command npm
 required_command python
 required_command curl
 required_command unzip
@@ -34,8 +34,7 @@ fi
 
 mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
-corepack enable --install-directory "$HOME/.local/bin"
-corepack prepare pnpm@11.9.0 --activate
+npm install --global --prefix "$HOME/.local" pnpm@11.9.0
 pnpm install --frozen-lockfile
 
 (

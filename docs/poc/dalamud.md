@@ -31,8 +31,8 @@
 
 1. 在游戏中执行 `/xlsettings`，打开 `Experimental`。
 2. 在 `Custom Plugin Repositories` 中添加：
-   `https://github.com/Coptone/VedaAxis/releases/latest/download/pluginmaster.json`
+   `https://raw.githubusercontent.com/Coptone/VedaAxis/codex/mvp-foundation/pluginmaster.json`
 3. 保存设置，执行 `/xlplugins`，搜索并安装 `VedaAxis`。
 4. 新版本发布后，Dalamud 会通过同一仓库地址获取更新。
 
-发布资产中的 `pluginmaster.json` 是仓库索引，`VedaAxis.zip` 是实际插件包。两者都使用 GitHub 最新正式 Release 的稳定下载地址；因此用于实机测试的 Release 不标记为 GitHub prerelease。
+根目录的 `pluginmaster.json` 是仓库索引，`repository/VedaAxis.zip` 是实际插件包。Dalamud 使用同一分支上的 raw 直链读取两者，避免国服环境访问 GitHub Release 重定向失败；正式 Release 仍保留用于版本归档和人工下载。

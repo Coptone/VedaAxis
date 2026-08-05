@@ -22,8 +22,8 @@
     "LoadPriority": 0,
     "AcceptsFeedback": true,
     "RepoUrl": "https://github.com/Coptone/VedaAxis",
-    "DownloadLinkInstall": "https://github.com/Coptone/VedaAxis/releases/latest/download/VedaAxis.zip",
-    "DownloadLinkUpdate": "https://github.com/Coptone/VedaAxis/releases/latest/download/VedaAxis.zip",
+    "DownloadLinkInstall": "https://raw.githubusercontent.com/Coptone/VedaAxis/codex/mvp-foundation/repository/VedaAxis.zip",
+    "DownloadLinkUpdate": "https://raw.githubusercontent.com/Coptone/VedaAxis/codex/mvp-foundation/repository/VedaAxis.zip",
     "DownloadLinkTesting": null,
     "IsHide": false,
     "IsTestingExclusive": false

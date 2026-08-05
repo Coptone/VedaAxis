@@ -1,4 +1,5 @@
 import type { PlanSnapshot, TimelineImportCandidate } from '../types/domain'
+import { cloneData } from './cloneData'
 
 export function applyTimelineImport(
   snapshot: PlanSnapshot,
@@ -6,7 +7,7 @@ export function applyTimelineImport(
   timelineId: string,
 ): PlanSnapshot {
   return {
-    ...structuredClone(snapshot),
+    ...cloneData(snapshot),
     schemaVersion: '1.2',
     minimumPluginVersion: '0.1.5',
     timelineId,
@@ -16,8 +17,8 @@ export function applyTimelineImport(
       reference: candidate.sourceUrl,
       confidence: 'POC_PENDING',
     },
-    phases: structuredClone(candidate.phases),
-    mechanics: structuredClone(candidate.mechanics),
+    phases: cloneData(candidate.phases),
+    mechanics: cloneData(candidate.mechanics),
     anchors: [],
     assignments: [],
   }

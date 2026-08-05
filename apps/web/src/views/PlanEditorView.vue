@@ -22,6 +22,7 @@ import {
 import { api, ApiError } from '../api/client'
 import { createTracks, formatTime } from '../lib/tracks'
 import { newId } from '../lib/ids'
+import { cloneData } from '../lib/cloneData'
 import { applyTimelineImport } from '../lib/timelineImports'
 import type {
   AbilityDefinition,
@@ -102,8 +103,8 @@ async function loadPlan() {
     name.value = details.plan.name
     snapshot.value = {
       ...details.snapshot,
-      phases: details.snapshot.phases?.length ? details.snapshot.phases : structuredClone(DEFAULT_PHASES),
-      mechanics: details.snapshot.mechanics?.length ? details.snapshot.mechanics : structuredClone(DEFAULT_MECHANICS),
+      phases: details.snapshot.phases?.length ? details.snapshot.phases : cloneData(DEFAULT_PHASES),
+      mechanics: details.snapshot.mechanics?.length ? details.snapshot.mechanics : cloneData(DEFAULT_MECHANICS),
     }
     selectedMechanicId.value = snapshot.value.mechanics[0]?.mechanicId ?? ''
   } catch (reason) {
@@ -126,8 +127,8 @@ function makeSnapshot(mode: TrackMode): PlanSnapshot {
     strategyTag: mode === 'EIGHT' ? 'O8S-POC' : 'O8S-FOUR-POC',
     trackMode: mode,
     source: { kind: 'PERSONAL', reference: null, confidence: 'UNVERIFIED' },
-    phases: structuredClone(DEFAULT_PHASES),
-    mechanics: structuredClone(DEFAULT_MECHANICS),
+    phases: cloneData(DEFAULT_PHASES),
+    mechanics: cloneData(DEFAULT_MECHANICS),
     anchors: [],
     tracks: createTracks(mode),
     assignments: [],
@@ -251,7 +252,7 @@ async function generateAiCandidate() {
 
 function applyAiCandidate() {
   if (!aiCandidate.value) return
-  snapshot.value.assignments = structuredClone(aiCandidate.value.assignments)
+  snapshot.value.assignments = cloneData(aiCandidate.value.assignments)
   snapshot.value.source = {
     kind: 'AI_CANDIDATE',
     reference: `${aiCandidate.value.provider} ${aiCandidate.value.model} · ${aiCandidate.value.candidateId}`,

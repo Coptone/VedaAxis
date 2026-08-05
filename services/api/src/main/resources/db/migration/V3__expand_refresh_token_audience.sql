@@ -1,0 +1,1 @@
+ALTER TABLE refresh_token ALTER COLUMN audience TYPE VARCHAR(80);

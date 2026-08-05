@@ -18,6 +18,7 @@ public record PlanSnapshot(
         @NotNull UUID timelineId,
         @Min(1) int timelineVersion,
         @NotNull UUID encounterId,
+        @Min(1) long territoryId,
         @NotBlank @Size(max = 80) String strategyTag,
         @NotNull TrackMode trackMode,
         @NotNull @Valid Source source,

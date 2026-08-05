@@ -8,9 +8,13 @@ public static class PlanValidator
     public static IReadOnlyList<string> Validate(PlanSnapshot plan)
     {
         List<string> issues = [];
-        if (plan.SchemaVersion != "1.0")
+        if (plan.SchemaVersion is not ("1.0" or "1.1"))
         {
             issues.Add($"不支持的计划结构版本：{plan.SchemaVersion}");
+        }
+        if (plan.SchemaVersion == "1.1" && plan.TerritoryId == 0)
+        {
+            issues.Add("计划结构 1.1 必须包含有效的 Territory ID");
         }
 
         var expectedSlots = plan.TrackMode == TrackMode.Four ? FourSlots : EightSlots;

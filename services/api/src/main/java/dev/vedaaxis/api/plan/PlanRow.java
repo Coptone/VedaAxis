@@ -7,6 +7,7 @@ public record PlanRow(
         String ownerId,
         String name,
         String encounterId,
+        long territoryId,
         String strategyTag,
         String trackMode,
         String draftJson,

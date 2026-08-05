@@ -12,6 +12,7 @@
     "timelineId",
     "timelineVersion",
     "encounterId",
+    "territoryId",
     "strategyTag",
     "trackMode",
     "source",
@@ -20,13 +21,14 @@
     "assignments"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "minimumPluginVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "planId": { "type": "string", "format": "uuid" },
     "planVersion": { "type": "integer", "minimum": 1 },
     "timelineId": { "type": "string", "format": "uuid" },
     "timelineVersion": { "type": "integer", "minimum": 1 },
     "encounterId": { "type": "string", "format": "uuid" },
+    "territoryId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
     "strategyTag": { "type": "string", "minLength": 1, "maxLength": 80 },
     "trackMode": { "enum": ["FOUR", "EIGHT"] },
     "source": { "$ref": "#/$defs/source" },

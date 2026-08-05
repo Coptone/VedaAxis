@@ -12,11 +12,7 @@ public sealed class PluginConfiguration : IPluginConfiguration
 
     public string LocalSlot { get; set; } = "H2";
 
-    public string EncounterId { get; set; } = "c97e8840-1697-476f-a4ac-8c7996df277b";
-
-    public uint TerritoryId { get; set; } = 1363;
-
-    public string StrategyTag { get; set; } = "DMU-LPDU";
+    public string StrategyTag { get; set; } = "O8S-POC";
 
     public string TrackMode { get; set; } = "EIGHT";
 

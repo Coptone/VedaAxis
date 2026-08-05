@@ -14,22 +14,22 @@ import java.util.Optional;
 public interface PlanMapper {
     @Insert("""
             INSERT INTO mitigation_plan(
-                id, owner_id, name, encounter_id, strategy_tag, track_mode, draft_json,
+                id, owner_id, name, encounter_id, territory_id, strategy_tag, track_mode, draft_json,
                 latest_version, created_at, updated_at)
-            VALUES(#{id}, #{ownerId}, #{name}, #{encounterId}, #{strategyTag}, #{trackMode}, #{draftJson},
+            VALUES(#{id}, #{ownerId}, #{name}, #{encounterId}, #{territoryId}, #{strategyTag}, #{trackMode}, #{draftJson},
                    #{latestVersion}, #{createdAt}, #{updatedAt})
             """)
     void insertPlan(PlanRow plan);
 
     @Select("""
-            SELECT id, owner_id, name, encounter_id, strategy_tag, track_mode, draft_json,
+            SELECT id, owner_id, name, encounter_id, territory_id, strategy_tag, track_mode, draft_json,
                    latest_version, created_at, updated_at
             FROM mitigation_plan WHERE id = #{id}
             """)
     Optional<PlanRow> findPlan(@Param("id") String id);
 
     @Select("""
-            SELECT id, owner_id, name, encounter_id, strategy_tag, track_mode, draft_json,
+            SELECT id, owner_id, name, encounter_id, territory_id, strategy_tag, track_mode, draft_json,
                    latest_version, created_at, updated_at
             FROM mitigation_plan WHERE owner_id = #{ownerId} ORDER BY updated_at DESC
             """)
@@ -92,6 +92,24 @@ public interface PlanMapper {
             FROM plan_version v
             JOIN mitigation_plan p ON p.id = v.plan_id
             WHERE p.owner_id = #{ownerId}
+              AND p.territory_id = #{territoryId}
+              AND p.strategy_tag = #{strategyTag}
+              AND p.track_mode = #{trackMode}
+              AND v.status = 'ACTIVE'
+            ORDER BY v.created_at DESC
+            LIMIT 1
+            """)
+    Optional<PlanVersionRow> findLatestActiveMatchByTerritory(
+            @Param("ownerId") String ownerId,
+            @Param("territoryId") long territoryId,
+            @Param("strategyTag") String strategyTag,
+            @Param("trackMode") String trackMode);
+
+    @Select("""
+            SELECT v.id, v.plan_id, v.version_number, v.status, v.snapshot_json, v.share_code, v.created_at
+            FROM plan_version v
+            JOIN mitigation_plan p ON p.id = v.plan_id
+            WHERE p.owner_id = #{ownerId}
               AND p.encounter_id = #{encounterId}
               AND p.strategy_tag = #{strategyTag}
               AND p.track_mode = #{trackMode}
@@ -99,7 +117,7 @@ public interface PlanMapper {
             ORDER BY v.created_at DESC
             LIMIT 1
             """)
-    Optional<PlanVersionRow> findLatestActiveMatch(
+    Optional<PlanVersionRow> findLatestActiveMatchByEncounter(
             @Param("ownerId") String ownerId,
             @Param("encounterId") String encounterId,
             @Param("strategyTag") String strategyTag,

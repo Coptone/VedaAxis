@@ -1,16 +1,17 @@
 {
-  "schemaVersion": "1.0",
-  "minimumPluginVersion": "0.1.0",
+  "schemaVersion": "1.1",
+  "minimumPluginVersion": "0.1.4",
   "planId": "0f4b3bc6-3095-4a32-85f8-02c367e1c177",
   "planVersion": 1,
   "timelineId": "ae10b230-ff1a-45df-b8fa-a720e66b4c69",
   "timelineVersion": 1,
-  "encounterId": "c97e8840-1697-476f-a4ac-8c7996df277b",
-  "strategyTag": "DMU-LPDU",
+  "encounterId": "9789ba9a-b761-4c44-b179-2e3e86ee0d3b",
+  "territoryId": 755,
+  "strategyTag": "O8S-POC",
   "trackMode": "EIGHT",
   "source": {
     "kind": "IMPORTED",
-    "reference": "https://github.com/Nainaiowo/dmu-mits",
+    "reference": "https://na.finalfantasyxiv.com/lodestone/playguide/db/duty/28d9a03c886/",
     "confidence": "POC_PENDING"
   },
   "anchors": [],

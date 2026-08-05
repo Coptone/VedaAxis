@@ -32,6 +32,7 @@ public sealed record PlanSnapshot(
     Guid TimelineId,
     int TimelineVersion,
     Guid EncounterId,
+    uint TerritoryId,
     string StrategyTag,
     TrackMode TrackMode,
     PlanSource Source,

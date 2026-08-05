@@ -14,9 +14,9 @@ internal static class ExamplePlan
         var h2 = tracks.Single(track => track.Slot == "H2");
 
         return new PlanSnapshot(
-            "1.0", "0.1.0", Guid.NewGuid(), 1, Guid.NewGuid(), 1,
-            Guid.Parse("c97e8840-1697-476f-a4ac-8c7996df277b"), "DMU-POC", TrackMode.Eight,
-            new PlanSource("IMPORTED", "https://github.com/Nainaiowo/dmu-mits", "POC_PENDING"),
+            "1.1", "0.1.4", Guid.NewGuid(), 1, Guid.NewGuid(), 1,
+            Guid.Parse("9789ba9a-b761-4c44-b179-2e3e86ee0d3b"), 755, "O8S-POC", TrackMode.Eight,
+            new PlanSource("IMPORTED", "https://na.finalfantasyxiv.com/lodestone/playguide/db/duty/28d9a03c886/", "POC_PENDING"),
             [],
             tracks,
             [

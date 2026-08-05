@@ -31,11 +31,12 @@ import type {
   TrackMode,
 } from '../types/domain'
 
-const DMU_ENCOUNTER_ID = 'c97e8840-1697-476f-a4ac-8c7996df277b'
+const O8S_ENCOUNTER_ID = '9789ba9a-b761-4c44-b179-2e3e86ee0d3b'
+const O8S_TERRITORY_ID = 755
 const route = useRoute()
 const router = useRouter()
 const planId = ref(typeof route.params.planId === 'string' ? route.params.planId : '')
-const name = ref('DMU 八人减伤计划')
+const name = ref('O8S 自动战斗 PoC')
 const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 const abilities = ref<AbilityDefinition[]>([])
 const selectedMechanicId = ref('0d80a50c-cd3a-4569-a7ce-4766612e3316')
@@ -97,14 +98,15 @@ async function loadPlan() {
 
 function makeSnapshot(mode: TrackMode): PlanSnapshot {
   return {
-    schemaVersion: '1.0',
-    minimumPluginVersion: '0.1.0',
+    schemaVersion: '1.1',
+    minimumPluginVersion: '0.1.4',
     planId: newId(),
     planVersion: 1,
     timelineId: newId(),
     timelineVersion: 1,
-    encounterId: DMU_ENCOUNTER_ID,
-    strategyTag: mode === 'EIGHT' ? 'DMU-LPDU' : 'FOUR-PLAYER',
+    encounterId: O8S_ENCOUNTER_ID,
+    territoryId: O8S_TERRITORY_ID,
+    strategyTag: mode === 'EIGHT' ? 'O8S-POC' : 'O8S-FOUR-POC',
     trackMode: mode,
     source: { kind: 'PERSONAL', reference: null, confidence: 'UNVERIFIED' },
     anchors: [],
@@ -116,7 +118,7 @@ function makeSnapshot(mode: TrackMode): PlanSnapshot {
 function changeMode(mode: TrackMode) {
   if (planId.value || snapshot.value.trackMode === mode) return
   snapshot.value = makeSnapshot(mode)
-  name.value = mode === 'EIGHT' ? 'DMU 八人减伤计划' : '四人减伤计划'
+  name.value = mode === 'EIGHT' ? 'O8S 自动战斗 PoC' : 'O8S 四轨扩展测试'
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
 }
 
@@ -157,6 +159,7 @@ async function save() {
       const created = await api.createPlan({
         name: name.value,
         encounterId: snapshot.value.encounterId,
+        territoryId: snapshot.value.territoryId,
         strategyTag: snapshot.value.strategyTag,
         trackMode: snapshot.value.trackMode,
       })
@@ -274,6 +277,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         <button :class="{ active: snapshot.trackMode === 'EIGHT' }" :disabled="Boolean(planId)" type="button" @click="changeMode('EIGHT')"><Grid3X3 :size="15" />8 轨</button>
       </div>
       <span><Clock3 :size="14" />固定预测＋Action 锚点</span>
+      <span>Territory {{ snapshot.territoryId }}</span>
       <span class="status-badge warning"><CircleDashed :size="13" />{{ snapshot.source.confidence }}</span>
       <span>计划 v{{ snapshot.planVersion }} · 时间轴 v{{ snapshot.timelineVersion }}</span>
     </div>

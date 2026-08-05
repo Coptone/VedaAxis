@@ -38,6 +38,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PluginConfiguration configuration;
     private readonly PlanFileStore planStore;
     private readonly PlanRuntime runtime = new(new TimelineClock());
+    private readonly CombatLifecycle combatLifecycle = new();
     private readonly HotbarOverlay overlay;
     private readonly DeviceAuthorizationClient deviceAuthorizationClient = new();
     private readonly ExecutionUploadQueue executionUploadQueue;
@@ -48,7 +49,6 @@ public sealed class Plugin : IDalamudPlugin
     private string status = "尚未加载计划";
     private string deviceCode = string.Empty;
     private string deviceCodeExpiresAt = string.Empty;
-    private DateTimeOffset? fightStartedAt;
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
 
     public Plugin()
@@ -157,7 +157,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawConfig()
     {
-        ImGui.SetNextWindowSize(new Vector2(520, 420), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new Vector2(560, 520), ImGuiCond.FirstUseEver);
         if (!ImGui.Begin("VedaAxis 控制台###VedaAxisConfig", ref showConfig))
         {
             ImGui.End();
@@ -192,6 +192,17 @@ public sealed class Plugin : IDalamudPlugin
             ReloadPlan();
         }
         ImGui.SameLine();
+        if (ImGui.Button("载入 O8S 测试计划"))
+        {
+            var plan = ExamplePlan.Create();
+            planStore.Save(plan);
+            configuration.StrategyTag = plan.StrategyTag;
+            configuration.TrackMode = "EIGHT";
+            configuration.LocalSlot = "H2";
+            SaveConfiguration();
+            ReloadPlan();
+        }
+        ImGui.SameLine();
         if (ImGui.Button("开始 / 重新开始"))
         {
             runtime.Start(DateTimeOffset.UtcNow);
@@ -200,12 +211,16 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.SameLine();
         if (ImGui.Button("停止"))
         {
+            combatLifecycle.Complete();
             runtime.Stop();
+            runtime.Reset();
+            activeCasts.Clear();
             status = "时间轴已停止";
         }
 
         ImGui.TextWrapped($"计划文件：{planStore.Path}");
         ImGui.TextWrapped($"状态：{status}");
+        DrawCombatDiagnostic();
         ImGui.Separator();
         ImGui.Text("账户连接");
         var apiBaseUrl = configuration.ApiBaseUrl;
@@ -308,6 +323,28 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.End();
     }
 
+    private void DrawCombatDiagnostic()
+    {
+        var currentTerritoryId = ClientState.TerritoryType;
+        var planTerritoryId = runtime.Plan?.TerritoryId ?? 0;
+        var inCombat = Condition[ConditionFlag.InCombat];
+        ImGui.Text("自动战斗诊断");
+        ImGui.Text($"当前 Territory：{currentTerritoryId} · 计划 Territory：{planTerritoryId}");
+        if (planTerritoryId == 0)
+        {
+            ImGui.TextColored(new Vector4(1f, 0.66f, 0.25f, 1f), "旧版计划缺少 Territory；请同步在线计划或载入 O8S 测试计划");
+        }
+        else if (planTerritoryId != currentTerritoryId)
+        {
+            ImGui.TextColored(new Vector4(1f, 0.42f, 0.35f, 1f), "区域不匹配，开怪不会自动启动");
+        }
+        else
+        {
+            ImGui.TextColored(new Vector4(0.35f, 0.88f, 0.58f, 1f), "区域匹配，开怪后将自动启动");
+        }
+        ImGui.TextDisabled($"战斗状态：{(inCombat ? "InCombat" : "Idle")} · 时间轴：{(combatLifecycle.IsActive ? "Auto" : runtime.Clock.IsRunning ? "Manual" : "Stopped")}");
+    }
+
     private void ReloadPlan()
     {
         try
@@ -359,18 +396,15 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnConditionChange(ConditionFlag flag, bool value)
     {
-        if (flag != ConditionFlag.InCombat || ClientState.TerritoryType != configuration.TerritoryId)
+        if (flag != ConditionFlag.InCombat)
         {
             return;
         }
         if (value)
         {
-            runtime.Start(DateTimeOffset.UtcNow);
-            activeCasts.Clear();
-            fightStartedAt = DateTimeOffset.UtcNow;
-            status = "检测到战斗开始，时间轴已启动";
+            TryStartAutomaticFight();
         }
-        else
+        else if (combatLifecycle.IsActive)
         {
             _ = FinalizeAfterCombatExitAsync();
         }
@@ -395,7 +429,23 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if (!runtime.Clock.IsRunning || ClientState.TerritoryType != configuration.TerritoryId)
+        if (Condition[ConditionFlag.InCombat] && !combatLifecycle.IsActive)
+        {
+            TryStartAutomaticFight();
+        }
+
+        var planTerritoryId = runtime.Plan?.TerritoryId ?? 0;
+        if (combatLifecycle.IsActive && planTerritoryId != 0 && ClientState.TerritoryType != planTerritoryId)
+        {
+            FinalizeFight("ABANDONED");
+            runtime.Stop();
+            runtime.Reset();
+            activeCasts.Clear();
+            status = $"区域已变化为 {ClientState.TerritoryType}，时间轴已结束";
+            return;
+        }
+
+        if (!runtime.Clock.IsRunning || planTerritoryId == 0 || ClientState.TerritoryType != planTerritoryId)
         {
             activeCasts.Clear();
             return;
@@ -483,6 +533,11 @@ public sealed class Plugin : IDalamudPlugin
             status = "请先连接 VedaAxis 账户";
             return;
         }
+        if (Condition[ConditionFlag.InCombat])
+        {
+            status = "战斗中不执行网络同步，请脱战后重试";
+            return;
+        }
 
         status = "正在同步已发布个人计划…";
         try
@@ -521,10 +576,15 @@ public sealed class Plugin : IDalamudPlugin
 
     private Task<PlanSnapshot> TryMatchPlanAsync(string accessToken, CancellationToken cancellationToken)
     {
+        var territoryId = ClientState.TerritoryType;
+        if (territoryId == 0)
+        {
+            throw new InvalidOperationException("无法确定计划 Territory，请先进入目标副本或载入测试计划");
+        }
         return deviceAuthorizationClient.MatchPlanAsync(
             configuration.ApiBaseUrl,
             accessToken,
-            configuration.EncounterId,
+            territoryId,
             configuration.StrategyTag,
             configuration.TrackMode,
             cancellationToken);
@@ -532,23 +592,23 @@ public sealed class Plugin : IDalamudPlugin
 
     private void FinalizeFight(string result)
     {
-        if (fightStartedAt is not { } startedAt || runtime.Plan is null)
+        var startedAt = combatLifecycle.Complete();
+        if (startedAt is null || runtime.Plan is null)
         {
             return;
         }
-        fightStartedAt = null;
         if (configuration.DeviceId is null || runtime.Plan.Source.Kind == "IMPORTED")
         {
             return;
         }
-        executionUploadQueue.Enqueue(runtime, startedAt, DateTimeOffset.UtcNow, result);
+        executionUploadQueue.Enqueue(runtime, startedAt.Value, DateTimeOffset.UtcNow, result);
         _ = DrainExecutionQueueAsync();
     }
 
     private async Task FinalizeAfterCombatExitAsync()
     {
         await Task.Delay(1_500);
-        if (Condition[ConditionFlag.InCombat] || fightStartedAt is null)
+        if (Condition[ConditionFlag.InCombat] || !combatLifecycle.IsActive)
         {
             return;
         }
@@ -557,6 +617,30 @@ public sealed class Plugin : IDalamudPlugin
         runtime.Reset();
         activeCasts.Clear();
         status = "检测到脱战，运行状态已清理";
+    }
+
+    private void TryStartAutomaticFight()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var decision = combatLifecycle.TryStart(
+            configuration.Enabled, runtime.Plan, ClientState.TerritoryType, now);
+        if (decision.Started)
+        {
+            runtime.Start(now);
+            activeCasts.Clear();
+            status = $"检测到战斗开始，Territory {ClientState.TerritoryType} 时间轴已自动启动";
+            return;
+        }
+
+        status = decision.Rejection switch
+        {
+            CombatStartRejection.Disabled => "检测到战斗，但插件高亮已禁用",
+            CombatStartRejection.PlanMissing => "检测到战斗，但尚未加载有效计划",
+            CombatStartRejection.TerritoryMissing => "检测到战斗，但旧版计划缺少 Territory",
+            CombatStartRejection.TerritoryMismatch => $"检测到战斗，但当前 Territory {ClientState.TerritoryType} 与计划 {runtime.Plan?.TerritoryId ?? 0} 不匹配",
+            CombatStartRejection.AlreadyActive => status,
+            _ => status,
+        };
     }
 
     private async Task DrainExecutionQueueAsync()

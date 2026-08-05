@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   CircleDashed,
   Clock3,
+  FileDown,
   Grid2X2,
   Grid3X3,
   Lock,
@@ -21,13 +22,16 @@ import {
 import { api, ApiError } from '../api/client'
 import { createTracks, formatTime } from '../lib/tracks'
 import { newId } from '../lib/ids'
+import { applyTimelineImport } from '../lib/timelineImports'
 import type {
   AbilityDefinition,
   AiCandidate,
   Assignment,
-  Mechanic,
   PlanSnapshot,
   RuleValidationResult,
+  TimelineImportCandidate,
+  TimelineMechanic,
+  TimelinePhase,
   TrackMode,
 } from '../types/domain'
 
@@ -47,16 +51,24 @@ const aiCandidate = ref<AiCandidate | null>(null)
 const busy = ref(false)
 const message = ref('')
 const error = ref('')
+const importOpen = ref(false)
+const importUrl = ref('https://raalm.com/m-spec/timelinev2.html?boss=dancing-mad&spec=sage-sage&buddy=0')
+const includeRecommendations = ref(true)
+const importCandidate = ref<TimelineImportCandidate | null>(null)
 
-const mechanics: Mechanic[] = [
-  { id: '0d80a50c-cd3a-4569-a7ce-4766612e3316', phase: 'P1', name: '呼啸爆破', timeMs: 38_000, damageType: '魔法', target: '全体', confidence: 'REVIEWED' },
-  { id: 'a6504b58-cb5b-408a-866f-e659912be1d0', phase: 'P1', name: '裁制之光', timeMs: 62_000, damageType: '魔法', target: '全体', confidence: 'UNVERIFIED' },
-  { id: 'd5c80602-c4b4-46ba-9e99-19c5ebf5f3c8', phase: 'P1', name: '超驱动', timeMs: 69_000, damageType: '特殊', target: '连续目标', confidence: 'UNVERIFIED' },
-  { id: '223e1b3c-ceca-4b62-86b7-90cd7c83b995', phase: 'P1', name: '重力弹', timeMs: 105_000, damageType: '魔法', target: '分组', confidence: 'UNVERIFIED' },
-  { id: 'dffb0bc5-77da-4aa5-9490-71b44804f89e', phase: 'P1', name: '强重力', timeMs: 121_000, damageType: '魔法', target: '全体', confidence: 'UNVERIFIED' },
+const DEFAULT_PHASES: TimelinePhase[] = [
+  { phaseId: '4270bbba-f402-4cc4-bb27-0d566815dd0d', externalId: 'O8S-P1', name: 'P1', plannedAtMs: 0, confidence: 'UNVERIFIED' },
+]
+const DEFAULT_MECHANICS: TimelineMechanic[] = [
+  { mechanicId: '0d80a50c-cd3a-4569-a7ce-4766612e3316', externalId: null, phase: 'P1', name: '呼啸爆破', plannedAtMs: 38_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'REVIEWED' },
+  { mechanicId: 'a6504b58-cb5b-408a-866f-e659912be1d0', externalId: null, phase: 'P1', name: '裁制之光', plannedAtMs: 62_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'UNVERIFIED' },
+  { mechanicId: 'd5c80602-c4b4-46ba-9e99-19c5ebf5f3c8', externalId: null, phase: 'P1', name: '超驱动', plannedAtMs: 69_000, durationMs: 0, type: 'MECHANIC', damageType: 'SPECIAL', target: '连续目标', actionId: null, confidence: 'UNVERIFIED' },
+  { mechanicId: '223e1b3c-ceca-4b62-86b7-90cd7c83b995', externalId: null, phase: 'P1', name: '重力弹', plannedAtMs: 105_000, durationMs: 0, type: 'MECHANIC', damageType: 'MAGICAL', target: '分组', actionId: null, confidence: 'UNVERIFIED' },
+  { mechanicId: 'dffb0bc5-77da-4aa5-9490-71b44804f89e', externalId: null, phase: 'P1', name: '强重力', plannedAtMs: 121_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'UNVERIFIED' },
 ]
 
-const selectedMechanic = computed(() => mechanics.find((item) => item.id === selectedMechanicId.value) ?? mechanics[0])
+const mechanics = computed(() => snapshot.value.mechanics)
+const selectedMechanic = computed(() => mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value) ?? mechanics.value[0] ?? DEFAULT_MECHANICS[0]!)
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
 const aiDiff = computed(() => {
@@ -88,7 +100,12 @@ async function loadPlan() {
   try {
     const details = await api.plan(planId.value)
     name.value = details.plan.name
-    snapshot.value = details.snapshot
+    snapshot.value = {
+      ...details.snapshot,
+      phases: details.snapshot.phases?.length ? details.snapshot.phases : structuredClone(DEFAULT_PHASES),
+      mechanics: details.snapshot.mechanics?.length ? details.snapshot.mechanics : structuredClone(DEFAULT_MECHANICS),
+    }
+    selectedMechanicId.value = snapshot.value.mechanics[0]?.mechanicId ?? ''
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : '计划加载失败'
   } finally {
@@ -98,8 +115,8 @@ async function loadPlan() {
 
 function makeSnapshot(mode: TrackMode): PlanSnapshot {
   return {
-    schemaVersion: '1.1',
-    minimumPluginVersion: '0.1.4',
+    schemaVersion: '1.2',
+    minimumPluginVersion: '0.1.5',
     planId: newId(),
     planVersion: 1,
     timelineId: newId(),
@@ -109,6 +126,8 @@ function makeSnapshot(mode: TrackMode): PlanSnapshot {
     strategyTag: mode === 'EIGHT' ? 'O8S-POC' : 'O8S-FOUR-POC',
     trackMode: mode,
     source: { kind: 'PERSONAL', reference: null, confidence: 'UNVERIFIED' },
+    phases: structuredClone(DEFAULT_PHASES),
+    mechanics: structuredClone(DEFAULT_MECHANICS),
     anchors: [],
     tracks: createTracks(mode),
     assignments: [],
@@ -127,14 +146,14 @@ function addAssignment() {
   const mechanic = selectedMechanic.value
   const assignment: Assignment = {
     assignmentId: newId(),
-    mechanicId: mechanic.id,
+    mechanicId: mechanic.mechanicId,
     trackId: selectedTrackId.value,
     actionId: selectedAbilityId.value,
     anchorId: null,
-    highlightAtMs: mechanic.timeMs - 12_000,
-    earliestUseAtMs: mechanic.timeMs - 8_000,
-    latestUseAtMs: mechanic.timeMs - 1_000,
-    impactAtMs: mechanic.timeMs,
+    highlightAtMs: Math.max(0, mechanic.plannedAtMs - 12_000),
+    earliestUseAtMs: Math.max(0, mechanic.plannedAtMs - 8_000),
+    latestUseAtMs: Math.max(0, mechanic.plannedAtMs - 1_000),
+    impactAtMs: mechanic.plannedAtMs,
     locked: false,
     confirmationStrategy: abilityMap.value.get(selectedAbilityId.value)?.confirmationStrategy ?? 'ACTION_EFFECT',
     fallbacks: [],
@@ -243,6 +262,37 @@ function applyAiCandidate() {
   message.value = 'AI 候选已应用到本地草稿，需再次保存或发布'
 }
 
+async function previewMSpecImport() {
+  busy.value = true
+  error.value = ''
+  message.value = ''
+  importCandidate.value = null
+  try {
+    importCandidate.value = await api.importMSpecTimeline(importUrl.value, includeRecommendations.value)
+    message.value = `已获取 ${importCandidate.value.stats.mechanicCount} 个机制，尚未应用`
+  } catch (reason) {
+    error.value = reason instanceof ApiError ? reason.message : 'M-Spec 候选获取失败'
+  } finally {
+    busy.value = false
+  }
+}
+
+function applyMSpecImport() {
+  if (!importCandidate.value) return
+  const removedAssignments = snapshot.value.assignments.length
+  snapshot.value = applyTimelineImport(snapshot.value, importCandidate.value, newId())
+  selectedMechanicId.value = snapshot.value.mechanics[0]?.mechanicId ?? ''
+  selectedAssignment.value = null
+  validation.value = null
+  importCandidate.value = null
+  importOpen.value = false
+  message.value = `M-Spec 候选已应用到本地草稿${removedAssignments ? `，已清除 ${removedAssignments} 个旧任务` : ''}；尚未保存或发布`
+}
+
+function damageTypeLabel(type: TimelineMechanic['damageType']) {
+  return ({ UNKNOWN: '未知', MAGICAL: '魔法', PHYSICAL: '物理', SPECIAL: '特殊' } as const)[type]
+}
+
 function fallbackAbilities(): AbilityDefinition[] {
   return [
     { actionId: 7535, name: '雪仇 / Reprisal', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED' },
@@ -266,6 +316,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         <span v-if="message" class="inline-message"><CheckCircle2 :size="15" />{{ message }}</span>
         <button class="secondary-button" type="button" :disabled="busy" @click="save"><Save :size="16" />保存草稿</button>
         <button class="secondary-button" type="button" :disabled="busy" @click="validate"><Shield :size="16" />规则校验</button>
+        <button class="secondary-button" type="button" :disabled="busy" @click="importOpen = !importOpen"><FileDown :size="16" />导入时间轴</button>
         <button class="secondary-button" type="button" :disabled="busy" @click="generateAiCandidate"><Sparkles :size="16" />AI 候选</button>
         <button class="primary-button" type="button" :disabled="busy" @click="publish"><Send :size="16" />发布版本</button>
       </div>
@@ -284,18 +335,55 @@ function fallbackAbilities(): AbilityDefinition[] {
 
     <p v-if="error" class="editor-error"><AlertTriangle :size="16" />{{ error }}</p>
 
+    <section v-if="importOpen" class="timeline-import-panel">
+      <header>
+        <div><p class="eyebrow">M-SPEC REFERENCE IMPORT</p><h2>导入外部时间轴候选</h2></div>
+        <span class="status-badge warning">不会自动保存或发布</span>
+      </header>
+      <div class="timeline-import-form">
+        <label>M-Spec 时间轴 URL
+          <input v-model.trim="importUrl" type="url" placeholder="https://raalm.com/m-spec/timelinev2.html?boss=...&spec=..." />
+        </label>
+        <label class="import-checkbox"><input v-model="includeRecommendations" type="checkbox" />匿名聚合减伤使用窗口（会额外读取公开样本）</label>
+        <button class="primary-button" type="button" :disabled="busy || !importUrl" @click="previewMSpecImport"><FileDown :size="16" />获取候选</button>
+      </div>
+      <div v-if="importCandidate" class="timeline-import-preview">
+        <div class="import-stats">
+          <span><b>{{ importCandidate.stats.phaseCount }}</b>阶段</span>
+          <span><b>{{ importCandidate.stats.mechanicCount }}</b>机制</span>
+          <span><b>{{ importCandidate.stats.actionIdCount }}</b>Action 锚点</span>
+          <span><b>{{ importCandidate.stats.recommendationCount }}</b>匿名窗口</span>
+        </div>
+        <p v-for="warning in importCandidate.warnings" :key="warning" class="import-warning"><AlertTriangle :size="14" />{{ warning }}</p>
+        <div v-if="importCandidate.recommendations.length" class="recommendation-preview">
+          <header><b>减伤窗口预览</b><small>显示前 12 项；相对各样本阶段起点</small></header>
+          <div v-for="window in importCandidate.recommendations.slice(0, 12)" :key="`${window.spellId}-${window.phase}-${window.occurrence}`">
+            <b>{{ window.spellName }}</b>
+            <span>{{ window.phase }} 第 {{ window.occurrence }} 次</span>
+            <time>{{ formatTime(window.medianPhaseTimeMs) }}</time>
+            <small>{{ formatTime(window.p25PhaseTimeMs) }}–{{ formatTime(window.p75PhaseTimeMs) }} · n={{ window.sampleCount }}</small>
+          </div>
+        </div>
+        <div class="candidate-actions">
+          <button class="primary-button" type="button" @click="applyMSpecImport">应用候选并替换当前时间轴</button>
+          <button class="secondary-button" type="button" @click="importCandidate = null">放弃候选</button>
+          <small>应用会清空 {{ snapshot.assignments.length }} 个旧任务和 {{ snapshot.anchors.length }} 个旧锚点。</small>
+        </div>
+      </div>
+    </section>
+
     <div class="editor-workspace">
       <aside class="mechanic-panel">
-        <header><div><p class="eyebrow">TIMELINE</p><h2>DMU · P1</h2></div><span>{{ mechanics.length }} 项</span></header>
+        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ snapshot.source.kind === 'IMPORTED' ? 'M-Spec 候选' : 'O8S · P1' }}</h2></div><span>{{ mechanics.length }} 项</span></header>
         <button
           v-for="mechanic in mechanics"
-          :key="mechanic.id"
-          :class="['mechanic-item', { active: selectedMechanicId === mechanic.id }]"
+          :key="mechanic.mechanicId"
+          :class="['mechanic-item', { active: selectedMechanicId === mechanic.mechanicId }]"
           type="button"
-          @click="selectedMechanicId = mechanic.id"
+          @click="selectedMechanicId = mechanic.mechanicId"
         >
-          <time>{{ formatTime(mechanic.timeMs) }}</time>
-          <span><b>{{ mechanic.name }}</b><small>{{ mechanic.damageType }} · {{ mechanic.target }}</small></span>
+          <time>{{ formatTime(mechanic.plannedAtMs) }}</time>
+          <span><b>{{ mechanic.name }}</b><small>{{ damageTypeLabel(mechanic.damageType) }} · {{ mechanic.target }}</small></span>
           <i :class="mechanic.confidence.toLowerCase()"></i>
         </button>
         <div class="timeline-legend"><span><i class="reviewed"></i>已复核</span><span><i class="unverified"></i>待实证</span></div>
@@ -304,9 +392,9 @@ function fallbackAbilities(): AbilityDefinition[] {
       <section class="assignment-board">
         <header class="board-header">
           <div>
-            <p class="eyebrow">{{ selectedMechanic.phase }} · {{ formatTime(selectedMechanic.timeMs) }}</p>
+            <p class="eyebrow">{{ selectedMechanic.phase }} · {{ formatTime(selectedMechanic.plannedAtMs) }}</p>
             <h2>{{ selectedMechanic.name }}</h2>
-            <p>{{ selectedMechanic.damageType }}伤害 · {{ selectedMechanic.target }} · 命中 {{ formatTime(selectedMechanic.timeMs) }}</p>
+            <p>{{ damageTypeLabel(selectedMechanic.damageType) }}伤害 · {{ selectedMechanic.target }} · 命中 {{ formatTime(selectedMechanic.plannedAtMs) }}</p>
           </div>
           <span class="confidence-chip">{{ selectedMechanic.confidence }}</span>
         </header>

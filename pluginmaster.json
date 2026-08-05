@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.4.0",
+    "AssemblyVersion": "0.1.5.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "新增 O8S（Territory 755）测试计划与计划契约 1.1；开怪自动启动，脱战、团灭和副本完成自动结束；控制台显示当前/计划区域及拒绝启动原因；在线计划按当前 Territory 匹配。",
+    "Changelog": "支持计划契约 1.2 的阶段与机制数据；管理端新增 M-Spec URL 候选导入、匿名减伤窗口预览和人工应用；保留 O8S 自动生命周期与只读热键栏高亮。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1785935861,
+    "LastUpdate": 1785941380,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

@@ -8,13 +8,13 @@ public static class PlanValidator
     public static IReadOnlyList<string> Validate(PlanSnapshot plan)
     {
         List<string> issues = [];
-        if (plan.SchemaVersion is not ("1.0" or "1.1"))
+        if (plan.SchemaVersion is not ("1.0" or "1.1" or "1.2"))
         {
             issues.Add($"不支持的计划结构版本：{plan.SchemaVersion}");
         }
-        if (plan.SchemaVersion == "1.1" && plan.TerritoryId == 0)
+        if (plan.SchemaVersion is "1.1" or "1.2" && plan.TerritoryId == 0)
         {
-            issues.Add("计划结构 1.1 必须包含有效的 Territory ID");
+            issues.Add("计划结构 1.1 及以上必须包含有效的 Territory ID");
         }
 
         var expectedSlots = plan.TrackMode == TrackMode.Four ? FourSlots : EightSlots;
@@ -25,6 +25,12 @@ public static class PlanValidator
         }
 
         var trackIds = plan.Tracks.Select(track => track.TrackId).ToHashSet();
+        var mechanics = plan.Mechanics ?? [];
+        var mechanicIds = mechanics.Select(mechanic => mechanic.MechanicId).ToHashSet();
+        if (mechanicIds.Count != mechanics.Count)
+        {
+            issues.Add("时间轴机制 ID 重复");
+        }
         var anchorIds = plan.Anchors.Select(anchor => anchor.AnchorId).ToHashSet();
         if (anchorIds.Count != plan.Anchors.Count)
         {
@@ -39,6 +45,10 @@ public static class PlanValidator
             if (!trackIds.Contains(assignment.TrackId))
             {
                 issues.Add($"任务 {assignment.AssignmentId} 引用了不存在的轨道");
+            }
+            if (mechanicIds.Count > 0 && !mechanicIds.Contains(assignment.MechanicId))
+            {
+                issues.Add($"任务 {assignment.AssignmentId} 引用了不存在的时间轴机制");
             }
             if (assignment.AnchorId is { } anchorId && !anchorIds.Contains(anchorId))
             {

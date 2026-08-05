@@ -1,6 +1,6 @@
 {
-  "schemaVersion": "1.1",
-  "minimumPluginVersion": "0.1.4",
+  "schemaVersion": "1.2",
+  "minimumPluginVersion": "0.1.5",
   "planId": "0f4b3bc6-3095-4a32-85f8-02c367e1c177",
   "planVersion": 1,
   "timelineId": "ae10b230-ff1a-45df-b8fa-a720e66b4c69",
@@ -14,6 +14,30 @@
     "reference": "https://na.finalfantasyxiv.com/lodestone/playguide/db/duty/28d9a03c886/",
     "confidence": "POC_PENDING"
   },
+  "phases": [
+    {
+      "phaseId": "4270bbba-f402-4cc4-bb27-0d566815dd0d",
+      "externalId": "O8S-P1",
+      "name": "P1",
+      "plannedAtMs": 0,
+      "confidence": "UNVERIFIED"
+    }
+  ],
+  "mechanics": [
+    {
+      "mechanicId": "0d80a50c-cd3a-4569-a7ce-4766612e3316",
+      "externalId": null,
+      "phase": "P1",
+      "name": "呼啸爆破",
+      "plannedAtMs": 38000,
+      "durationMs": 0,
+      "type": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "全体",
+      "actionId": null,
+      "confidence": "REVIEWED"
+    }
+  ],
   "anchors": [],
   "tracks": [
     { "trackId": "7636dcc4-bb88-443a-9f36-a9b51ebc063e", "slot": "MT", "allowedJobIds": [19, 21, 32, 37], "displayName": "主坦" },

@@ -28,6 +28,7 @@ public class PlanRuleEngine {
     RuleValidationResult validate(PlanSnapshot snapshot, Map<Long, AbilityDefinition> abilities) {
         List<RuleIssue> issues = new ArrayList<>();
         validateTracks(snapshot, issues);
+        Set<UUID> mechanicIds = validateMechanics(snapshot, issues);
         Set<UUID> anchorIds = validateAnchors(snapshot, issues);
         Map<UUID, PlanSnapshot.ExecutionTrack> tracks = snapshot.tracks().stream()
                 .collect(HashMap::new, (map, track) -> map.put(track.trackId(), track), HashMap::putAll);
@@ -37,6 +38,9 @@ public class PlanRuleEngine {
             String reference = assignment.assignmentId().toString();
             if (!assignmentIds.add(assignment.assignmentId())) {
                 error(issues, "DUPLICATE_ASSIGNMENT", "任务 ID 重复", reference);
+            }
+            if (!mechanicIds.isEmpty() && !mechanicIds.contains(assignment.mechanicId())) {
+                error(issues, "UNKNOWN_MECHANIC", "任务引用了不存在的时间轴机制", reference);
             }
             PlanSnapshot.ExecutionTrack track = tracks.get(assignment.trackId());
             if (track == null) {
@@ -74,6 +78,16 @@ public class PlanRuleEngine {
 
         validateCooldowns(snapshot.assignments(), abilities, issues);
         return RuleValidationResult.from(issues);
+    }
+
+    private Set<UUID> validateMechanics(PlanSnapshot snapshot, List<RuleIssue> issues) {
+        Set<UUID> mechanicIds = new HashSet<>();
+        for (PlanSnapshot.TimelineMechanic mechanic : snapshot.mechanics()) {
+            if (!mechanicIds.add(mechanic.mechanicId())) {
+                error(issues, "DUPLICATE_MECHANIC_ID", "时间轴机制 ID 重复", mechanic.mechanicId().toString());
+            }
+        }
+        return mechanicIds;
     }
 
     private Set<UUID> validateAnchors(PlanSnapshot snapshot, List<RuleIssue> issues) {

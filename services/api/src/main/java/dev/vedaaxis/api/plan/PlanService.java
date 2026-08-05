@@ -78,7 +78,7 @@ public class PlanService {
                         PlanSnapshot.SourceKind.PERSONAL,
                         "copied-from:" + sourcePlanId,
                         PlanSnapshot.Confidence.UNVERIFIED),
-                source.anchors(), tracks, assignments);
+                source.phases(), source.mechanics(), source.anchors(), tracks, assignments);
         Instant now = Instant.now();
         PlanRow row = new PlanRow(
                 newPlanId.toString(), ownerId.toString(), sourcePlan.name() + " 副本", sourcePlan.encounterId(),
@@ -192,18 +192,18 @@ public class PlanService {
                 .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, java.util.Set.of(), slot.name()))
                 .toList();
         return new PlanSnapshot(
-                "1.1", "0.1.4", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
+                "1.2", "0.1.5", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
                 request.strategyTag().trim(), request.trackMode(),
                 new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
-                List.of(), tracks, List.of());
+                List.of(), List.of(), List.of(), tracks, List.of());
     }
 
     private PlanSnapshot authoritativeSnapshot(PlanRow plan, PlanSnapshot submitted, int version) {
         return new PlanSnapshot(
-                "1.1", "0.1.4", UUID.fromString(plan.id()), version,
+                "1.2", "0.1.5", UUID.fromString(plan.id()), version,
                 submitted.timelineId(), submitted.timelineVersion(), UUID.fromString(plan.encounterId()),
                 plan.territoryId(), submitted.strategyTag(), TrackMode.valueOf(plan.trackMode()), submitted.source(),
-                submitted.anchors(), submitted.tracks(), submitted.assignments());
+                submitted.phases(), submitted.mechanics(), submitted.anchors(), submitted.tracks(), submitted.assignments());
     }
 
     private PlanRow ownedPlan(UUID ownerId, UUID planId) {

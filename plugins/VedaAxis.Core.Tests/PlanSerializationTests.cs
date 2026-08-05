@@ -55,4 +55,37 @@ public sealed class PlanSerializationTests
         Assert.NotNull(plan);
         Assert.Equal(0u, plan.TerritoryId);
     }
+
+    [Fact]
+    public void DeserializesVersion12TimelineContent()
+    {
+        const string json = """
+                            {
+                              "schemaVersion": "1.2",
+                              "minimumPluginVersion": "0.1.5",
+                              "planId": "0f4b3bc6-3095-4a32-85f8-02c367e1c177",
+                              "planVersion": 1,
+                              "timelineId": "ae10b230-ff1a-45df-b8fa-a720e66b4c69",
+                              "timelineVersion": 2,
+                              "encounterId": "c97e8840-1697-476f-a4ac-8c7996df277b",
+                              "territoryId": 755,
+                              "strategyTag": "IMPORTED",
+                              "trackMode": "FOUR",
+                              "source": { "kind": "IMPORTED", "reference": "https://raalm.com/m-spec/timelinev2.html?boss=dancing-mad&spec=sage-sage", "confidence": "POC_PENDING" },
+                              "phases": [{ "phaseId": "4270bbba-f402-4cc4-bb27-0d566815dd0d", "externalId": "DM_P1", "name": "P1", "plannedAtMs": 0, "confidence": "POC_PENDING" }],
+                              "mechanics": [{ "mechanicId": "0d80a50c-cd3a-4569-a7ce-4766612e3316", "externalId": "dmu-001", "phase": "P1", "name": "机制", "plannedAtMs": 15000, "durationMs": 5000, "type": "RAIDWIDE", "damageType": "UNKNOWN", "target": "全体", "actionId": null, "confidence": "POC_PENDING" }],
+                              "anchors": [],
+                              "tracks": [],
+                              "assignments": []
+                            }
+                            """;
+
+        var plan = JsonSerializer.Deserialize<PlanSnapshot>(json, Options);
+
+        Assert.NotNull(plan);
+        Assert.Single(plan.Phases!);
+        Assert.Single(plan.Mechanics!);
+        Assert.Equal("机制", plan.Mechanics![0].Name);
+        Assert.Null(plan.Mechanics[0].ActionId);
+    }
 }

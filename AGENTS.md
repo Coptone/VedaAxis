@@ -74,6 +74,6 @@ GitHub `main` is the source of truth and Gitee is the domestic mirror. A plugin 
 3. Replace `repository/VedaAxis.zip` with the verified package.
 4. Update the changelog and verify the package SHA-256.
 5. Commit, push GitHub, create/push the matching `vX.Y.Z` tag, then force-sync Gitee.
-6. Verify `pluginmaster.json` and the ZIP return HTTP 200 from the configured jsDelivr URLs before asking users to update.
+6. Verify `pluginmaster.json` and the ZIP return HTTP 200 from the configured public HTTPS repository URLs before asking users to update.
 
 Do not publish credentials, local plan files, diagnostic logs containing character/account identifiers, or ignored PoC raw data.

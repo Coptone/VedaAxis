@@ -23,7 +23,7 @@
     "assignments"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.2" },
+    "schemaVersion": { "const": "1.3" },
     "minimumPluginVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "planId": { "type": "string", "format": "uuid" },
     "planVersion": { "type": "integer", "minimum": 1 },
@@ -86,12 +86,14 @@
     "phase": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phaseId", "externalId", "name", "plannedAtMs", "confidence"],
+      "required": ["phaseId", "externalId", "name", "plannedAtMs", "durationMs", "timingMode", "confidence"],
       "properties": {
         "phaseId": { "type": "string", "format": "uuid" },
         "externalId": { "type": ["string", "null"], "maxLength": 120 },
         "name": { "type": "string", "minLength": 1, "maxLength": 120 },
         "plannedAtMs": { "type": "integer", "minimum": 0 },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "timingMode": { "enum": ["ABSOLUTE", "RELATIVE"] },
         "confidence": { "enum": ["POC_PENDING", "UNVERIFIED", "REVIEWED", "VERIFIED"] }
       }
     },
@@ -156,6 +158,7 @@
         "mechanicId",
         "trackId",
         "actionId",
+        "targetTrackId",
         "highlightAtMs",
         "earliestUseAtMs",
         "latestUseAtMs",
@@ -170,6 +173,7 @@
         "trackId": { "type": "string", "format": "uuid" },
         "actionId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
         "anchorId": { "type": ["string", "null"], "format": "uuid" },
+        "targetTrackId": { "type": ["string", "null"], "format": "uuid" },
         "highlightAtMs": { "type": "integer" },
         "earliestUseAtMs": { "type": "integer" },
         "latestUseAtMs": { "type": "integer" },

@@ -49,7 +49,18 @@ public sealed record TimelinePhase(
     string? ExternalId,
     string Name,
     long PlannedAtMs,
-    string Confidence);
+    string Confidence,
+    long DurationMs = 0,
+    PhaseTimingMode TimingMode = PhaseTimingMode.Absolute);
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum PhaseTimingMode
+{
+    [JsonStringEnumMemberName("ABSOLUTE")]
+    Absolute,
+    [JsonStringEnumMemberName("RELATIVE")]
+    Relative,
+}
 
 public sealed record TimelineMechanic(
     Guid MechanicId,
@@ -102,6 +113,7 @@ public sealed record Assignment(
     long ImpactAtMs,
     bool Locked,
     ConfirmationStrategy ConfirmationStrategy,
-    IReadOnlyList<Fallback> Fallbacks);
+    IReadOnlyList<Fallback> Fallbacks,
+    Guid? TargetTrackId = null);
 
 public sealed record Fallback(Guid TrackId, uint ActionId);

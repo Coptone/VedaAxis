@@ -21,11 +21,17 @@ public class PlanService {
     private final PlanMapper mapper;
     private final ObjectMapper objectMapper;
     private final PlanRuleEngine ruleEngine;
+    private final DefaultPlanProvider defaultPlanProvider;
 
-    public PlanService(PlanMapper mapper, ObjectMapper objectMapper, PlanRuleEngine ruleEngine) {
+    public PlanService(
+            PlanMapper mapper,
+            ObjectMapper objectMapper,
+            PlanRuleEngine ruleEngine,
+            DefaultPlanProvider defaultPlanProvider) {
         this.mapper = mapper;
         this.objectMapper = objectMapper;
         this.ruleEngine = ruleEngine;
+        this.defaultPlanProvider = defaultPlanProvider;
     }
 
     @Transactional
@@ -68,7 +74,8 @@ public class PlanService {
                         assignment.fallbacks().stream()
                                 .map(fallback -> new PlanSnapshot.Fallback(
                                         trackIds.get(fallback.trackId()), fallback.actionId()))
-                                .toList()))
+                                .toList(),
+                        assignment.targetTrackId() == null ? null : trackIds.get(assignment.targetTrackId())))
                 .toList();
         PlanSnapshot copy = new PlanSnapshot(
                 source.schemaVersion(), source.minimumPluginVersion(), newPlanId, 1,
@@ -171,11 +178,13 @@ public class PlanService {
 
     public RuntimePlan matchRuntimePlan(
             UUID ownerId, long territoryId, String strategyTag, TrackMode trackMode) {
-        PlanVersionRow version = mapper.findLatestActiveMatchByTerritory(
+        return mapper.findLatestActiveMatchByTerritory(
                         ownerId.toString(), territoryId, strategyTag.trim(), trackMode.name())
-                .orElseThrow(() -> new ApiException(
-                        HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划"));
-        return new RuntimePlan(read(version.snapshotJson()), version.createdAt());
+                .map(version -> new RuntimePlan(read(version.snapshotJson()), version.createdAt()))
+                .orElseGet(() -> defaultPlanProvider.match(territoryId, strategyTag, trackMode)
+                        .map(snapshot -> new RuntimePlan(snapshot, Instant.EPOCH))
+                        .orElseThrow(() -> new ApiException(
+                                HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划")));
     }
 
     public RuntimePlan matchRuntimePlanByEncounter(
@@ -188,22 +197,30 @@ public class PlanService {
     }
 
     private PlanSnapshot emptySnapshot(UUID planId, CreatePlanRequest request) {
+        if (defaultPlanProvider.supports(request.territoryId(), request.strategyTag(), request.trackMode())) {
+            return defaultPlanProvider.create(planId);
+        }
         List<PlanSnapshot.ExecutionTrack> tracks = request.trackMode().orderedSlots().stream()
                 .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, java.util.Set.of(), slot.name()))
                 .toList();
         return new PlanSnapshot(
-                "1.2", "0.1.5", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
+                "1.3", "0.1.7", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
                 request.strategyTag().trim(), request.trackMode(),
                 new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
                 List.of(), List.of(), List.of(), tracks, List.of());
     }
 
     private PlanSnapshot authoritativeSnapshot(PlanRow plan, PlanSnapshot submitted, int version) {
+        List<PlanSnapshot.TimelinePhase> phases = submitted.phases().stream()
+                .map(phase -> new PlanSnapshot.TimelinePhase(
+                        phase.phaseId(), phase.externalId(), phase.name(), phase.plannedAtMs(), phase.confidence(),
+                        phase.durationMs(), phase.timingMode() == null ? PlanSnapshot.TimingMode.ABSOLUTE : phase.timingMode()))
+                .toList();
         return new PlanSnapshot(
-                "1.2", "0.1.5", UUID.fromString(plan.id()), version,
+                "1.3", "0.1.7", UUID.fromString(plan.id()), version,
                 submitted.timelineId(), submitted.timelineVersion(), UUID.fromString(plan.encounterId()),
                 plan.territoryId(), submitted.strategyTag(), TrackMode.valueOf(plan.trackMode()), submitted.source(),
-                submitted.phases(), submitted.mechanics(), submitted.anchors(), submitted.tracks(), submitted.assignments());
+                phases, submitted.mechanics(), submitted.anchors(), submitted.tracks(), submitted.assignments());
     }
 
     private PlanRow ownedPlan(UUID ownerId, UUID planId) {

@@ -88,4 +88,25 @@ public sealed class PlanSerializationTests
         Assert.Equal("机制", plan.Mechanics![0].Name);
         Assert.Null(plan.Mechanics[0].ActionId);
     }
+
+    [Fact]
+    public void DeserializesTheVersion13DmuP1P2DefaultPlan()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "TestData", "p1-p2-default-plan.json");
+        var plan = JsonSerializer.Deserialize<PlanSnapshot>(File.ReadAllText(path), Options);
+
+        Assert.NotNull(plan);
+        Assert.Equal("1.3", plan.SchemaVersion);
+        Assert.Equal(1363u, plan.TerritoryId);
+        Assert.Equal(2, plan.Phases?.Count);
+        Assert.All(plan.Phases!, phase =>
+        {
+            Assert.Equal(PhaseTimingMode.Absolute, phase.TimingMode);
+            Assert.True(phase.DurationMs > 0);
+        });
+        Assert.Equal(76, plan.Mechanics?.Count);
+        Assert.Equal(108, plan.Assignments.Count);
+        Assert.Equal(15, plan.Assignments.Count(assignment => assignment.TargetTrackId is not null));
+        Assert.Empty(PlanValidator.Validate(plan));
+    }
 }

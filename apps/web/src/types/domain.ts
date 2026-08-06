@@ -2,6 +2,7 @@ export type TrackMode = 'FOUR' | 'EIGHT'
 export type TrackSlot = 'T1' | 'MT' | 'ST' | 'H1' | 'H2' | 'D1' | 'D2' | 'D3' | 'D4'
 export type Confidence = 'POC_PENDING' | 'UNVERIFIED' | 'REVIEWED' | 'VERIFIED'
 export type ConfirmationStrategy = 'ACTION_EFFECT' | 'STATUS_APPLY' | 'COOLDOWN_CHANGE' | 'COMPOSITE'
+export type PhaseTimingMode = 'ABSOLUTE' | 'RELATIVE'
 
 export const TRACK_SLOTS: Record<TrackMode, TrackSlot[]> = {
   FOUR: ['T1', 'H1', 'D1', 'D2'],
@@ -27,6 +28,7 @@ export interface Assignment {
   trackId: string
   actionId: number
   anchorId: string | null
+  targetTrackId?: string | null
   highlightAtMs: number
   earliestUseAtMs: number
   latestUseAtMs: number
@@ -37,7 +39,7 @@ export interface Assignment {
 }
 
 export interface PlanSnapshot {
-  schemaVersion: '1.0' | '1.1' | '1.2'
+  schemaVersion: '1.0' | '1.1' | '1.2' | '1.3'
   minimumPluginVersion: string
   planId: string
   planVersion: number
@@ -60,6 +62,8 @@ export interface TimelinePhase {
   externalId: string | null
   name: string
   plannedAtMs: number
+  durationMs?: number
+  timingMode?: PhaseTimingMode
   confidence: Confidence
 }
 

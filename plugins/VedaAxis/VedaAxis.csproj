@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
   <PropertyGroup>
-    <Version>0.1.6</Version>
+    <Version>0.1.7</Version>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
     <Nullable>enable</Nullable>
@@ -13,5 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\VedaAxis.Core\VedaAxis.Core.csproj" />
+    <EmbeddedResource Include="..\..\data\seeds\dmu\p1-p2-default-plan.json"
+                      LogicalName="VedaAxis.DefaultPlans.dmu-p1-p2-eight.json" />
   </ItemGroup>
 </Project>

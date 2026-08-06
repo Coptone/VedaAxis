@@ -6,10 +6,22 @@ export function applyTimelineImport(
   candidate: TimelineImportCandidate,
   timelineId: string,
 ): PlanSnapshot {
+  const finalMechanicAtMs = candidate.mechanics.reduce(
+    (latest, mechanic) => Math.max(latest, mechanic.plannedAtMs + mechanic.durationMs),
+    0,
+  )
+  const phases = candidate.phases.map((phase, index) => ({
+    ...phase,
+    durationMs: Math.max(
+      1_000,
+      (candidate.phases[index + 1]?.plannedAtMs ?? finalMechanicAtMs) - phase.plannedAtMs,
+    ),
+    timingMode: 'ABSOLUTE' as const,
+  }))
   return {
     ...cloneData(snapshot),
-    schemaVersion: '1.2',
-    minimumPluginVersion: '0.1.5',
+    schemaVersion: '1.3',
+    minimumPluginVersion: '0.1.7',
     timelineId,
     timelineVersion: snapshot.timelineVersion + 1,
     source: {
@@ -17,7 +29,7 @@ export function applyTimelineImport(
       reference: candidate.sourceUrl,
       confidence: 'POC_PENDING',
     },
-    phases: cloneData(candidate.phases),
+    phases: cloneData(phases),
     mechanics: cloneData(candidate.mechanics),
     anchors: [],
     assignments: [],

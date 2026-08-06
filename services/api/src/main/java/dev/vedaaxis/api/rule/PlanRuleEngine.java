@@ -28,6 +28,7 @@ public class PlanRuleEngine {
     RuleValidationResult validate(PlanSnapshot snapshot, Map<Long, AbilityDefinition> abilities) {
         List<RuleIssue> issues = new ArrayList<>();
         validateTracks(snapshot, issues);
+        validatePhases(snapshot, issues);
         Set<UUID> mechanicIds = validateMechanics(snapshot, issues);
         Set<UUID> anchorIds = validateAnchors(snapshot, issues);
         Map<UUID, PlanSnapshot.ExecutionTrack> tracks = snapshot.tracks().stream()
@@ -46,6 +47,9 @@ public class PlanRuleEngine {
             if (track == null) {
                 error(issues, "UNKNOWN_TRACK", "任务引用了不存在的执行轨道", reference);
                 continue;
+            }
+            if (assignment.targetTrackId() != null && !tracks.containsKey(assignment.targetTrackId())) {
+                error(issues, "UNKNOWN_TARGET_TRACK", "单体任务引用了不存在的目标轨道", reference);
             }
             if (assignment.highlightAtMs() > assignment.earliestUseAtMs()) {
                 error(issues, "HIGHLIGHT_AFTER_WINDOW", "高亮时间不得晚于允许窗口起点", reference);
@@ -88,6 +92,20 @@ public class PlanRuleEngine {
             }
         }
         return mechanicIds;
+    }
+
+    private void validatePhases(PlanSnapshot snapshot, List<RuleIssue> issues) {
+        if (!"1.3".equals(snapshot.schemaVersion())) {
+            return;
+        }
+        for (PlanSnapshot.TimelinePhase phase : snapshot.phases()) {
+            if (phase.durationMs() <= 0) {
+                error(issues, "INVALID_PHASE_DURATION", "1.3 阶段必须包含有效持续时间", phase.phaseId().toString());
+            }
+            if (phase.timingMode() == null) {
+                error(issues, "PHASE_TIMING_MODE_REQUIRED", "1.3 阶段必须声明绝对或相对时间模式", phase.phaseId().toString());
+            }
+        }
     }
 
     private Set<UUID> validateAnchors(PlanSnapshot snapshot, List<RuleIssue> issues) {
@@ -135,9 +153,8 @@ public class PlanRuleEngine {
         }
         for (List<PlanSnapshot.Assignment> group : groups.values()) {
             group.sort(Comparator.comparingLong(PlanSnapshot.Assignment::earliestUseAtMs));
-            for (int index = 1; index < group.size(); index++) {
-                PlanSnapshot.Assignment previous = group.get(index - 1);
-                PlanSnapshot.Assignment current = group.get(index);
+            long nextAvailableAtMs = Long.MIN_VALUE;
+            for (PlanSnapshot.Assignment current : group) {
                 AbilityDefinition ability = abilities.get(current.actionId());
                 if (ability == null) {
                     continue;
@@ -145,10 +162,13 @@ public class PlanRuleEngine {
                 long recovery = Math.max(1, ability.maxCharges()) == 1
                         ? ability.cooldownMs()
                         : ability.cooldownMs() / ability.maxCharges();
-                if (current.earliestUseAtMs() - previous.latestUseAtMs() < recovery) {
+                long scheduledAtMs = Math.max(current.earliestUseAtMs(), nextAvailableAtMs);
+                if (scheduledAtMs > current.latestUseAtMs()) {
                     error(issues, "COOLDOWN_CONFLICT",
                             ability.name() + " 与上一任务的冷却窗口冲突", current.assignmentId().toString());
+                    continue;
                 }
+                nextAvailableAtMs = scheduledAtMs + recovery;
             }
         }
     }

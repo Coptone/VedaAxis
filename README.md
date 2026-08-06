@@ -23,9 +23,10 @@ FFXIV 团队减伤规划、个人执行提醒与复盘平台。项目按 PRD 的
 
 ## 项目进度
 
-- 当前测试版：`0.1.6`。
+- 当前测试版：`0.1.7`。
 - 公网管理端：`https://coptone.link/VedaAxis/`；API、Web 和插件发布文件均隔离在 `/VedaAxis/` 路径下。
 - FFLogs 国服 API PoC 已通过；原生热键栏高亮、国服事件链和 DMU 绝对时间轴仍在实机验收中。
+- `0.1.7` 内置来自附件减伤表的 DMU P1/P2 八轨默认计划：76 个机制、108 次施放提醒和 15 个单体目标标记；P1/P2 按绝对时间运行，来源仍为 `POC_PENDING`。
 - 详细阶段、PoC 和 PRD 验收项映射见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
 - GitHub `main` 是源代码真源，Gitee 是国内镜像；发布后两个仓库应保持同一提交和标签。
 

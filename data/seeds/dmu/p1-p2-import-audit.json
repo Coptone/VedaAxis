@@ -1,0 +1,19 @@
+{
+  "source": "attachment:p1-2.xlsx",
+  "generatedAt": "2026-08-06",
+  "workbookSheets": [
+    "P1",
+    "P2"
+  ],
+  "mechanicCount": 76,
+  "rawAssignmentCount": 112,
+  "assignmentCount": 108,
+  "targetAssignmentCount": 15,
+  "unresolvedCells": [],
+  "notes": [
+    "MT1 is treated as the MT personal-mitigation subcolumn, not a ninth execution track.",
+    "The source text 白牛青汁MT is mapped to Taurochole because the cell describes a single-target tank action; this remains POC_PENDING.",
+    "Ambiguous or non-action instructions are retained in unresolvedCells and are not converted into fake Action IDs.",
+    "One sustained effect is scheduled once when it covers multiple adjacent source mechanics; cooldown windows use effective level-100 recasts."
+  ]
+}

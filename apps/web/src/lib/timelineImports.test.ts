@@ -29,6 +29,8 @@ describe('applyTimelineImport', () => {
     expect(applied.trackMode).toBe('FOUR')
     expect(applied.tracks).toEqual(snapshot.tracks)
     expect(applied.timelineVersion).toBe(8)
+    expect(applied.schemaVersion).toBe('1.3')
+    expect(applied.phases[0]).toMatchObject({ durationMs: 20_000, timingMode: 'ABSOLUTE' })
     expect(applied.mechanics[0]?.mechanicId).toBe('m1')
     expect(applied.anchors).toEqual([])
     expect(applied.assignments).toEqual([])

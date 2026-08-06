@@ -4,9 +4,8 @@ import { useRouter } from 'vue-router'
 import { ArrowUpRight, CalendarClock, Copy, Grid2X2, Grid3X3, Plus, ShieldAlert } from 'lucide-vue-next'
 import { api, ApiError } from '../api/client'
 import type { PlanSummary, TrackMode } from '../types/domain'
+import { DMU_ENCOUNTER_ID, DMU_P1_P2_STRATEGY, DMU_TERRITORY_ID } from '../data/dmuP1P2Default'
 
-const O8S_ENCOUNTER_ID = '9789ba9a-b761-4c44-b179-2e3e86ee0d3b'
-const O8S_TERRITORY_ID = 755
 const router = useRouter()
 const plans = ref<PlanSummary[]>([])
 const loading = ref(true)
@@ -43,10 +42,10 @@ async function create(mode: TrackMode) {
   creating.value = mode
   try {
     const created = await api.createPlan({
-      name: mode === 'EIGHT' ? 'O8S 自动战斗 PoC' : 'O8S 四轨扩展测试',
-      encounterId: O8S_ENCOUNTER_ID,
-      territoryId: O8S_TERRITORY_ID,
-      strategyTag: mode === 'EIGHT' ? 'O8S-POC' : 'O8S-FOUR-POC',
+      name: mode === 'EIGHT' ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞四轨扩展草稿',
+      encounterId: DMU_ENCOUNTER_ID,
+      territoryId: DMU_TERRITORY_ID,
+      strategyTag: mode === 'EIGHT' ? DMU_P1_P2_STRATEGY : 'DMU-P1P2-FOUR',
       trackMode: mode,
     })
     await router.push(`/plans/${created.plan.id}`)
@@ -87,7 +86,7 @@ async function create(mode: TrackMode) {
       <span><Grid3X3 :size="31" /></span>
       <h2>从第一条可验证的轴开始</h2>
       <p>八轨适用于高难团队副本；四轨为后续四人内容和通用模型预留。</p>
-      <button class="primary-button" type="button" @click="create('EIGHT')"><Plus :size="17" />创建 O8S 八轨测试计划</button>
+      <button class="primary-button" type="button" @click="create('EIGHT')"><Plus :size="17" />创建妖星乱舞 P1/P2 八轨计划</button>
     </div>
     <div v-else class="plan-grid">
       <article v-for="plan in plans" :key="plan.id" class="plan-card" role="button" tabindex="0" @click="router.push(`/plans/${plan.id}`)" @keyup.enter="router.push(`/plans/${plan.id}`)">

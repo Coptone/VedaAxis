@@ -67,6 +67,12 @@ const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
 const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 
 const mechanics = computed(() => snapshot.value.mechanics)
+const timelineTitle = computed(() => {
+  if (snapshot.value.source.kind === 'IMPORTED') return 'M-Spec 候选'
+  const encounterName = snapshot.value.strategyTag.startsWith('DMU-P1P2') ? '妖星乱舞' : snapshot.value.strategyTag
+  const phaseNames = snapshot.value.phases.map((phase) => phase.name.trim()).filter(Boolean).join('/')
+  return phaseNames ? `${encounterName} · ${phaseNames}` : encounterName
+})
 const selectedMechanic = computed(() => mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value) ?? mechanics.value[0] ?? DEFAULT_MECHANICS[0]!)
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
@@ -380,7 +386,7 @@ function fallbackAbilities(): AbilityDefinition[] {
 
     <div class="editor-workspace">
       <aside class="mechanic-panel">
-        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ snapshot.source.kind === 'IMPORTED' ? 'M-Spec 候选' : 'O8S · P1' }}</h2></div><span>{{ mechanics.length }} 项</span></header>
+        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ timelineTitle }}</h2></div><span>{{ mechanics.length }} 项</span></header>
         <button
           v-for="mechanic in mechanics"
           :key="mechanic.mechanicId"

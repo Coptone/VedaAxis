@@ -20,6 +20,8 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 `0.1.9` 针对跨电脑使用体验补充了账户可见性、计划列表刷新和 2K 宽屏缩放。计划数据的服务端查询始终按账户 ID 隔离：同一登录账户应跨电脑读取同一列表；页面会显示邮箱或账户摘要，并在重新获得焦点、恢复可见及每 30 秒重新拉取。插件的热键栏和单减队友列表新增强化外圈、加粗描边与待执行脉冲，默认使用强化样式；常用轨道、轨道模式、计划类型、提示强度和服务地址改用下拉选择，自定义服务地址仍保留在高级选项。仅构建和界面检查通过不代表游戏 HUD 可读性已验收，强化提示的实机截图/诊断仍待补充。
 
+提交 `1042ff5` 继续优化 Web 计划编辑体验：预计伤害接口请求失败时，浏览器会基于当前计划的 `damageProfile`、已加载技能目录、持续时间、职业匹配、作用范围与不可叠加组做本地参考计算；减伤技能下拉框默认按执行轨道职业过滤，并保留“显示全部技能”兜底；伤害面板显示本机制安排、提前覆盖到当前命中的技能、冷却冲突和当前时间轴完整度。AI 入口改为先填写调整要求再生成候选，并继续遵守“候选不自动保存或发布”的边界。该提交已通过 Web 类型检查、25 项 Web 测试和生产构建，并只部署 Web 静态资源到 HTTPS 测试环境；API、插件清单和插件 ZIP 未更新。
+
 当前优先级：
 
 1. 为已通过的 O8S 自动启动冒烟补齐脱战/团灭/完成闭环、一次性执行批次、版本与诊断证据。
@@ -85,6 +87,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 ## 最近里程碑
 
+- 2026-08-06：提交 `1042ff5` 已推送 GitHub/Gitee `main`，并将 Web 静态构建部署到 `https://coptone.link/VedaAxis/`。公网根站、Web、`assets/index-CJJz6yNx.js`、`assets/index-D_0ZrUlK.css`、健康检查、插件清单和现有插件 ZIP 均返回 200；部署前备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis-1042ff5-20260806-212140`。本地验证使用 Node 24：`pnpm check:web` 通过、Web 25 项测试通过、`pnpm build:web` 通过。该变更未更新 API JAR、插件包或 PoC 状态。
 - `0.1.9`：提交 `4534af0` 已发布到 GitHub `v0.1.9` Release，并按主库同步到 Gitee `main` 与同名标签。Web、插件清单和 ZIP 已隔离部署到 `https://coptone.link/VedaAxis/`；公网根站、Web、健康检查、清单与 ZIP 均返回 200，清单为 `0.1.9.0`，发布 ZIP SHA-256 为 `8bbb3c73410196500501a04a8ac89bd8caa9dad798fa316c917a0fea14756796`，Web 入口引用 `index-BdHBbQHc.js` 与 `index-BQ178Wqc.css`。API 未重启且保持 `active`/`UP`；部署前静态目录备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis`，根站点未受影响。全量本地检查通过：Web 22、API 30、Python 9、Core 29 个测试及 Dalamud Release 构建；强化 HUD 的实机截图/诊断仍待补充，PoC 状态不提升。
 - `0.1.8`：提交 `521ee30` 新增 O8S Territory 755 云端联调模板、Web 快速创建、插件 DMU/O8S 快速配置和启动时设备令牌自动续期；网页可查看/撤销设备。GitHub/Gitee `main`、`v0.1.8` 标签和 GitHub Release 已同步并部署到 `https://coptone.link/VedaAxis/`。服务器 JAR SHA-256 为 `262726388b95195478f4d6643737c61b28e7298eb6febc2b72c4a49beecac62b`，插件 ZIP SHA-256 为 `9cae4d9dfeae345e4284d0fd9848bcfd61132a434b9381be32f4079bf292b88c`，Web 入口引用 `index-DAL467Di.js` 与 `index-qT93mMfu.css`；`vedaaxis-api` 为 active、`127.0.0.1:18085/actuator/health` 返回 `UP`，JAR 内 O8S 种子、登录态设备列表和 O8S 新建入口均已验证。根站点与插件发布 URL 返回 200，回滚备份位于 `/opt/vedaaxis/backups/20260806-182058-521ee30`；O8S 探针与跨网执行上传仍需实机验收。
 - 2026-08-06：伤害映射从仅扫描 AOE/死刑扩展到整张 P1/P2 时间轴。6 份去标识化公开击杀为 59 个直接伤害行生成 P95 基线；XIVAPI v2 Action 数据用于复核物理/魔法属性，FFLogs Action 组用于处理双 Action 同名技、互斥目标分支和可选晚期重复机制。17 个没有直接承伤事件的阶段/咏唱/判定行改为“时间轴标记”，普通平 A 只在坦克轨道计算。所有新值保持 `POC_PENDING`，等待实机交叉验证后再提升置信度。

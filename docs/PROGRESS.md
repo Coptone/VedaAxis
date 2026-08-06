@@ -22,6 +22,8 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 `0.1.10` 修复插件单体减伤目标识别的过窄职业匹配：默认计划的 MT/ST/H1/H2 等轨道仍保留原表格职业约束用于规则校验，但插件在当前队伍没有精确职业命中时会按轨道角色组兜底；若同角色候选超过 1 人，则不自动猜测并在设置界面显示具体原因，继续要求开打前手动选择。Core 32 项测试和 Dalamud Release 构建通过；公网插件清单与 ZIP 已更新到 `0.1.10.0`。
 
+提交 `8971c49` 将 API 技能目录扩展为 89 个正常战斗职业防护/减伤/护盾/无敌/关键增疗条目，覆盖坦克、治疗、近战、远敏、法系以及 VPR/PCT。Web 仍按执行轨道 `job_ids` 过滤技能，默认不会让一个职业看到其它职业技能；承伤模型仅把可保守表示的百分比减伤、最大生命/最大生命护盾计入数字，治疗威力护盾、无敌、Cover、格挡、纯治疗和增疗类技能会显示为复核提示，不会被错误当作已扣除伤害。
+
 提交 `1042ff5` 继续优化 Web 计划编辑体验：预计伤害接口请求失败时，浏览器会基于当前计划的 `damageProfile`、已加载技能目录、持续时间、职业匹配、作用范围与不可叠加组做本地参考计算；减伤技能下拉框默认按执行轨道职业过滤，并保留“显示全部技能”兜底；伤害面板显示本机制安排、提前覆盖到当前命中的技能、冷却冲突和当前时间轴完整度。AI 入口改为先填写调整要求再生成候选，并继续遵守“候选不自动保存或发布”的边界。该提交已通过 Web 类型检查、25 项 Web 测试和生产构建，并只部署 Web 静态资源到 HTTPS 测试环境；API、插件清单和插件 ZIP 未更新。
 
 提交 `a7dbaec` 继续调整 Web 计划编辑器的可读性：左侧机制列表改为每页 12 项的时间窗口，显示页码、当前页时间范围和本页减伤安排数，翻页时会自动选中该页第一项机制；“当前减伤后预计伤害”新增比例条，以绿色表示已被当前安排减掉的伤害比例、红色表示仍需承受的伤害比例。该提交已通过 Web 类型检查、25 项 Web 测试和生产构建，并只部署 Web 静态资源到 HTTPS 测试环境；API、插件清单和插件 ZIP 未更新。
@@ -91,6 +93,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 ## 最近里程碑
 
+- 2026-08-07：提交 `8971c49` 的完整技能目录已部署到 HTTPS API 测试环境。Flyway 从 v5 迁移到 v6，线上 `ability_definition` 回读为 89 条；机工 `Tactician`、绘灵法师 `Tempera Coat/Grassa`、召唤 `Radiant Aegis`、赤魔 `Magick Barrier`、贤者 `Eukrasian Prognosis`、占星 `Sun Sign` 等关键新增项均已回读。服务器 JAR SHA-256 为 `8C034FDE5044F817047C32A94850E8CC14F493CD88C84231CDFBEE043720D217`，`vedaaxis-api` 为 active，公网健康检查为 `UP`；部署前备份位于 `/opt/vedaaxis/backups/20260807-001018-8971c49-ability-catalog`，包含旧 JAR 和 `ability_definition` 单表 dump。本地验证通过：API 32 项测试、Web 25 项测试和 `pnpm check:web`；该变更未更新 Web 静态文件或插件 ZIP。
 - `0.1.10`：提交 `5ff8937` 已发布到 GitHub `v0.1.10` Release，并同步 GitHub/Gitee `main` 与同名标签。插件清单和 ZIP 已部署到 `https://coptone.link/VedaAxis/`；公网根站、Web、健康检查、清单和 ZIP 均返回 200，清单为 `0.1.10.0`，发布 ZIP SHA-256 为 `a601d0b62d992e788287861eeed66418f138bcd5b73c4848100bae6998f8d40c`，部署前备份位于 `/www/wwwroot/.vedaaxis-backups/plugin-5ff8937-20260806221636`。本地验证通过：Core 32 项测试及 Dalamud Release 构建 0 警告、0 错误；该版本仅修复插件单体目标识别和提示，不更新 API JAR 或 Web 静态文件。
 - 2026-08-06：提交 `a7dbaec` 已推送 GitHub/Gitee `main`，并将 Web 静态构建部署到 `https://coptone.link/VedaAxis/`。公网根站、Web、`assets/index-DNqE1KYe.js`、`assets/index-DkxHyc9n.css`、健康检查、插件清单和现有插件 ZIP 均返回 200；部署前备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis-a7dbaec-20260806215133`。本地验证使用 Node 24：`pnpm check:web` 通过、Web 25 项测试通过、`pnpm build:web` 通过。该变更未更新 API JAR、插件包或 PoC 状态。
 - 2026-08-06：提交 `1042ff5` 已推送 GitHub/Gitee `main`，并将 Web 静态构建部署到 `https://coptone.link/VedaAxis/`。公网根站、Web、`assets/index-CJJz6yNx.js`、`assets/index-D_0ZrUlK.css`、健康检查、插件清单和现有插件 ZIP 均返回 200；部署前备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis-1042ff5-20260806-212140`。本地验证使用 Node 24：`pnpm check:web` 通过、Web 25 项测试通过、`pnpm build:web` 通过。该变更未更新 API JAR、插件包或 PoC 状态。

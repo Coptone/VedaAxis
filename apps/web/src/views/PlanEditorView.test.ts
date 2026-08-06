@@ -29,6 +29,9 @@ describe('PlanEditorView', () => {
 
     expect(wrapper.get('[aria-label="计划名称"]').element).toHaveProperty('value', '妖星乱舞 P1/P2 默认减伤表')
     expect(wrapper.get('.mechanic-panel h2').text()).toBe('妖星乱舞 · P1/P2')
+    expect(wrapper.get('.mechanic-panel > header > span').text()).toBe('76 项 · 108 个减伤安排')
+    expect(wrapper.get('.assignment-board h2').text()).toBe('攻击 x4')
+    expect(wrapper.findAll('.assignment-card')).toHaveLength(8)
     expect(wrapper.findAll('.track-column')).toHaveLength(8)
   })
 })

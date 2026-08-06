@@ -94,6 +94,7 @@ export interface TimelineAnchor {
 export interface AbilityDefinition {
   actionId: number
   name: string
+  iconPath: string
   jobIds: number[]
   cooldownMs: number
   maxCharges: number

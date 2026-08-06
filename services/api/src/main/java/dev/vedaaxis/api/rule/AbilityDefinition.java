@@ -7,6 +7,7 @@ import java.util.Set;
 public record AbilityDefinition(
         long actionId,
         String name,
+        String iconPath,
         Set<Integer> jobIds,
         long cooldownMs,
         int maxCharges,

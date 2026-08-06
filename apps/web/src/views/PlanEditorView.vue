@@ -23,6 +23,7 @@ import { api, ApiError } from '../api/client'
 import { createTracks, formatTime } from '../lib/tracks'
 import { newId } from '../lib/ids'
 import { cloneData } from '../lib/cloneData'
+import { actionIconUrl } from '../lib/actionIcons'
 import { applyTimelineImport } from '../lib/timelineImports'
 import {
   DMU_ENCOUNTER_ID,
@@ -91,6 +92,7 @@ const timelineTitle = computed(() => {
 const selectedMechanic = computed(() => mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value) ?? mechanics.value[0] ?? DEFAULT_MECHANICS[0]!)
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
+const selectedAbility = computed(() => selectedAbilityId.value === null ? undefined : abilityMap.value.get(selectedAbilityId.value))
 const aiDiff = computed(() => {
   if (!aiCandidate.value) return { added: 0, removed: 0, changed: 0 }
   const current = new Map(snapshot.value.assignments.map((item) => [item.assignmentId, item]))
@@ -320,11 +322,15 @@ function damageTypeLabel(type: TimelineMechanic['damageType']) {
   return ({ UNKNOWN: '未知', MAGICAL: '魔法', PHYSICAL: '物理', SPECIAL: '特殊' } as const)[type]
 }
 
+function hideBrokenIcon(event: Event) {
+  ;(event.currentTarget as HTMLImageElement).hidden = true
+}
+
 function fallbackAbilities(): AbilityDefinition[] {
   return [
-    { actionId: 7535, name: '雪仇 / Reprisal', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED' },
-    { actionId: 24298, name: 'Kerachole', jobIds: [40], cooldownMs: 30_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED' },
-    { actionId: 24310, name: 'Holos', jobIds: [40], cooldownMs: 120_000, maxCharges: 1, durationMs: 20_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED' },
+    { actionId: 7535, name: '雪仇 / Reprisal', iconPath: 'ui/icon/000000/000806.tex', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED' },
+    { actionId: 24298, name: 'Kerachole', iconPath: 'ui/icon/003000/003666.tex', jobIds: [40], cooldownMs: 30_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED' },
+    { actionId: 24310, name: 'Holos', iconPath: 'ui/icon/003000/003678.tex', jobIds: [40], cooldownMs: 120_000, maxCharges: 1, durationMs: 20_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED' },
   ]
 }
 </script>
@@ -433,10 +439,21 @@ function fallbackAbilities(): AbilityDefinition[] {
               <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
             </select>
           </label>
-          <label>减伤技能
-            <select v-model.number="selectedAbilityId">
-              <option v-for="ability in abilities" :key="ability.actionId" :value="ability.actionId">{{ ability.name }} · {{ ability.durationMs / 1000 }}s</option>
-            </select>
+          <label class="ability-picker">减伤技能
+            <span class="ability-select">
+              <img
+                v-if="actionIconUrl(selectedAbility)"
+                class="action-icon action-icon-select"
+                :src="actionIconUrl(selectedAbility)!"
+                alt=""
+                decoding="async"
+                referrerpolicy="no-referrer"
+                @error="hideBrokenIcon"
+              />
+              <select v-model.number="selectedAbilityId">
+                <option v-for="ability in abilities" :key="ability.actionId" :value="ability.actionId">{{ ability.name }} · {{ ability.durationMs / 1000 }}s</option>
+              </select>
+            </span>
           </label>
           <label>单体目标（可选）
             <select v-model="selectedTargetTrackId">
@@ -457,7 +474,16 @@ function fallbackAbilities(): AbilityDefinition[] {
               type="button"
               @click="selectedAssignment = assignment"
             >
-              <span class="ability-dot"></span>
+              <img
+                v-if="actionIconUrl(abilityMap.get(assignment.actionId))"
+                class="action-icon action-icon-card"
+                :src="actionIconUrl(abilityMap.get(assignment.actionId))!"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+                @error="hideBrokenIcon"
+              />
               <div><b>{{ abilityMap.get(assignment.actionId)?.name ?? `Action ${assignment.actionId}` }}</b><small>{{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }}</small></div>
               <Lock v-if="assignment.locked" :size="13" />
             </button>
@@ -488,7 +514,18 @@ function fallbackAbilities(): AbilityDefinition[] {
       <aside class="inspector-panel">
         <template v-if="selectedAssignment">
           <header><div><p class="eyebrow">ASSIGNMENT</p><h2>任务窗口</h2></div><button class="icon-button danger" type="button" title="删除任务" @click="removeAssignment(selectedAssignment.assignmentId)"><Trash2 :size="16" /></button></header>
-          <div class="inspector-ability"><Sparkles :size="20" /><span><b>{{ abilityMap.get(selectedAssignment.actionId)?.name }}</b><small>Action {{ selectedAssignment.actionId }}</small></span></div>
+          <div class="inspector-ability">
+            <img
+              v-if="actionIconUrl(abilityMap.get(selectedAssignment.actionId))"
+              class="action-icon action-icon-inspector"
+              :src="actionIconUrl(abilityMap.get(selectedAssignment.actionId))!"
+              alt=""
+              decoding="async"
+              referrerpolicy="no-referrer"
+              @error="hideBrokenIcon"
+            />
+            <span><b>{{ abilityMap.get(selectedAssignment.actionId)?.name }}</b><small>Action {{ selectedAssignment.actionId }}</small></span>
+          </div>
           <label>开始高亮（毫秒）<input v-model.number="selectedAssignment.highlightAtMs" type="number" step="100" /></label>
           <label>允许起点（毫秒）<input v-model.number="selectedAssignment.earliestUseAtMs" type="number" step="100" /></label>
           <label>允许终点（毫秒）<input v-model.number="selectedAssignment.latestUseAtMs" type="number" step="100" /></label>

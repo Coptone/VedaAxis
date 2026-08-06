@@ -20,7 +20,7 @@ class PlanRuleEngineTest {
     private final Map<Long, AbilityDefinition> catalog = Map.of(
             KERACHOLE,
             new AbilityDefinition(
-                    KERACHOLE, "Kerachole", Set.of(40), 30_000, 1, 15_000,
+                    KERACHOLE, "Kerachole", "ui/icon/003000/003666.tex", Set.of(40), 30_000, 1, 15_000,
                     ConfirmationStrategy.STATUS_APPLY, "test", "VERIFIED"));
 
     @Test

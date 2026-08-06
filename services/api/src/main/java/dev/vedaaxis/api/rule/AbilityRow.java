@@ -3,6 +3,7 @@ package dev.vedaaxis.api.rule;
 public record AbilityRow(
         long actionId,
         String name,
+        String iconPath,
         String jobIds,
         long cooldownMs,
         int maxCharges,
@@ -19,7 +20,7 @@ public record AbilityRow(
                         .map(Integer::valueOf)
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
         return new AbilityDefinition(
-                actionId, name, jobs, cooldownMs, maxCharges, durationMs,
+                actionId, name, iconPath, jobs, cooldownMs, maxCharges, durationMs,
                 dev.vedaaxis.api.plan.ConfirmationStrategy.valueOf(confirmationStrategy), source, confidence);
     }
 }

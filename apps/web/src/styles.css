@@ -218,6 +218,9 @@ a { color: inherit; text-decoration: none; }
 .quick-assign { display: grid; grid-template-columns: 1fr 1.3fr 1fr auto; align-items: end; gap: 10px; margin: 18px 0; padding: 13px; background: rgba(13,31,43,.78); border: 1px solid var(--border); border-radius: 8px; }
 .quick-assign label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; }
 .quick-assign select { height: 35px; font-size: 11px; }
+.ability-picker { min-width: 0; }
+.ability-select { min-width: 0; height: 35px; display: flex; align-items: center; gap: 7px; }
+.ability-select select { min-width: 0; flex: 1; }
 .quick-assign .primary-button { height: 35px; min-height: 35px; }
 .track-grid { display: grid; grid-template-columns: repeat(4, minmax(125px, 1fr)); gap: 9px; }
 .track-column { min-height: 152px; border: 1px solid var(--border); border-radius: 8px; background: rgba(9,23,34,.72); overflow: hidden; }
@@ -226,12 +229,15 @@ a { color: inherit; text-decoration: none; }
 .track-column > header b, .track-column > header small { display: block; }
 .track-column > header b { font-size: 10px; }
 .track-column > header small { color: var(--muted); font-size: 8px; margin-top: 3px; }
-.assignment-card { width: calc(100% - 12px); margin: 7px 6px; padding: 8px; display: grid; grid-template-columns: 5px 1fr auto; align-items: center; gap: 7px; color: inherit; text-align: left; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
+.assignment-card { width: calc(100% - 12px); margin: 7px 6px; padding: 8px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 7px; color: inherit; text-align: left; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 6px; cursor: pointer; }
 .assignment-card.selected { border-color: rgba(82,212,200,.54); box-shadow: 0 0 0 2px rgba(82,212,200,.07); }
 .assignment-card b, .assignment-card small { display: block; }
 .assignment-card b { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .assignment-card small { color: var(--muted); font: 8px ui-monospace, monospace; margin-top: 4px; }
-.ability-dot { width: 4px; height: 22px; border-radius: 4px; background: var(--cyan); box-shadow: 0 0 8px rgba(82,212,200,.35); }
+.action-icon { display: block; object-fit: cover; border: 1px solid rgba(213, 239, 245, .18); border-radius: 4px; background: #102633; box-shadow: 0 1px 5px rgba(0, 0, 0, .28); }
+.action-icon-select { width: 30px; height: 30px; flex: none; }
+.action-icon-card { width: 28px; height: 28px; }
+.action-icon-inspector { width: 32px; height: 32px; flex: none; }
 .track-empty { text-align: center; color: #526977; font-size: 9px; padding: 15px 0; }
 .validation-panel { margin-top: 14px; padding: 12px; background: rgba(185,62,70,.08); border: 1px solid rgba(242,121,121,.22); border-radius: 8px; }
 .validation-panel.valid { background: rgba(65,156,120,.08); border-color: rgba(82,212,160,.2); }

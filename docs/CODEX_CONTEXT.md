@@ -30,6 +30,7 @@
 ## 3. 当前可依赖的已验证事实
 
 - 当前测试版是 `0.1.9`。
+- `0.1.9` 的发布证据：提交 `4534af0`、GitHub/Gitee `v0.1.9` 标签、GitHub Release 资产和公网 HTTPS 部署均已完成；`pluginmaster.json` 返回 `0.1.9.0`，公网 ZIP SHA-256 为 `8bbb3c73410196500501a04a8ac89bd8caa9dad798fa316c917a0fea14756796`，Web 入口为 `index-BdHBbQHc.js` 与 `index-BQ178Wqc.css`。服务器仅更新 `/www/wwwroot/VedaAxis` 静态目录，API 保持 `active`/`UP`，发布前备份为 `/www/wwwroot/.vedaaxis-backups/VedaAxis`。
 - GitHub [`Coptone/VedaAxis`](https://github.com/Coptone/VedaAxis) 的 `main` 是源代码真源；Gitee [`Need4Spd/VedaAxis`](https://gitee.com/Need4Spd/VedaAxis) 是国内镜像。
 - Dalamud 自定义仓库地址为 `https://coptone.link/VedaAxis/pluginmaster.json`；插件包地址为 `https://coptone.link/VedaAxis/release/latest/VedaAxis.zip`。
 - HTTPS 测试环境已隔离部署在 `https://coptone.link/VedaAxis/`：Web 静态文件、仅回环监听的 API 与 PostgreSQL、独立 systemd/Compose 资源和路径级 Nginx 规则均未修改根站点业务。公网健康检查、注册、登录和 M-Spec 导入已通过；数据库备份演练与插件跨网完整闭环仍未完成。

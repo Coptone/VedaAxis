@@ -88,8 +88,10 @@ const importCandidate = ref<TimelineImportCandidate | null>(null)
 const damageEstimates = ref<Record<string, DamageEstimate>>({})
 const damageEstimateBusy = ref(false)
 const damageEstimateError = ref('')
+const timelinePage = ref(0)
 let damageEstimateRequest = 0
 let damageEstimateTimer: ReturnType<typeof setTimeout> | undefined
+const TIMELINE_PAGE_SIZE = 12
 
 const DEFAULT_PHASES: TimelinePhase[] = cloneData(defaultPlan.phases)
 const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
@@ -102,6 +104,21 @@ const assignmentCountByMechanic = computed(() => {
     counts.set(assignment.mechanicId, (counts.get(assignment.mechanicId) ?? 0) + 1)
   }
   return counts
+})
+const timelinePageCount = computed(() => Math.max(1, Math.ceil(mechanics.value.length / TIMELINE_PAGE_SIZE)))
+const selectedMechanicIndex = computed(() => Math.max(0, mechanics.value.findIndex((item) => item.mechanicId === selectedMechanicId.value)))
+const pagedMechanics = computed(() => {
+  const start = timelinePage.value * TIMELINE_PAGE_SIZE
+  return mechanics.value.slice(start, start + TIMELINE_PAGE_SIZE)
+})
+const timelinePageAssignmentCount = computed(() =>
+  pagedMechanics.value.reduce((total, mechanic) => total + (assignmentCountByMechanic.value.get(mechanic.mechanicId) ?? 0), 0),
+)
+const timelinePageRangeLabel = computed(() => {
+  const first = pagedMechanics.value[0]
+  const last = pagedMechanics.value[pagedMechanics.value.length - 1]
+  if (!first || !last) return '暂无机制'
+  return `${formatTime(first.plannedAtMs)}–${formatTime(last.plannedAtMs)}`
 })
 const timelineTitle = computed(() => {
   if (snapshot.value.source.kind === 'IMPORTED') return 'M-Spec 候选'
@@ -135,6 +152,7 @@ const timelineScopeSummary = computed(() => {
   const phases = snapshot.value.phases.map((phase) => phase.name).filter(Boolean).join('/')
   return `${phases || '未分阶段'} · ${mechanics.value.length} 项机制 · ${directDamageMechanicCount.value} 项直接伤害`
 })
+const selectedDamageRatio = computed(() => damageRatio(selectedDamageEstimate.value))
 const aiDiff = computed(() => {
   if (!aiCandidate.value) return { added: 0, removed: 0, changed: 0 }
   const current = new Map(snapshot.value.assignments.map((item) => [item.assignmentId, item]))
@@ -242,6 +260,25 @@ function selectMechanic(mechanicId: string) {
   selectedAssignment.value = null
 }
 
+function setTimelinePage(page: number) {
+  timelinePage.value = Math.min(Math.max(page, 0), timelinePageCount.value - 1)
+  const firstMechanic = pagedMechanics.value[0]
+  if (firstMechanic && !pagedMechanics.value.some((mechanic) => mechanic.mechanicId === selectedMechanicId.value)) {
+    selectMechanic(firstMechanic.mechanicId)
+  }
+}
+
+function syncTimelinePageToSelection() {
+  if (!mechanics.value.length) {
+    timelinePage.value = 0
+    return
+  }
+  timelinePage.value = Math.min(
+    Math.floor(selectedMechanicIndex.value / TIMELINE_PAGE_SIZE),
+    timelinePageCount.value - 1,
+  )
+}
+
 function displayInteger(value: number | null): string {
   return value === null ? '—' : Math.round(value).toLocaleString('zh-CN')
 }
@@ -256,6 +293,22 @@ function damageRiskLabel(estimate: DamageEstimate | undefined, mechanic: Timelin
 function damageRiskClass(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic = selectedMechanic.value): string {
   if (!hasDirectDamage(mechanic)) return 'damage-risk-unclassified'
   return estimate ? `damage-risk-${estimate.riskLevel.toLowerCase()}` : 'damage-risk-calibration_required'
+}
+
+function damageRatio(estimate: DamageEstimate | undefined) {
+  const baseline = estimate?.baselineDamage ?? 0
+  const after = estimate?.damageAfterMitigation
+  if (!baseline || after === null || after === undefined) return null
+  const remaining = Math.max(0, after / baseline)
+  return {
+    mitigated: Math.max(0, 1 - Math.min(remaining, 1)),
+    remaining,
+    remainingBar: Math.min(remaining, 1),
+  }
+}
+
+function percentLabel(value: number): string {
+  return `${(value * 100).toFixed(1)}%`
 }
 
 async function refreshDamageEstimates() {
@@ -288,6 +341,7 @@ watch(
   { deep: true },
 )
 watch([selectedTrackId, showAllAbilities, abilities], ensureSelectedAbilityVisible, { deep: true })
+watch([selectedMechanicId, mechanics], syncTimelinePageToSelection, { deep: true, immediate: true })
 
 function addAssignment() {
   if (!selectedAbilityId.value || !selectedTrackId.value) return
@@ -576,8 +630,14 @@ function fallbackAbilities(): AbilityDefinition[] {
     <div class="editor-workspace">
       <aside class="mechanic-panel">
         <header><div><p class="eyebrow">TIMELINE</p><h2>{{ timelineTitle }}</h2></div><span>{{ mechanics.length }} 项 · {{ snapshot.assignments.length }} 个减伤安排</span></header>
+        <div class="timeline-pager">
+          <button class="secondary-button compact" type="button" :disabled="timelinePage === 0" @click="setTimelinePage(timelinePage - 1)">上一页</button>
+          <span>第 {{ timelinePage + 1 }} / {{ timelinePageCount }} 页</span>
+          <button class="secondary-button compact" type="button" :disabled="timelinePage + 1 >= timelinePageCount" @click="setTimelinePage(timelinePage + 1)">下一页</button>
+          <small>{{ timelinePageRangeLabel }} · 本页 {{ timelinePageAssignmentCount }} 个安排</small>
+        </div>
         <button
-          v-for="mechanic in mechanics"
+          v-for="mechanic in pagedMechanics"
           :key="mechanic.mechanicId"
           :class="['mechanic-item', { active: selectedMechanicId === mechanic.mechanicId }]"
           type="button"
@@ -711,7 +771,17 @@ function fallbackAbilities(): AbilityDefinition[] {
             <span><small>减伤后预计伤害</small><b :class="damageRiskClass(selectedDamageEstimate)">{{ displayInteger(selectedDamageEstimate.damageAfterMitigation) }}</b></span>
             <span><small>最危险轨道</small><b>{{ selectedDamageEstimate.worstTrackSlot ?? '—' }}</b></span>
           </div>
-          <p v-else class="damage-analysis-empty">
+          <div v-if="selectedDamageRatio" class="damage-ratio-panel">
+            <div class="damage-ratio-bar" aria-label="减伤比例">
+              <span class="damage-ratio-mitigated" :style="{ width: percentLabel(selectedDamageRatio.mitigated) }"></span>
+              <span class="damage-ratio-remaining" :style="{ width: percentLabel(selectedDamageRatio.remainingBar) }"></span>
+            </div>
+            <div class="damage-ratio-labels">
+              <span><i class="mitigated"></i>减掉 {{ percentLabel(selectedDamageRatio.mitigated) }}</span>
+              <span><i class="remaining"></i>承受 {{ percentLabel(selectedDamageRatio.remaining) }}</span>
+            </div>
+          </div>
+          <p v-if="selectedDamageEstimate?.damageAfterMitigation == null" class="damage-analysis-empty">
             {{ hasDirectDamage(selectedMechanic)
               ? '当前机制没有足够的 FFLogs 样本，暂不显示猜测伤害；可继续编排减伤，待校准后会自动出现结果。'
               : '该行用于阶段或机制定位，不对应一次需要计算承伤的直接伤害事件。' }}

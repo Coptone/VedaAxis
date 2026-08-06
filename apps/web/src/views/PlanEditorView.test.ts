@@ -36,6 +36,8 @@ describe('PlanEditorView', () => {
     expect(wrapper.get('[aria-label="计划名称"]').element).toHaveProperty('value', '妖星乱舞 P1/P2 默认减伤表')
     expect(wrapper.get('.mechanic-panel h2').text()).toBe('妖星乱舞 · P1/P2')
     expect(wrapper.get('.mechanic-panel > header > span').text()).toBe('76 项 · 108 个减伤安排')
+    expect(wrapper.get('.timeline-pager span').text()).toBe('第 1 / 7 页')
+    expect(wrapper.findAll('.mechanic-item')).toHaveLength(12)
     expect(wrapper.get('.assignment-board h2').text()).toBe('攻击 x4')
     expect(wrapper.findAll('.assignment-card')).toHaveLength(8)
     expect(wrapper.findAll('.track-column')).toHaveLength(8)
@@ -76,6 +78,8 @@ describe('PlanEditorView', () => {
     expect(wrapper.get('.post-mitigation-damage.damage-risk-red').text()).toContain('减伤后 200,000')
     expect(wrapper.get('.damage-analysis-metrics .damage-risk-red').text()).toBe('200,000')
     expect(wrapper.get('.damage-analysis-status').text()).toBe('红色区间')
+    expect(wrapper.get('.damage-ratio-labels').text()).toContain('减掉 33.3%')
+    expect(wrapper.get('.damage-ratio-labels').text()).toContain('承受 66.7%')
   })
 
   it('remaps execution and single-target tracks when first saving a default plan', async () => {

@@ -14,5 +14,6 @@ public record AbilityDefinition(
         long durationMs,
         ConfirmationStrategy confirmationStrategy,
         String source,
-        String confidence) {
+        String confidence,
+        MitigationEffectProfile effect) {
 }

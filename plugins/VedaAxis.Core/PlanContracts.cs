@@ -73,6 +73,15 @@ public sealed record TimelineMechanic(
     string DamageType,
     string Target,
     uint? ActionId,
+    string Confidence,
+    DamageProfile? DamageProfile = null);
+
+public sealed record DamageProfile(
+    long Amount,
+    string Basis,
+    int SampleCount,
+    string Statistic,
+    string Source,
     string Confidence);
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

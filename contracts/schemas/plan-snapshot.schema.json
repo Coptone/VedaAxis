@@ -124,6 +124,25 @@
         "damageType": { "enum": ["UNKNOWN", "MAGICAL", "PHYSICAL", "SPECIAL"] },
         "target": { "type": "string", "minLength": 1, "maxLength": 80 },
         "actionId": { "type": ["integer", "null"], "minimum": 1, "maximum": 4294967295 },
+        "damageProfile": {
+          "anyOf": [
+            { "$ref": "#/$defs/damageProfile" },
+            { "type": "null" }
+          ]
+        },
+        "confidence": { "enum": ["POC_PENDING", "UNVERIFIED", "REVIEWED", "VERIFIED"] }
+      }
+    },
+    "damageProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "basis", "sampleCount", "statistic", "source", "confidence"],
+      "properties": {
+        "amount": { "type": "integer", "minimum": 1 },
+        "basis": { "enum": ["OBSERVED_TARGET_ADJUSTED", "FORMULA_VERIFIED"] },
+        "sampleCount": { "type": "integer", "minimum": 1 },
+        "statistic": { "enum": ["MAX_OBSERVED", "P95", "EXPECTED"] },
+        "source": { "type": "string", "minLength": 1, "maxLength": 500 },
         "confidence": { "enum": ["POC_PENDING", "UNVERIFIED", "REVIEWED", "VERIFIED"] }
       }
     },

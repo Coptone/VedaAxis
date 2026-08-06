@@ -11,7 +11,7 @@ public record AbilityRow(
         String confirmationStrategy,
         String source,
         String confidence) {
-    AbilityDefinition toDefinition() {
+    AbilityDefinition toDefinition(MitigationEffectProfile effect) {
         java.util.Set<Integer> jobs = jobIds == null || jobIds.isBlank()
                 ? java.util.Set.of()
                 : java.util.Arrays.stream(jobIds.split(","))
@@ -21,6 +21,6 @@ public record AbilityRow(
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
         return new AbilityDefinition(
                 actionId, name, iconPath, jobs, cooldownMs, maxCharges, durationMs,
-                dev.vedaaxis.api.plan.ConfirmationStrategy.valueOf(confirmationStrategy), source, confidence);
+                dev.vedaaxis.api.plan.ConfirmationStrategy.valueOf(confirmationStrategy), source, confidence, effect);
     }
 }

@@ -24,6 +24,8 @@ import { createTracks, formatTime } from '../lib/tracks'
 import { newId } from '../lib/ids'
 import { cloneData } from '../lib/cloneData'
 import { actionIconUrl } from '../lib/actionIcons'
+import { attackClass, attackClassLabel, damageEstimateLabel, damageTypeLabel } from '../lib/combatPresentation'
+import { abilityEffectSummary } from '../lib/abilityEffects'
 import { applyTimelineImport } from '../lib/timelineImports'
 import {
   DMU_ENCOUNTER_ID,
@@ -37,6 +39,7 @@ import type {
   Assignment,
   PlanSnapshot,
   RuleValidationResult,
+  SurvivabilityAnalysis,
   TimelineImportCandidate,
   TimelineMechanic,
   TimelinePhase,
@@ -70,6 +73,13 @@ const importOpen = ref(false)
 const importUrl = ref('https://raalm.com/m-spec/timelinev2.html?boss=dancing-mad&spec=sage-sage&buddy=0')
 const includeRecommendations = ref(true)
 const importCandidate = ref<TimelineImportCandidate | null>(null)
+const survivabilityTargetTrackId = ref('')
+const survivabilityCurrentHp = ref<number | null>(null)
+const survivabilityMaximumHp = ref<number | null>(null)
+const partyRangeConfirmed = ref(false)
+const enemyEffectConfirmed = ref(false)
+const survivability = ref<SurvivabilityAnalysis | null>(null)
+const survivabilityBusy = ref(false)
 
 const DEFAULT_PHASES: TimelinePhase[] = cloneData(defaultPlan.phases)
 const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
@@ -93,6 +103,15 @@ const selectedMechanic = computed(() => mechanics.value.find((item) => item.mech
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
 const selectedAbility = computed(() => selectedAbilityId.value === null ? undefined : abilityMap.value.get(selectedAbilityId.value))
+const survivabilityStatusLabel = computed(() => {
+  switch (survivability.value?.status) {
+    case 'SURVIVES_WITH_MODELED_EFFECTS': return '已建模部分可存活'
+    case 'INSUFFICIENT_WITH_MODELED_EFFECTS': return '已建模部分不足'
+    case 'SPECIAL_CASE_REVIEW_REQUIRED': return '需要无敌/机制特判'
+    case 'CALIBRATION_REQUIRED': return '伤害值待校准'
+    default: return '尚未计算'
+  }
+})
 const aiDiff = computed(() => {
   if (!aiCandidate.value) return { added: 0, removed: 0, changed: 0 }
   const current = new Map(snapshot.value.assignments.map((item) => [item.assignmentId, item]))
@@ -115,6 +134,7 @@ onMounted(async () => {
   }
   if (planId.value) await loadPlan()
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
+  survivabilityTargetTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
 })
 
 async function loadPlan() {
@@ -167,6 +187,66 @@ function changeMode(mode: TrackMode) {
   snapshot.value = makeSnapshot(mode)
   name.value = mode === 'EIGHT' ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞四轨扩展草稿'
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
+  survivabilityTargetTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
+  survivability.value = null
+}
+
+function selectMechanic(mechanicId: string) {
+  selectedMechanicId.value = mechanicId
+  selectedAssignment.value = null
+  survivability.value = null
+}
+
+function displayInteger(value: number | null): string {
+  return value === null ? '—' : Math.round(value).toLocaleString('zh-CN')
+}
+
+async function analyzeSurvivability() {
+  if (!selectedMechanic.value.damageProfile) {
+    survivability.value = {
+      status: 'CALIBRATION_REQUIRED',
+      hardGuarantee: false,
+      incomingDamage: null,
+      damageAfterMitigation: null,
+      effectiveHp: null,
+      remainingHp: null,
+      modeledReduction: null,
+      notices: ['该机制尚无可追溯的伤害校准数据；未创建或保存计划，也未进行猜测计算。'],
+    }
+    return
+  }
+  const currentHp = survivabilityCurrentHp.value
+  const maximumHp = survivabilityMaximumHp.value
+  if (!survivabilityTargetTrackId.value || currentHp === null || maximumHp === null || currentHp < 0 || maximumHp < 1) {
+    error.value = '请先选择受击轨道，并填写当前生命和最大生命。'
+    return
+  }
+  if (currentHp > maximumHp) {
+    error.value = '当前生命不能大于最大生命。'
+    return
+  }
+  survivabilityBusy.value = true
+  survivability.value = null
+  error.value = ''
+  await save()
+  if (!planId.value || error.value) {
+    survivabilityBusy.value = false
+    return
+  }
+  try {
+    survivability.value = await api.analyzeSurvivability(planId.value, selectedMechanicId.value, {
+      targetTrackId: survivabilityTargetTrackId.value,
+      currentHp,
+      maximumHp,
+      partyRangeConfirmed: partyRangeConfirmed.value,
+      enemyEffectConfirmed: enemyEffectConfirmed.value,
+    })
+    message.value = '已完成目标特定的保守生存分析'
+  } catch (reason) {
+    error.value = reason instanceof ApiError ? reason.message : '生存分析失败'
+  } finally {
+    survivabilityBusy.value = false
+  }
 }
 
 function addAssignment() {
@@ -215,14 +295,22 @@ async function save() {
       snapshot.value.planId = created.plan.id
       const createdTrackBySlot = new Map(created.snapshot.tracks.map((track) => [track.slot, track.trackId]))
       const localSlotByTrackId = new Map(snapshot.value.tracks.map((track) => [track.trackId, track.slot]))
+      const remapTrackId = (trackId: string | null | undefined) => {
+        if (!trackId) return null
+        return createdTrackBySlot.get(localSlotByTrackId.get(trackId)!) ?? trackId
+      }
       snapshot.value.assignments = snapshot.value.assignments.map((assignment) => ({
         ...assignment,
-        trackId: createdTrackBySlot.get(localSlotByTrackId.get(assignment.trackId)!) ?? assignment.trackId,
+        trackId: remapTrackId(assignment.trackId) ?? assignment.trackId,
+        targetTrackId: remapTrackId(assignment.targetTrackId),
         fallbacks: assignment.fallbacks.map((fallback) => ({
           ...fallback,
-          trackId: createdTrackBySlot.get(localSlotByTrackId.get(fallback.trackId)!) ?? fallback.trackId,
+          trackId: remapTrackId(fallback.trackId) ?? fallback.trackId,
         })),
       }))
+      selectedTrackId.value = remapTrackId(selectedTrackId.value) ?? ''
+      selectedTargetTrackId.value = remapTrackId(selectedTargetTrackId.value) ?? ''
+      survivabilityTargetTrackId.value = remapTrackId(survivabilityTargetTrackId.value) ?? ''
       snapshot.value.tracks = created.snapshot.tracks
       await router.replace(`/plans/${created.plan.id}`)
     }
@@ -318,19 +406,15 @@ function applyMSpecImport() {
   message.value = `M-Spec 候选已应用到本地草稿${removedAssignments ? `，已清除 ${removedAssignments} 个旧任务` : ''}；尚未保存或发布`
 }
 
-function damageTypeLabel(type: TimelineMechanic['damageType']) {
-  return ({ UNKNOWN: '未知', MAGICAL: '魔法', PHYSICAL: '物理', SPECIAL: '特殊' } as const)[type]
-}
-
 function hideBrokenIcon(event: Event) {
   ;(event.currentTarget as HTMLImageElement).hidden = true
 }
 
 function fallbackAbilities(): AbilityDefinition[] {
   return [
-    { actionId: 7535, name: '雪仇 / Reprisal', iconPath: 'ui/icon/000000/000806.tex', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED' },
-    { actionId: 24298, name: 'Kerachole', iconPath: 'ui/icon/003000/003666.tex', jobIds: [40], cooldownMs: 30_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED' },
-    { actionId: 24310, name: 'Holos', iconPath: 'ui/icon/003000/003678.tex', jobIds: [40], cooldownMs: 120_000, maxCharges: 1, durationMs: 20_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED' },
+    { actionId: 7535, name: '雪仇 / Reprisal', iconPath: 'ui/icon/000000/000806.tex', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED', effect: { scope: 'ENEMY_AREA', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: '', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
+    { actionId: 24298, name: 'Kerachole', iconPath: 'ui/icon/003000/003666.tex', jobIds: [40], cooldownMs: 30_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED', effect: { scope: 'PARTY', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: 'SGE_KERACHOLE_TAUROCHOLE', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
+    { actionId: 24310, name: 'Holos', iconPath: 'ui/icon/003000/003678.tex', jobIds: [40], cooldownMs: 120_000, maxCharges: 1, durationMs: 20_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED', effect: { scope: 'PARTY', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 300, invulnerability: false, stackingGroup: '', calculationReadiness: 'REQUIRES_HEALING_STATS', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
   ]
 }
 </script>
@@ -413,10 +497,18 @@ function fallbackAbilities(): AbilityDefinition[] {
           :key="mechanic.mechanicId"
           :class="['mechanic-item', { active: selectedMechanicId === mechanic.mechanicId }]"
           type="button"
-          @click="selectedMechanicId = mechanic.mechanicId"
+          @click="selectMechanic(mechanic.mechanicId)"
         >
           <time>{{ formatTime(mechanic.plannedAtMs) }}</time>
-          <span><b>{{ mechanic.name }}</b><small>{{ damageTypeLabel(mechanic.damageType) }} · {{ mechanic.target }}</small></span>
+          <span>
+            <b>{{ mechanic.name }}</b>
+            <small class="mechanic-classification">
+              <strong :class="['attack-class-chip', `attack-class-${attackClass(mechanic).toLowerCase()}`]">{{ attackClassLabel(mechanic) }}</strong>
+              <span>{{ damageTypeLabel(mechanic.damageType) }}</span>
+              <span>{{ mechanic.target }}</span>
+            </small>
+            <small class="damage-estimate-note">{{ damageEstimateLabel(mechanic) }}</small>
+          </span>
           <em v-if="assignmentCountByMechanic.get(mechanic.mechanicId)">{{ assignmentCountByMechanic.get(mechanic.mechanicId) }}</em>
           <i :class="mechanic.confidence.toLowerCase()"></i>
         </button>
@@ -428,7 +520,10 @@ function fallbackAbilities(): AbilityDefinition[] {
           <div>
             <p class="eyebrow">{{ selectedMechanic.phase }} · {{ formatTime(selectedMechanic.plannedAtMs) }}</p>
             <h2>{{ selectedMechanic.name }}</h2>
-            <p>{{ damageTypeLabel(selectedMechanic.damageType) }}伤害 · {{ selectedMechanic.target }} · 命中 {{ formatTime(selectedMechanic.plannedAtMs) }}</p>
+            <p>
+              <strong :class="['attack-class-chip', `attack-class-${attackClass(selectedMechanic).toLowerCase()}`]">{{ attackClassLabel(selectedMechanic) }}</strong>
+              {{ damageTypeLabel(selectedMechanic.damageType) }}伤害 · {{ selectedMechanic.target }} · 命中 {{ formatTime(selectedMechanic.plannedAtMs) }} · {{ damageEstimateLabel(selectedMechanic) }}
+            </p>
           </div>
           <span class="confidence-chip">{{ selectedMechanic.confidence }}</span>
         </header>
@@ -484,12 +579,59 @@ function fallbackAbilities(): AbilityDefinition[] {
                 referrerpolicy="no-referrer"
                 @error="hideBrokenIcon"
               />
-              <div><b>{{ abilityMap.get(assignment.actionId)?.name ?? `Action ${assignment.actionId}` }}</b><small>{{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }}</small></div>
+              <div>
+                <b>{{ abilityMap.get(assignment.actionId)?.name ?? `Action ${assignment.actionId}` }}</b>
+                <small>{{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }}</small>
+                <small class="ability-effect-summary">{{ abilityEffectSummary(abilityMap.get(assignment.actionId)) }}</small>
+              </div>
               <Lock v-if="assignment.locked" :size="13" />
             </button>
             <p v-if="!assignmentsForMechanic.some((item) => item.trackId === track.trackId)" class="track-empty">未安排</p>
           </article>
         </div>
+
+        <section class="survivability-panel">
+          <header>
+            <div>
+              <p class="eyebrow">TARGET-SPECIFIC SURVIVABILITY</p>
+              <h3>减伤承伤校验</h3>
+            </div>
+            <span :class="['survivability-status', survivability?.status?.toLowerCase() ?? 'idle']">{{ survivabilityStatusLabel }}</span>
+          </header>
+          <div class="survivability-form">
+            <label>受击轨道
+              <select v-model="survivabilityTargetTrackId">
+                <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
+              </select>
+            </label>
+            <label>命中前当前生命
+              <input v-model.number="survivabilityCurrentHp" type="number" min="0" step="100" placeholder="按角色实际值填写" />
+            </label>
+            <label>基础最大生命
+              <input v-model.number="survivabilityMaximumHp" type="number" min="1" step="100" placeholder="按角色实际值填写" />
+            </label>
+            <button class="primary-button" type="button" :disabled="survivabilityBusy" @click="analyzeSurvivability">
+              <Shield :size="16" />{{ survivabilityBusy ? '计算中…' : '计算承伤' }}
+            </button>
+          </div>
+          <div class="survivability-confirmations">
+            <label><input v-model="partyRangeConfirmed" type="checkbox" />确认目标处于队伍/地面减伤范围</label>
+            <label><input v-model="enemyEffectConfirmed" type="checkbox" />确认雪仇、牵制、昏乱等施加在伤害来源上</label>
+          </div>
+          <p class="survivability-boundary">仅计算已录入且满足目标/范围条件的效果。日志观测伤害属于特定角色、装备和队伍环境，不会被宣称为跨队伍“100% 必定存活”。</p>
+          <template v-if="survivability">
+            <div v-if="survivability.incomingDamage !== null" class="survivability-metrics">
+              <span><small>校准入伤</small><b>{{ displayInteger(survivability.incomingDamage) }}</b></span>
+              <span><small>已建模减伤</small><b>{{ survivability.modeledReduction === null ? '—' : `${(survivability.modeledReduction * 100).toFixed(1)}%` }}</b></span>
+              <span><small>减伤后伤害</small><b>{{ displayInteger(survivability.damageAfterMitigation) }}</b></span>
+              <span><small>有效生命</small><b>{{ displayInteger(survivability.effectiveHp) }}</b></span>
+              <span><small>预计余量</small><b :class="{ negative: (survivability.remainingHp ?? 0) < 0 }">{{ displayInteger(survivability.remainingHp) }}</b></span>
+            </div>
+            <div v-if="survivability.notices.length" class="survivability-notices">
+              <p v-for="notice in survivability.notices" :key="notice"><AlertTriangle :size="13" />{{ notice }}</p>
+            </div>
+          </template>
+        </section>
 
         <div v-if="validation" :class="['validation-panel', { valid: validation.valid }]">
           <header>
@@ -524,7 +666,11 @@ function fallbackAbilities(): AbilityDefinition[] {
               referrerpolicy="no-referrer"
               @error="hideBrokenIcon"
             />
-            <span><b>{{ abilityMap.get(selectedAssignment.actionId)?.name }}</b><small>Action {{ selectedAssignment.actionId }}</small></span>
+            <span>
+              <b>{{ abilityMap.get(selectedAssignment.actionId)?.name }}</b>
+              <small>Action {{ selectedAssignment.actionId }}</small>
+              <small class="ability-effect-summary">{{ abilityEffectSummary(abilityMap.get(selectedAssignment.actionId)) }}</small>
+            </span>
           </div>
           <label>开始高亮（毫秒）<input v-model.number="selectedAssignment.highlightAtMs" type="number" step="100" /></label>
           <label>允许起点（毫秒）<input v-model.number="selectedAssignment.earliestUseAtMs" type="number" step="100" /></label>

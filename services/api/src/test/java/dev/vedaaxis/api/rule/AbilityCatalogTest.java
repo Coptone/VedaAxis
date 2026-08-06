@@ -19,4 +19,15 @@ class AbilityCatalogTest {
                         .startsWith("ui/icon/")
                         .endsWith(".tex"));
     }
+
+    @Test
+    void exposesAReviewedEffectProfileForEverySeededAbility() {
+        assertThat(catalog.all())
+                .isNotEmpty()
+                .allSatisfy(ability -> {
+                    assertThat(ability.effect()).isNotNull();
+                    assertThat(ability.effect().confidence()).isEqualTo("REVIEWED");
+                    assertThat(ability.effect().source()).contains("XIVAPI Action sheet");
+                });
+    }
 }

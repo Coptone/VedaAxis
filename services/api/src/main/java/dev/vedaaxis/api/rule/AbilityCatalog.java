@@ -11,14 +11,16 @@ import java.util.stream.Collectors;
 @Service
 public class AbilityCatalog {
     private final AbilityMapper mapper;
+    private final AbilityEffectCatalog effectCatalog;
 
-    public AbilityCatalog(AbilityMapper mapper) {
+    public AbilityCatalog(AbilityMapper mapper, AbilityEffectCatalog effectCatalog) {
         this.mapper = mapper;
+        this.effectCatalog = effectCatalog;
     }
 
     public Map<Long, AbilityDefinition> load() {
         return mapper.findAll().stream()
-                .map(AbilityRow::toDefinition)
+                .map(row -> row.toDefinition(effectCatalog.profile(row.actionId())))
                 .collect(Collectors.toUnmodifiableMap(AbilityDefinition::actionId, Function.identity()));
     }
 

@@ -109,4 +109,38 @@ public sealed class PlanSerializationTests
         Assert.Equal(15, plan.Assignments.Count(assignment => assignment.TargetTrackId is not null));
         Assert.Empty(PlanValidator.Validate(plan));
     }
+
+    [Fact]
+    public void DeserializesOptionalMechanicDamageProfile()
+    {
+        const string json = """
+                            {
+                              "mechanicId": "0d80a50c-cd3a-4569-a7ce-4766612e3316",
+                              "externalId": null,
+                              "phase": "P1",
+                              "name": "Test hit",
+                              "plannedAtMs": 15000,
+                              "durationMs": 0,
+                              "type": "TANK_BUSTER",
+                              "damageType": "MAGICAL",
+                              "target": "MT",
+                              "actionId": 12345,
+                              "confidence": "POC_PENDING",
+                              "damageProfile": {
+                                "amount": 100000,
+                                "basis": "OBSERVED_TARGET_ADJUSTED",
+                                "sampleCount": 10,
+                                "statistic": "MAX_OBSERVED",
+                                "source": "test sample",
+                                "confidence": "POC_PENDING"
+                              }
+                            }
+                            """;
+
+        var mechanic = JsonSerializer.Deserialize<TimelineMechanic>(json, Options);
+
+        Assert.NotNull(mechanic?.DamageProfile);
+        Assert.Equal(100000, mechanic.DamageProfile.Amount);
+        Assert.Equal("OBSERVED_TARGET_ADJUSTED", mechanic.DamageProfile.Basis);
+    }
 }

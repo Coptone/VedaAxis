@@ -29,7 +29,8 @@
 
 ## 3. 当前可依赖的已验证事实
 
-- 当前测试版是 `0.1.9`。
+- 当前测试版是 `0.1.10`。
+- `0.1.10` 的发布证据：提交 `5ff8937`、GitHub/Gitee `v0.1.10` 标签、GitHub Release 资产和公网 HTTPS 插件仓库均已完成；`pluginmaster.json` 返回 `0.1.10.0`，公网 ZIP SHA-256 为 `a601d0b62d992e788287861eeed66418f138bcd5b73c4848100bae6998f8d40c`。该版本仅修复插件单体减伤目标识别：精确职业不匹配时按轨道角色组兜底，多个同角色候选时不自动猜测并显示具体原因；未更新 API JAR 或 Web 静态文件。
 - `0.1.9` 的发布证据：提交 `4534af0`、GitHub/Gitee `v0.1.9` 标签、GitHub Release 资产和公网 HTTPS 部署均已完成；`pluginmaster.json` 返回 `0.1.9.0`，公网 ZIP SHA-256 为 `8bbb3c73410196500501a04a8ac89bd8caa9dad798fa316c917a0fea14756796`，Web 入口为 `index-BdHBbQHc.js` 与 `index-BQ178Wqc.css`。服务器仅更新 `/www/wwwroot/VedaAxis` 静态目录，API 保持 `active`/`UP`，发布前备份为 `/www/wwwroot/.vedaaxis-backups/VedaAxis`。
 - GitHub [`Coptone/VedaAxis`](https://github.com/Coptone/VedaAxis) 的 `main` 是源代码真源；Gitee [`Need4Spd/VedaAxis`](https://gitee.com/Need4Spd/VedaAxis) 是国内镜像。
 - Dalamud 自定义仓库地址为 `https://coptone.link/VedaAxis/pluginmaster.json`；插件包地址为 `https://coptone.link/VedaAxis/release/latest/VedaAxis.zip`。

@@ -2,7 +2,7 @@
 
 > 最近更新：2026-08-06
 >
-> 当前测试版：`0.1.9`
+> 当前测试版：`0.1.10`
 >
 > 进度口径：`已完成` 表示已有可复现的验证证据；`进行中` 表示代码或样板已存在，但仍缺少 PRD 要求的完整验收；`待开始` 表示尚未进入实现。
 
@@ -19,6 +19,8 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 `0.1.8` 已增加 Territory 755、`O8S-POC` 八轨云端联调模板，Web 新建后由 API 初始化同一份规范快照，插件提供 O8S 快速配置并按 Territory/策略/轨道精确匹配。模板的 10 秒坚角清汁和 20 秒整体论仅为联调探针，不代表真实 O8S 时间轴。设备授权改为每台游戏电脑首次绑定一次，插件在非战斗启动阶段主动轮换刷新令牌，网页提供已绑定设备列表和撤销入口。Web 22 项、API 30 项、Python 9 项、Core 29 项及 Dalamud Release 构建已通过；GitHub/Gitee、Release 与公网部署均已完成，服务器和管理端已验证，游戏电脑的 O8S 完整闭环仍待实机完成。
 
 `0.1.9` 针对跨电脑使用体验补充了账户可见性、计划列表刷新和 2K 宽屏缩放。计划数据的服务端查询始终按账户 ID 隔离：同一登录账户应跨电脑读取同一列表；页面会显示邮箱或账户摘要，并在重新获得焦点、恢复可见及每 30 秒重新拉取。插件的热键栏和单减队友列表新增强化外圈、加粗描边与待执行脉冲，默认使用强化样式；常用轨道、轨道模式、计划类型、提示强度和服务地址改用下拉选择，自定义服务地址仍保留在高级选项。仅构建和界面检查通过不代表游戏 HUD 可读性已验收，强化提示的实机截图/诊断仍待补充。
+
+`0.1.10` 修复插件单体减伤目标识别的过窄职业匹配：默认计划的 MT/ST/H1/H2 等轨道仍保留原表格职业约束用于规则校验，但插件在当前队伍没有精确职业命中时会按轨道角色组兜底；若同角色候选超过 1 人，则不自动猜测并在设置界面显示具体原因，继续要求开打前手动选择。Core 32 项测试和 Dalamud Release 构建通过；公网插件清单与 ZIP 已更新到 `0.1.10.0`。
 
 提交 `1042ff5` 继续优化 Web 计划编辑体验：预计伤害接口请求失败时，浏览器会基于当前计划的 `damageProfile`、已加载技能目录、持续时间、职业匹配、作用范围与不可叠加组做本地参考计算；减伤技能下拉框默认按执行轨道职业过滤，并保留“显示全部技能”兜底；伤害面板显示本机制安排、提前覆盖到当前命中的技能、冷却冲突和当前时间轴完整度。AI 入口改为先填写调整要求再生成候选，并继续遵守“候选不自动保存或发布”的边界。该提交已通过 Web 类型检查、25 项 Web 测试和生产构建，并只部署 Web 静态资源到 HTTPS 测试环境；API、插件清单和插件 ZIP 未更新。
 
@@ -89,6 +91,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 ## 最近里程碑
 
+- `0.1.10`：提交 `5ff8937` 已发布到 GitHub `v0.1.10` Release，并同步 GitHub/Gitee `main` 与同名标签。插件清单和 ZIP 已部署到 `https://coptone.link/VedaAxis/`；公网根站、Web、健康检查、清单和 ZIP 均返回 200，清单为 `0.1.10.0`，发布 ZIP SHA-256 为 `a601d0b62d992e788287861eeed66418f138bcd5b73c4848100bae6998f8d40c`，部署前备份位于 `/www/wwwroot/.vedaaxis-backups/plugin-5ff8937-20260806221636`。本地验证通过：Core 32 项测试及 Dalamud Release 构建 0 警告、0 错误；该版本仅修复插件单体目标识别和提示，不更新 API JAR 或 Web 静态文件。
 - 2026-08-06：提交 `a7dbaec` 已推送 GitHub/Gitee `main`，并将 Web 静态构建部署到 `https://coptone.link/VedaAxis/`。公网根站、Web、`assets/index-DNqE1KYe.js`、`assets/index-DkxHyc9n.css`、健康检查、插件清单和现有插件 ZIP 均返回 200；部署前备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis-a7dbaec-20260806215133`。本地验证使用 Node 24：`pnpm check:web` 通过、Web 25 项测试通过、`pnpm build:web` 通过。该变更未更新 API JAR、插件包或 PoC 状态。
 - 2026-08-06：提交 `1042ff5` 已推送 GitHub/Gitee `main`，并将 Web 静态构建部署到 `https://coptone.link/VedaAxis/`。公网根站、Web、`assets/index-CJJz6yNx.js`、`assets/index-D_0ZrUlK.css`、健康检查、插件清单和现有插件 ZIP 均返回 200；部署前备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis-1042ff5-20260806-212140`。本地验证使用 Node 24：`pnpm check:web` 通过、Web 25 项测试通过、`pnpm build:web` 通过。该变更未更新 API JAR、插件包或 PoC 状态。
 - `0.1.9`：提交 `4534af0` 已发布到 GitHub `v0.1.9` Release，并按主库同步到 Gitee `main` 与同名标签。Web、插件清单和 ZIP 已隔离部署到 `https://coptone.link/VedaAxis/`；公网根站、Web、健康检查、清单与 ZIP 均返回 200，清单为 `0.1.9.0`，发布 ZIP SHA-256 为 `8bbb3c73410196500501a04a8ac89bd8caa9dad798fa316c917a0fea14756796`，Web 入口引用 `index-BdHBbQHc.js` 与 `index-BQ178Wqc.css`。API 未重启且保持 `active`/`UP`；部署前静态目录备份位于 `/www/wwwroot/.vedaaxis-backups/VedaAxis`，根站点未受影响。全量本地检查通过：Web 22、API 30、Python 9、Core 29 个测试及 Dalamud Release 构建；强化 HUD 的实机截图/诊断仍待补充，PoC 状态不提升。

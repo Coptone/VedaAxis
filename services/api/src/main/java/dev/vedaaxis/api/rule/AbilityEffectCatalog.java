@@ -30,7 +30,7 @@ import static dev.vedaaxis.api.rule.MitigationEffectProfile.Scope.TARGET;
 @Service
 public class AbilityEffectCatalog {
     private static final String SOURCE =
-            "Official Job Guide + XIVAPI Action sheet game 7583112015aaef5d, 2026-08-06";
+            "Official Job Guide + XIVAPI Action sheet game 7583112015aaef5d, 2026-08-07";
     private static final String REVIEWED = "REVIEWED";
     private static final String SGE_GALL = "SGE_KERACHOLE_TAUROCHOLE";
     private static final String PHYSICAL_RANGED_PARTY = "PHYSICAL_RANGED_PARTY_MIT";
@@ -82,6 +82,9 @@ public class AbilityEffectCatalog {
             Map.entry(16152L, invulnerability(SELF, "", "将生命降至最大值的 50%，并免疫多数攻击。")),
 
             // White mage
+            Map.entry(140L, noDirect(TARGET, "", "天赐祝福是即时治疗，不直接减少命中伤害。")),
+            Map.entry(3570L, noDirect(TARGET, "", "神名是即时治疗，不直接减少命中伤害。")),
+            Map.entry(3571L, noDirect(PARTY, "", "法令的治疗不从命中前承伤数字中扣除。")),
             Map.entry(7432L, potencyBarrier(TARGET, 500, "", "护盾数值取决于施法者治疗属性与暴击治疗。")),
             Map.entry(25861L, direct(TARGET, 15, 0, 0, "", "可对自身或队友。")),
             Map.entry(3569L, noDirect(GROUND_AREA, "", "庇护所仅提高治疗恢复并提供持续治疗，不直接减少伤害。")),
@@ -94,33 +97,59 @@ public class AbilityEffectCatalog {
             Map.entry(185L, potencyBarrier(TARGET, 180, SCH_SGE_BARRIER, "鼓舞与均衡系护盾不可叠加；数值取决于实际治疗量和暴击。")),
             Map.entry(186L, potencyBarrier(PARTY, 160, SCH_SGE_BARRIER, "士气与均衡系护盾不可叠加；数值取决于实际治疗量。")),
             Map.entry(188L, direct(GROUND_AREA, 10, 0, 0, "", "目标必须站在野战治疗阵范围内。")),
+            Map.entry(189L, noDirect(TARGET, "", "生命活性法是即时治疗，不直接减少命中伤害。")),
+            Map.entry(3583L, noDirect(PARTY, "", "不屈不挠之策是范围即时治疗，不直接减少命中伤害。")),
             Map.entry(3585L, noDirect(PARTY, "", "展开已有鼓舞护盾，需知道原护盾剩余值；不直接按固定数值计算。")),
+            Map.entry(3586L, noDirect(SELF, "", "应急战术会改变下一次鼓舞/士气的用途，必须与后续治疗配对计算。")),
+            Map.entry(3587L, noDirect(SELF, "", "转化提供以太超流并提高治疗魔法恢复量；不直接减少伤害。")),
             Map.entry(16542L, noDirect(SELF, "", "秘策确保下一次指定治疗暴击并免资源；必须与后续护盾/治疗配对计算。")),
+            Map.entry(7434L, noDirect(TARGET, "", "深谋远虑之策在条件满足时治疗，不直接减少命中伤害。")),
+            Map.entry(7437L, noDirect(TARGET, "", "以太契约提供持续妖精治疗，不直接减少命中伤害。")),
+            Map.entry(16537L, noDirect(PARTY, "", "仙光的低语提供持续治疗，不直接减少命中伤害。")),
+            Map.entry(16538L, direct(PARTY, 0, 0, 5, "", "异想的幻光仅按 5% 魔法减伤计入；治疗魔法提高不计入伤害数字。")),
+            Map.entry(16543L, noDirect(PARTY, "", "仙光的祝福是范围治疗，不直接减少命中伤害。")),
+            Map.entry(16545L, noDirect(PARTY, "", "炽天召唤本身提供妖精治疗与慰藉使用条件；固定承伤数字不直接扣除。")),
             Map.entry(16546L, potencyBarrier(PARTY, 250, "", "慰藉护盾等于实际恢复量；最多 2 层充能，需确认炽天使状态。")),
             Map.entry(25867L, maxHpIncrease(TARGET, 10, "", "提高目标最大生命并恢复等量生命；受治疗提高不计入伤害数字。")),
             Map.entry(25868L, direct(PARTY, 10, 0, 0, "", "队友需处于范围内。")),
             Map.entry(37014L, noDirect(PARTY, "", "炽天召唤提供持续治疗并改变鼓舞/士气形态；需与后续护盾配对计算。")),
 
             // Astrologian
+            Map.entry(3612L, noDirect(TARGET, "", "星位合图改变治疗分配，不直接减少命中伤害。")),
             Map.entry(3613L, direct(GROUND_AREA, 10, 0, 0, "", "需要保持引导/不移动，队友需处于范围内。")),
+            Map.entry(3614L, noDirect(TARGET, "", "先天禀赋是即时治疗，不直接减少命中伤害。")),
+            Map.entry(7439L, noDirect(GROUND_AREA, "", "地星/星体爆轰提供延迟范围治疗，不直接减少命中伤害。")),
+            Map.entry(8324L, noDirect(PARTY, "", "星体爆轰提供范围治疗，不直接减少命中伤害。")),
+            Map.entry(7445L, noDirect(PARTY, "", "王冠之贵妇是范围治疗，不直接减少命中伤害。")),
+            Map.entry(16553L, noDirect(PARTY, "", "天星冲日提供范围治疗和持续恢复，不直接减少命中伤害。")),
             Map.entry(16556L, potencyBarrier(TARGET, 200, "", "护盾为实际恢复量的 200%，取决于治疗属性。")),
+            Map.entry(16557L, noDirect(PARTY, "", "天宫图记录并触发后续治疗，需要与触发时点配对。")),
             Map.entry(16559L, noDirect(PARTY, "", "中间学派提高治疗魔法并使后续治疗附带护盾；不单独减少伤害。")),
             Map.entry(25873L, direct(TARGET, 10, 0, 0, "", "结束时治疗不计入命中前承伤。")),
             Map.entry(25874L, noDirect(PARTY, "", "大宇宙记录伤害并在到期/触发时治疗，不直接减少该段伤害。")),
+            Map.entry(37024L, noDirect(TARGET, "", "放浪神之箭提高治疗恢复；卡牌资源约束需人工确认。")),
+            Map.entry(37025L, potencyBarrier(TARGET, 400, "", "建筑神之塔提供目标护盾；卡牌资源约束需人工确认。")),
+            Map.entry(37027L, direct(TARGET, 10, 0, 0, "", "世界树之干提供单体减伤；卡牌资源约束需人工确认。")),
+            Map.entry(37028L, noDirect(TARGET, "", "河流神之瓶提供持续治疗；卡牌资源约束需人工确认。")),
             Map.entry(37031L, direct(PARTY, 10, 0, 0, "", "只能在 Suntouched 状态下执行；队友需处于范围内。")),
 
             // Sage
             Map.entry(24291L, potencyBarrier(TARGET, 180, SCH_SGE_BARRIER, "均衡诊断与鼓舞/均衡预后不可叠加；数值取决于实际治疗量和暴击。")),
             Map.entry(24292L, potencyBarrier(PARTY, 320, SCH_SGE_BARRIER, "均衡预后与鼓舞/均衡诊断不可叠加；数值取决于实际治疗量。")),
             Map.entry(37034L, potencyBarrier(PARTY, 360, SCH_SGE_BARRIER, "均衡预后 II 与鼓舞/均衡诊断不可叠加；数值取决于实际治疗量。")),
+            Map.entry(24294L, noDirect(TARGET, "", "拯救强化关照治疗，通常作用于关照目标；不直接减少命中伤害。")),
+            Map.entry(24296L, noDirect(TARGET, "", "灵橡清汁是单体即时治疗，不直接减少命中伤害。")),
             Map.entry(24298L, direct(PARTY, 10, 0, 0, SGE_GALL, "不能与坚角清汁叠加；队友需处于范围内。")),
+            Map.entry(24299L, noDirect(PARTY, "", "寄生清汁是范围即时治疗，不直接减少命中伤害。")),
             Map.entry(24303L, direct(TARGET, 10, 0, 0, SGE_GALL, "不能与白牛清汁叠加。")),
             Map.entry(24310L, mixed(PARTY, 10, 0, 0, 0, 300, "", "魔法障壁取决于实际治疗量；队友需处于范围内。")),
             Map.entry(24311L, potencyBarrier(PARTY, 200, "", "最多 5 层，受击破盾才消耗一层；需按命中段数和治疗属性计算。")),
             Map.entry(24305L, potencyBarrier(TARGET, 300, "", "最多 5 层，受击破盾才消耗一层；需按命中段数和治疗属性计算。")),
             Map.entry(24300L, noDirect(SELF, "", "活化只提高下一次治疗魔法威力；必须与后续治疗/护盾配对计算。")),
+            Map.entry(24301L, noDirect(PARTY, "", "消化通过移除均衡系护盾进行治疗，需知道护盾是否存在。")),
             Map.entry(24302L, noDirect(PARTY, "", "自生 II 提高治疗恢复并提供持续治疗，不直接减少伤害。")),
-            Map.entry(24317L, noDirect(TARGET, "", "拯救只提高治疗恢复，不直接减少伤害。")),
+            Map.entry(24309L, noDirect(SELF, "", "根素只补充蛇胆资源，不直接减少伤害。")),
+            Map.entry(24317L, noDirect(TARGET, "", "混合只提高治疗恢复，不直接减少伤害。")),
             Map.entry(24318L, noDirect(PARTY, "", "魂灵风息提供治疗，不直接减少该段伤害。")),
             Map.entry(37035L, noDirect(PARTY, "", "智慧之爱提供增疗和后续触发治疗，不直接减少该段伤害。")),
 

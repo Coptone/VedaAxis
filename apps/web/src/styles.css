@@ -264,6 +264,7 @@ a { color: inherit; text-decoration: none; }
 .ability-select { min-width: 0; height: 35px; display: flex; align-items: center; gap: 7px; }
 .ability-select select { min-width: 0; flex: 1; }
 .ability-filter-note { min-height: 13px; color: #86b9b2 !important; font-size: 8px !important; }
+.ability-category-note { color: #d8b579 !important; font-size: 8px !important; line-height: 1.35; }
 .show-all-abilities { height: 35px; display: flex !important; align-items: center; gap: 6px !important; white-space: nowrap; }
 .show-all-abilities input { width: 14px; height: 14px; accent-color: var(--cyan); }
 .quick-assign .primary-button { height: 35px; min-height: 35px; }

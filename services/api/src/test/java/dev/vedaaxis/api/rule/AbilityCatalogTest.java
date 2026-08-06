@@ -74,6 +74,11 @@ class AbilityCatalogTest {
                 25857L, // Magick Barrier
                 34685L, // Tempera Coat
                 34686L, // Tempera Grassa
+                24299L, // Ixochole
+                24296L, // Druochole
+                24294L, // Soteria
+                16538L, // Fey Illumination
+                37027L, // the Bole
                 24292L, // Eukrasian Prognosis
                 25868L, // Expedient
                 37031L  // Sun Sign

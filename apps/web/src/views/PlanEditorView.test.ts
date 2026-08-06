@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../api/client'
 import { dmuP1P2DefaultPlan } from '../data/dmuP1P2Default'
+import type { AbilityDefinition } from '../types/domain'
 import PlanEditorView from './PlanEditorView.vue'
 
 vi.mock('../api/client', () => ({
@@ -82,6 +83,31 @@ describe('PlanEditorView', () => {
     expect(wrapper.get('.damage-ratio-labels').text()).toContain('承受 66.7%')
   })
 
+  it('groups selectable abilities by planning category while preserving job filtering', async () => {
+    vi.mocked(api.abilities).mockResolvedValueOnce([
+      testAbility(24298, '白牛清汁 / Kerachole', [40], { allDamageReductionPercent: 10, calculationReadiness: 'DIRECT_REDUCTION' }),
+      testAbility(24299, '寄生清汁 / Ixochole', [40], { calculationReadiness: 'NO_DIRECT_MITIGATION' }),
+      testAbility(140, '天赐祝福 / Benediction', [24], { calculationReadiness: 'NO_DIRECT_MITIGATION' }),
+    ])
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+    await wrapper.get('select').setValue(dmuP1P2DefaultPlan().tracks.find((track) => track.slot === 'H2')!.trackId)
+    await flushPromises()
+
+    const labels = wrapper.findAll('optgroup').map((group) => group.attributes('label'))
+    expect(labels).toContain('直接减伤（1）')
+    expect(labels).toContain('治疗 / 增疗 / 资源（1）')
+    expect(wrapper.text()).toContain('寄生清汁 / Ixochole')
+    expect(wrapper.text()).not.toContain('天赐祝福 / Benediction')
+  })
+
   it('remaps execution and single-target tracks when first saving a default plan', async () => {
     const planId = '11111111-1111-4111-8111-111111111111'
     const createdTrackIds = [
@@ -128,3 +154,39 @@ describe('PlanEditorView', () => {
       .every((assignment) => validTrackIds.has(assignment.targetTrackId!))).toBe(true)
   })
 })
+
+function testAbility(
+  actionId: number,
+  name: string,
+  jobIds: number[],
+  effect: Partial<AbilityDefinition['effect']>,
+): AbilityDefinition {
+  return {
+    actionId,
+    name,
+    iconPath: 'ui/icon/003000/003667.tex',
+    jobIds,
+    cooldownMs: 30_000,
+    maxCharges: 1,
+    durationMs: effect.calculationReadiness === 'NO_DIRECT_MITIGATION' ? 0 : 15_000,
+    confirmationStrategy: 'STATUS_APPLY',
+    source: 'test',
+    confidence: 'REVIEWED',
+    effect: {
+      scope: 'PARTY',
+      allDamageReductionPercent: 0,
+      physicalDamageReductionPercent: 0,
+      magicalDamageReductionPercent: 0,
+      maximumHpIncreasePercent: 0,
+      maximumHpBarrierPercent: 0,
+      barrierCurePotency: 0,
+      invulnerability: false,
+      stackingGroup: '',
+      calculationReadiness: 'NO_DIRECT_MITIGATION',
+      conditions: [],
+      source: 'test',
+      confidence: 'REVIEWED',
+      ...effect,
+    },
+  }
+}

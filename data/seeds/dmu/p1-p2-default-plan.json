@@ -2920,7 +2920,7 @@
       "assignmentId": "d548dd59-6a06-58d9-99f3-44ca1ffc5d5c",
       "mechanicId": "2c4eda41-a4fa-56e9-8d0e-b310c45650c5",
       "trackId": "1af6e496-044b-5ae1-9862-3b16d6ef6bd9",
-      "actionId": 24300,
+      "actionId": 24299,
       "anchorId": null,
       "targetTrackId": null,
       "highlightAtMs": 335000,
@@ -2928,7 +2928,7 @@
       "latestUseAtMs": 342000,
       "impactAtMs": 342000,
       "locked": true,
-      "confirmationStrategy": "STATUS_APPLY",
+      "confirmationStrategy": "ACTION_EFFECT",
       "fallbacks": []
     },
     {

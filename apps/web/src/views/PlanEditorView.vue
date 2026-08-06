@@ -27,6 +27,13 @@ import { actionIconUrl } from '../lib/actionIcons'
 import { attackClass, attackClassLabel, damageEstimateLabel, damageTypeLabel, hasDirectDamage } from '../lib/combatPresentation'
 import { abilityEffectSummary } from '../lib/abilityEffects'
 import {
+  ABILITY_CATEGORY_LABELS,
+  ABILITY_CATEGORY_ORDER,
+  abilityPlanningCategory,
+  abilityPlanningCategoryLabel,
+  type AbilityPlanningCategory,
+} from '../lib/abilityCategories'
+import {
   abilityFitsTrack,
   assignmentsCoveringMechanic,
   localCooldownConflicts,
@@ -134,10 +141,27 @@ const filteredAbilities = computed(() => {
   if (showAllAbilities.value) return abilities.value
   return abilities.value.filter((ability) => abilityFitsTrack(ability, selectedTrack.value))
 })
+const groupedFilteredAbilities = computed(() => {
+  const groups = new Map<AbilityPlanningCategory, AbilityDefinition[]>()
+  for (const ability of filteredAbilities.value) {
+    const category = abilityPlanningCategory(ability)
+    groups.set(category, [...(groups.get(category) ?? []), ability])
+  }
+  return ABILITY_CATEGORY_ORDER
+    .map((category) => ({
+      category,
+      label: ABILITY_CATEGORY_LABELS[category],
+      abilities: groups.get(category) ?? [],
+    }))
+    .filter((group) => group.abilities.length > 0)
+})
 const abilityFilterSummary = computed(() => {
   if (showAllAbilities.value) return `显示全部 ${abilities.value.length} 个技能`
   const slot = selectedTrack.value?.slot ?? '当前轨道'
-  return `${slot} 可用 ${filteredAbilities.value.length} / ${abilities.value.length} 个技能`
+  const categorySummary = groupedFilteredAbilities.value
+    .map((group) => `${group.label} ${group.abilities.length}`)
+    .join('，')
+  return `${slot} 可用 ${filteredAbilities.value.length} / ${abilities.value.length} 个技能${categorySummary ? ` · ${categorySummary}` : ''}`
 })
 const selectedAbility = computed(() => selectedAbilityId.value === null ? undefined : abilityMap.value.get(selectedAbilityId.value))
 const selectedDamageEstimate = computed(() => damageEstimates.value[selectedMechanicId.value])
@@ -515,6 +539,10 @@ function seconds(milliseconds: number | undefined): string {
   return `${Math.round(milliseconds / 1000)}s`
 }
 
+function abilityOptionLabel(ability: AbilityDefinition): string {
+  return `${ability.name} · 持续 ${seconds(ability.durationMs)} · CD ${seconds(ability.cooldownMs)}`
+}
+
 function coverageSourceLabel(coverage: AssignmentCoverage): string {
   const sourceMechanic = coverage.sourceMechanic
   const source = sourceMechanic ? `${formatTime(sourceMechanic.plannedAtMs)} ${sourceMechanic.name}` : '未知来源机制'
@@ -697,12 +725,19 @@ function fallbackAbilities(): AbilityDefinition[] {
                 @error="hideBrokenIcon"
               />
               <select v-model.number="selectedAbilityId">
-                <option v-for="ability in filteredAbilities" :key="ability.actionId" :value="ability.actionId">
-                  {{ ability.name }} · 持续 {{ seconds(ability.durationMs) }} · CD {{ seconds(ability.cooldownMs) }}
-                </option>
+                <optgroup
+                  v-for="group in groupedFilteredAbilities"
+                  :key="group.category"
+                  :label="`${group.label}（${group.abilities.length}）`"
+                >
+                  <option v-for="ability in group.abilities" :key="ability.actionId" :value="ability.actionId">
+                    {{ abilityOptionLabel(ability) }}
+                  </option>
+                </optgroup>
               </select>
             </span>
             <small class="ability-filter-note">{{ abilityFilterSummary }}</small>
+            <small v-if="selectedAbility" class="ability-category-note">{{ abilityPlanningCategoryLabel(selectedAbility) }} · {{ abilityEffectSummary(selectedAbility) }}</small>
           </label>
           <label>单体目标（可选）
             <select v-model="selectedTargetTrackId">
@@ -738,6 +773,7 @@ function fallbackAbilities(): AbilityDefinition[] {
                 <b>{{ abilityMap.get(assignment.actionId)?.name ?? `Action ${assignment.actionId}` }}</b>
                 <small>施放 {{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }} · 判定 {{ formatTime(assignment.impactAtMs) }}</small>
                 <small v-if="abilityMap.get(assignment.actionId)">持续 {{ seconds(abilityMap.get(assignment.actionId)?.durationMs) }} · CD {{ seconds(abilityMap.get(assignment.actionId)?.cooldownMs) }}</small>
+                <small v-if="abilityMap.get(assignment.actionId)" class="ability-category-note">{{ abilityPlanningCategoryLabel(abilityMap.get(assignment.actionId)) }}</small>
                 <small class="ability-effect-summary">{{ abilityEffectSummary(abilityMap.get(assignment.actionId)) }}</small>
                 <small v-if="cooldownIssueByAssignmentId.has(assignment.assignmentId)" class="cooldown-inline-warning">冷却冲突</small>
               </div>

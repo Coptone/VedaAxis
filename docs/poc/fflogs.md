@@ -20,6 +20,21 @@ FFLOGS_CLIENT_SECRET=...
 - `events.normalized.jsonl`：稳定字段名的规范化事件层；
 - `manifest.json`：端点、页数与产物索引，不含凭据。
 
+规范化事件同时保留 `packetId`、`multiplier`、`hitType` 与 `mitigated`（仅在上游事件存在时），用于复核同一伤害包和 FFLogs 乘区，不能据此反推未公开的通用 Boss 伤害公式。
+
+## 伤害校准候选
+
+运行：
+
+```powershell
+python tools/fflogs_damage_candidates.py `
+  --report-dir data/fflogs-poc/WdgtVGLAmj73Mbr8/fight-2
+```
+
+工具只统计敌方/NPC 对友方玩家的 `calculateddamage`，按 Action ID 输出匿名实际伤害、日志原始量、样本量、观测次数和单次最大目标数，并把普通 `Attack`、AOE 候选、多人候选和单体候选分开。产物位于被 Git 忽略的报告目录，明确标记 `promotionAllowed: false`，不会保存玩家姓名，也不会自动写入默认计划。
+
+当前样板已能识别 `Attack` 平 A、`Light of Judgment` 等 8 人 AOE 候选、`Hyperdrive` 单体候选和 `Ultimate Embrace` 双目标候选。该证据只证明提取和目标模式识别路径成立；实际 `amount` 已包含当次减伤/护盾，`unmitigatedAmount` 又是 FFLogs 乘区前原始量，均不能直接作为通用计划伤害。因此数值仍保持 `POC_PENDING`，需要更多当前版本样本和人工机制复核后才能进入计划 `damageProfile`。
+
 ## 验证结果
 
 `POC-03` 已于 2026-08-05 通过：默认官方端点成功读取公开样板报告，fight 2 为 `Kefka / Chaos / Exdeath` 击杀记录，持续 `1101.83` 秒；事件共 `6` 页、规范化后 `54,330` 条。产物凭据扫描通过，输出目录由 Git 忽略。

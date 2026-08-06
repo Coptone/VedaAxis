@@ -82,7 +82,34 @@ public record PlanSnapshot(
             @NotNull DamageType damageType,
             @NotBlank @Size(max = 80) String target,
             @Min(1) Long actionId,
+            @NotNull Confidence confidence,
+            @Valid DamageProfile damageProfile) {
+        public TimelineMechanic(
+                UUID mechanicId, String externalId, String phase, String name, long plannedAtMs, long durationMs,
+                MechanicType type, DamageType damageType, String target, Long actionId, Confidence confidence) {
+            this(mechanicId, externalId, phase, name, plannedAtMs, durationMs, type, damageType, target, actionId,
+                    confidence, null);
+        }
+    }
+
+    public record DamageProfile(
+            @Min(1) long amount,
+            @NotNull DamageBasis basis,
+            @Min(1) int sampleCount,
+            @NotNull DamageStatistic statistic,
+            @NotBlank @Size(max = 500) String source,
             @NotNull Confidence confidence) {
+    }
+
+    public enum DamageBasis {
+        OBSERVED_TARGET_ADJUSTED,
+        FORMULA_VERIFIED
+    }
+
+    public enum DamageStatistic {
+        MAX_OBSERVED,
+        P95,
+        EXPECTED
     }
 
     public enum MechanicType {

@@ -43,6 +43,8 @@ class FFLogsExtractorTests(unittest.TestCase):
                 "type": "cast",
                 "sourceID": 7,
                 "targetID": 9,
+                "packetID": 12,
+                "multiplier": 0.8,
                 "ability": {"gameID": 7535, "name": "Reprisal"},
             },
             fight_start_time=1000,
@@ -51,6 +53,8 @@ class FFLogsExtractorTests(unittest.TestCase):
         self.assertEqual("Reprisal", normalized["abilityName"])
         self.assertEqual(234, normalized["fightTimeMs"])
         self.assertEqual("cast", normalized["type"])
+        self.assertEqual(12, normalized["packetId"])
+        self.assertEqual(0.8, normalized["multiplier"])
         self.assertNotIn("amount", normalized)
 
 

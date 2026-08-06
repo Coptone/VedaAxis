@@ -3,6 +3,7 @@ package dev.vedaaxis.api.plan;
 import dev.vedaaxis.api.rule.AbilityCatalog;
 import dev.vedaaxis.api.rule.AbilityDefinition;
 import dev.vedaaxis.api.rule.RuleValidationResult;
+import dev.vedaaxis.api.rule.SurvivabilityAnalysisService;
 import dev.vedaaxis.api.security.CurrentUser;
 import dev.vedaaxis.api.common.ApiException;
 import jakarta.validation.Valid;
@@ -29,10 +30,15 @@ import java.util.UUID;
 public class PlanController {
     private final PlanService planService;
     private final AbilityCatalog abilityCatalog;
+    private final SurvivabilityAnalysisService survivabilityAnalysisService;
 
-    public PlanController(PlanService planService, AbilityCatalog abilityCatalog) {
+    public PlanController(
+            PlanService planService,
+            AbilityCatalog abilityCatalog,
+            SurvivabilityAnalysisService survivabilityAnalysisService) {
         this.planService = planService;
         this.abilityCatalog = abilityCatalog;
+        this.survivabilityAnalysisService = survivabilityAnalysisService;
     }
 
     @PostMapping("/plans")
@@ -67,6 +73,14 @@ public class PlanController {
     @PostMapping("/plans/{planId}/validate")
     RuleValidationResult validate(@PathVariable UUID planId) {
         return planService.validate(CurrentUser.id(), planId);
+    }
+
+    @PostMapping("/plans/{planId}/mechanics/{mechanicId}/survivability")
+    SurvivabilityAnalysisService.Analysis survivability(
+            @PathVariable UUID planId,
+            @PathVariable UUID mechanicId,
+            @Valid @RequestBody SurvivabilityAnalysisService.Request request) {
+        return survivabilityAnalysisService.analyze(planService.get(CurrentUser.id(), planId).snapshot(), mechanicId, request);
     }
 
     @PostMapping("/plans/{planId}/publish")

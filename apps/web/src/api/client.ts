@@ -7,6 +7,8 @@ import type {
   PlanSnapshot,
   PlanSummary,
   RuleValidationResult,
+  SurvivabilityAnalysis,
+  SurvivabilityRequest,
   TimelineImportCandidate,
   TrackMode,
 } from '../types/domain'
@@ -92,6 +94,11 @@ export const api = {
     }),
   validatePlan: (planId: string) =>
     request<RuleValidationResult>(`/plans/${planId}/validate`, { method: 'POST' }),
+  analyzeSurvivability: (planId: string, mechanicId: string, payload: SurvivabilityRequest) =>
+    request<SurvivabilityAnalysis>(`/plans/${planId}/mechanics/${mechanicId}/survivability`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   publishPlan: (planId: string) =>
     request<{ snapshot: PlanSnapshot; shareCode: string; validation: RuleValidationResult }>(
       `/plans/${planId}/publish`,

@@ -79,6 +79,35 @@ export interface TimelineMechanic {
   target: string
   actionId: number | null
   confidence: Confidence
+  damageProfile?: DamageProfile | null
+}
+
+export interface DamageProfile {
+  amount: number
+  basis: 'OBSERVED_TARGET_ADJUSTED' | 'FORMULA_VERIFIED'
+  sampleCount: number
+  statistic: 'MAX_OBSERVED' | 'P95' | 'EXPECTED'
+  source: string
+  confidence: Confidence
+}
+
+export interface SurvivabilityRequest {
+  targetTrackId: string
+  currentHp: number
+  maximumHp: number
+  partyRangeConfirmed: boolean
+  enemyEffectConfirmed: boolean
+}
+
+export interface SurvivabilityAnalysis {
+  status: 'CALIBRATION_REQUIRED' | 'SURVIVES_WITH_MODELED_EFFECTS' | 'INSUFFICIENT_WITH_MODELED_EFFECTS' | 'SPECIAL_CASE_REVIEW_REQUIRED'
+  hardGuarantee: boolean
+  incomingDamage: number | null
+  damageAfterMitigation: number | null
+  effectiveHp: number | null
+  remainingHp: number | null
+  modeledReduction: number | null
+  notices: string[]
 }
 
 export interface TimelineAnchor {
@@ -102,6 +131,23 @@ export interface AbilityDefinition {
   confirmationStrategy: ConfirmationStrategy
   source: string
   confidence: string
+  effect: MitigationEffectProfile
+}
+
+export interface MitigationEffectProfile {
+  scope: 'SELF' | 'TARGET' | 'PARTY' | 'GROUND_AREA' | 'ENEMY_TARGET' | 'ENEMY_AREA' | 'UNKNOWN'
+  allDamageReductionPercent: number
+  physicalDamageReductionPercent: number
+  magicalDamageReductionPercent: number
+  maximumHpIncreasePercent: number
+  maximumHpBarrierPercent: number
+  barrierCurePotency: number
+  invulnerability: boolean
+  stackingGroup: string
+  calculationReadiness: 'DIRECT_REDUCTION' | 'MAX_HP_BARRIER' | 'REQUIRES_HEALING_STATS' | 'INVULNERABILITY_SPECIAL_CASE' | 'NO_DIRECT_MITIGATION' | 'UNMODELED'
+  conditions: string[]
+  source: string
+  confidence: Confidence
 }
 
 export interface RuleIssue {

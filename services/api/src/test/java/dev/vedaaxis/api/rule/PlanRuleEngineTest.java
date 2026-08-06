@@ -21,7 +21,8 @@ class PlanRuleEngineTest {
             KERACHOLE,
             new AbilityDefinition(
                     KERACHOLE, "Kerachole", "ui/icon/003000/003666.tex", Set.of(40), 30_000, 1, 15_000,
-                    ConfirmationStrategy.STATUS_APPLY, "test", "VERIFIED"));
+                    ConfirmationStrategy.STATUS_APPLY, "test", "VERIFIED",
+                    MitigationEffectProfile.unknown(KERACHOLE)));
 
     @Test
     void acceptsAValidEightTrackPlan() {

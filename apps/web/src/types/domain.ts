@@ -110,6 +110,23 @@ export interface SurvivabilityAnalysis {
   notices: string[]
 }
 
+export type DamageRiskLevel = 'GREEN' | 'YELLOW' | 'RED' | 'UNCLASSIFIED' | 'CALIBRATION_REQUIRED'
+
+export interface DamageEstimate {
+  mechanicId: string
+  status: 'CALIBRATION_REQUIRED' | 'CALCULATED' | 'SPECIAL_CASE_REVIEW_REQUIRED'
+  baselineDamage: number | null
+  damageAfterMitigation: number | null
+  modeledReduction: number | null
+  riskLevel: DamageRiskLevel
+  worstTrackId: string | null
+  worstTrackSlot: TrackSlot | null
+  sampleCount: number | null
+  statistic: DamageProfile['statistic'] | null
+  source: string | null
+  notices: string[]
+}
+
 export interface TimelineAnchor {
   anchorId: string
   actionId: number

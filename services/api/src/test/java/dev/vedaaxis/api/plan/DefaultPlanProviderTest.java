@@ -2,6 +2,7 @@ package dev.vedaaxis.api.plan;
 
 import dev.vedaaxis.api.rule.PlanRuleEngine;
 import dev.vedaaxis.api.rule.RuleIssue;
+import dev.vedaaxis.api.rule.DamageEstimateAnalysisService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +19,9 @@ class DefaultPlanProviderTest {
     @Autowired
     private PlanRuleEngine ruleEngine;
 
+    @Autowired
+    private DamageEstimateAnalysisService damageEstimateAnalysisService;
+
     @Test
     void loadsTheDmuP1P2EightTrackTemplate() {
         PlanSnapshot snapshot = provider.create(UUID.randomUUID());
@@ -28,8 +32,23 @@ class DefaultPlanProviderTest {
         assertThat(snapshot.phases()).extracting(PlanSnapshot.TimelinePhase::timingMode)
                 .containsOnly(PlanSnapshot.TimingMode.ABSOLUTE);
         assertThat(snapshot.mechanics()).hasSize(76);
+        assertThat(snapshot.mechanics()).filteredOn(mechanic -> mechanic.damageProfile() != null).hasSize(11);
         assertThat(snapshot.assignments()).hasSize(108);
         assertThat(snapshot.assignments()).filteredOn(assignment -> assignment.targetTrackId() != null).hasSize(15);
+    }
+
+    @Test
+    void previewsPostMitigationDamageForEveryCalibratedDefaultMechanic() {
+        var estimates = damageEstimateAnalysisService.preview(provider.create(UUID.randomUUID()));
+
+        assertThat(estimates).hasSize(76);
+        assertThat(estimates).filteredOn(estimate -> estimate.damageAfterMitigation() != null).hasSize(11);
+        assertThat(estimates)
+                .filteredOn(estimate -> estimate.damageAfterMitigation() != null)
+                .allMatch(estimate -> estimate.baselineDamage() >= estimate.damageAfterMitigation());
+        assertThat(estimates)
+                .filteredOn(estimate -> estimate.damageAfterMitigation() != null)
+                .anyMatch(estimate -> estimate.baselineDamage() > estimate.damageAfterMitigation());
     }
 
     @Test

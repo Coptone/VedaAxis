@@ -38,10 +38,10 @@ public class SurvivabilityAnalysisService {
         Set<Long> includedActionIds = new HashSet<>();
         boolean conditionsConfirmed = true;
         for (PlanSnapshot.Assignment assignment : snapshot.assignments()) {
-            if (!assignment.mechanicId().equals(mechanicId)) {
+            AbilityDefinition ability = abilityCatalog.find(assignment.actionId()).orElse(null);
+            if (!isRelevantToImpact(assignment, ability, mechanic)) {
                 continue;
             }
-            AbilityDefinition ability = abilityCatalog.find(assignment.actionId()).orElse(null);
             MitigationEffectProfile effect = ability == null
                     ? MitigationEffectProfile.unknown(assignment.actionId())
                     : ability.effect();
@@ -102,6 +102,23 @@ public class SurvivabilityAnalysisService {
         }
         return new Analysis(result.status().name(), false, result.incomingDamage(), result.damageAfterMitigation(),
                 result.effectiveHp(), result.remainingHp(), result.modeledReduction(), List.copyOf(notices));
+    }
+
+    private static boolean isRelevantToImpact(
+            PlanSnapshot.Assignment assignment,
+            AbilityDefinition ability,
+            PlanSnapshot.TimelineMechanic mechanic) {
+        if (assignment.mechanicId().equals(mechanic.mechanicId())
+                || assignment.impactAtMs() == mechanic.plannedAtMs()) {
+            return true;
+        }
+        if (ability == null || ability.durationMs() <= 0) {
+            return false;
+        }
+        long impactAtMs = mechanic.plannedAtMs();
+        return assignment.earliestUseAtMs() <= impactAtMs
+                && assignment.latestUseAtMs() <= impactAtMs
+                && assignment.earliestUseAtMs() + ability.durationMs() >= impactAtMs;
     }
 
     private static boolean isUsableByAssignmentTrack(

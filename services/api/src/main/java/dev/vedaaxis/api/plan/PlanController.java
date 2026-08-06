@@ -2,6 +2,7 @@ package dev.vedaaxis.api.plan;
 
 import dev.vedaaxis.api.rule.AbilityCatalog;
 import dev.vedaaxis.api.rule.AbilityDefinition;
+import dev.vedaaxis.api.rule.DamageEstimateAnalysisService;
 import dev.vedaaxis.api.rule.RuleValidationResult;
 import dev.vedaaxis.api.rule.SurvivabilityAnalysisService;
 import dev.vedaaxis.api.security.CurrentUser;
@@ -31,14 +32,17 @@ public class PlanController {
     private final PlanService planService;
     private final AbilityCatalog abilityCatalog;
     private final SurvivabilityAnalysisService survivabilityAnalysisService;
+    private final DamageEstimateAnalysisService damageEstimateAnalysisService;
 
     public PlanController(
             PlanService planService,
             AbilityCatalog abilityCatalog,
-            SurvivabilityAnalysisService survivabilityAnalysisService) {
+            SurvivabilityAnalysisService survivabilityAnalysisService,
+            DamageEstimateAnalysisService damageEstimateAnalysisService) {
         this.planService = planService;
         this.abilityCatalog = abilityCatalog;
         this.survivabilityAnalysisService = survivabilityAnalysisService;
+        this.damageEstimateAnalysisService = damageEstimateAnalysisService;
     }
 
     @PostMapping("/plans")
@@ -81,6 +85,12 @@ public class PlanController {
             @PathVariable UUID mechanicId,
             @Valid @RequestBody SurvivabilityAnalysisService.Request request) {
         return survivabilityAnalysisService.analyze(planService.get(CurrentUser.id(), planId).snapshot(), mechanicId, request);
+    }
+
+    @PostMapping("/damage-estimates/preview")
+    List<DamageEstimateAnalysisService.MechanicEstimate> previewDamageEstimates(
+            @Valid @RequestBody DamageEstimateAnalysisService.PreviewRequest request) {
+        return damageEstimateAnalysisService.preview(request.snapshot());
     }
 
     @PostMapping("/plans/{planId}/publish")

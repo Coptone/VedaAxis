@@ -35,6 +35,12 @@ python tools/fflogs_damage_candidates.py `
 
 当前样板已能识别 `Attack` 平 A、`Light of Judgment` 等 8 人 AOE 候选、`Hyperdrive` 单体候选和 `Ultimate Embrace` 双目标候选。该证据只证明提取和目标模式识别路径成立；实际 `amount` 已包含当次减伤/护盾，`unmitigatedAmount` 又是 FFLogs 乘区前原始量，均不能直接作为通用计划伤害。因此数值仍保持 `POC_PENDING`，需要更多当前版本样本和人工机制复核后才能进入计划 `damageProfile`。
 
+### 多报告 P1/P2 校准
+
+2026-08-06 增加了两段可复现工具链：`fflogs_collect_samples.py` 使用公开 API 自动发现 zone 76、encounter 1085 的近期不同击杀并下载事件；`fflogs_plan_damage_calibration.py` 从被忽略的样本目录中匿名聚合。它按计划相对时间（默认 `±2.5s`）、Action ID 和目标数量匹配 AOE/死刑，同一 Action 在 5 秒内的连续命中先按单个目标求和，再跨不同战斗取 P95，至少需要 3 份报告。
+
+本轮读取 6 份不同公开击杀，得到 11 个可追溯候选，另有 4 个机制因时间未匹配或报告数不足而保持待校准。提交的 `data/seeds/dmu/p1-p2-damage-calibration.json` 明确声明不含玩家名与报告码，`promotionAllowed` 为 `false`；原始报告仍只存在于 Git 忽略目录。该结果可驱动计划编辑器的风险预览，但仍是特定版本和样本环境的 `POC_PENDING` 观测基线，必须与实机命中继续交叉验证。
+
 ## 验证结果
 
 `POC-03` 已于 2026-08-05 通过：默认官方端点成功读取公开样板报告，fight 2 为 `Kefka / Chaos / Exdeath` 击杀记录，持续 `1101.83` 秒；事件共 `6` 页、规范化后 `54,330` 条。产物凭据扫描通过，输出目录由 Git 忽略。

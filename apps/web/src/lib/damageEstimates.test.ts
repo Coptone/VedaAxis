@@ -138,8 +138,12 @@ describe('local damage estimates', () => {
 
   it('filters abilities by the selected execution track job', () => {
     const plan = basePlan()
+    const pictomancerBarrier = { ...reprisal, actionId: 34685, name: '坦培拉涂层 / Tempera Coat', jobIds: [42] }
+    const machinistMitigation = { ...reprisal, actionId: 16889, name: '策动 / Tactician', jobIds: [31] }
     expect(abilityFitsTrack(reprisal, plan.tracks[0])).toBe(true)
     expect(abilityFitsTrack(reprisal, plan.tracks[1])).toBe(false)
+    expect(abilityFitsTrack(pictomancerBarrier, plan.tracks[0])).toBe(false)
+    expect(abilityFitsTrack(machinistMitigation, { trackId: 'd3', slot: 'D3', allowedJobIds: [31], displayName: 'MCH' })).toBe(true)
   })
 
   it('reports local cooldown conflicts with the same track and action', () => {

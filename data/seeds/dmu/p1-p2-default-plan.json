@@ -71,8 +71,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50179,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 980519,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 5,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 5 unique kills · Action 50179 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "4e614c61-8410-5cb8-b70b-1ee4ec6299f2",
@@ -97,8 +105,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50401,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 977751,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 6,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 50401 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "abcf9f0d-7333-546c-b269-02570af4bb61",
@@ -240,8 +256,16 @@
       "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "全体",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50722,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 284938,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 43,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 50722 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "99a1821e-a0e8-582f-8a3e-50a5c657a83e",
@@ -266,8 +290,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 49739,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 1594655,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 6,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49739 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c6877ed3-5ecd-5956-932d-6b520119955f",
@@ -461,8 +493,16 @@
       "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "全体",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50722,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 246985,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 46,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 50722 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "1bd76da5-159e-5fc4-8ec5-c1fd899157f1",
@@ -487,8 +527,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 49739,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 1725360,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 5,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 5 unique kills · Action 49739 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "714fed19-7be5-56ba-8ea3-fa2b05a062ea",
@@ -669,8 +717,16 @@
       "type": "TANK_BUSTER",
       "damageType": "PHYSICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 49740,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 2484334,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 8,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49740 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c08d5701-a11b-506e-a44c-d711fd3613bf",
@@ -695,8 +751,16 @@
       "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "全体",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47804,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 340667,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 46,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47804 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "3828403d-4ac6-5c40-9df3-356756299769",
@@ -942,8 +1006,16 @@
       "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "全体",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47805,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 255803,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 40,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47805 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "49d6cc04-14b0-5396-9835-1073bc081ac7",
@@ -994,8 +1066,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47823,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 655135,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 9,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 5 unique kills · Action 47823 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "db748296-83b2-5563-9a93-a21435d0ed6a",
@@ -1007,8 +1087,16 @@
       "type": "TANK_BUSTER",
       "damageType": "PHYSICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 49740,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 1204946,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 12,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49740 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "fb33f77d-9152-5a43-a41c-22da122816d6",

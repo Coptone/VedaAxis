@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   AlertTriangle,
@@ -37,9 +37,9 @@ import type {
   AbilityDefinition,
   AiCandidate,
   Assignment,
+  DamageEstimate,
   PlanSnapshot,
   RuleValidationResult,
-  SurvivabilityAnalysis,
   TimelineImportCandidate,
   TimelineMechanic,
   TimelinePhase,
@@ -55,7 +55,9 @@ const defaultPlan = dmuP1P2DefaultPlan()
 
 function firstAssignedMechanicId(plan: PlanSnapshot): string {
   const assignedMechanics = new Set(plan.assignments.map((assignment) => assignment.mechanicId))
-  return plan.mechanics.find((mechanic) => assignedMechanics.has(mechanic.mechanicId))?.mechanicId
+  return plan.mechanics.find((mechanic) => mechanic.damageProfile && assignedMechanics.has(mechanic.mechanicId))?.mechanicId
+    ?? plan.mechanics.find((mechanic) => mechanic.damageProfile)?.mechanicId
+    ?? plan.mechanics.find((mechanic) => assignedMechanics.has(mechanic.mechanicId))?.mechanicId
     ?? plan.mechanics[0]?.mechanicId
     ?? ''
 }
@@ -73,13 +75,11 @@ const importOpen = ref(false)
 const importUrl = ref('https://raalm.com/m-spec/timelinev2.html?boss=dancing-mad&spec=sage-sage&buddy=0')
 const includeRecommendations = ref(true)
 const importCandidate = ref<TimelineImportCandidate | null>(null)
-const survivabilityTargetTrackId = ref('')
-const survivabilityCurrentHp = ref<number | null>(null)
-const survivabilityMaximumHp = ref<number | null>(null)
-const partyRangeConfirmed = ref(false)
-const enemyEffectConfirmed = ref(false)
-const survivability = ref<SurvivabilityAnalysis | null>(null)
-const survivabilityBusy = ref(false)
+const damageEstimates = ref<Record<string, DamageEstimate>>({})
+const damageEstimateBusy = ref(false)
+const damageEstimateError = ref('')
+let damageEstimateRequest = 0
+let damageEstimateTimer: ReturnType<typeof setTimeout> | undefined
 
 const DEFAULT_PHASES: TimelinePhase[] = cloneData(defaultPlan.phases)
 const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
@@ -103,15 +103,7 @@ const selectedMechanic = computed(() => mechanics.value.find((item) => item.mech
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
 const selectedAbility = computed(() => selectedAbilityId.value === null ? undefined : abilityMap.value.get(selectedAbilityId.value))
-const survivabilityStatusLabel = computed(() => {
-  switch (survivability.value?.status) {
-    case 'SURVIVES_WITH_MODELED_EFFECTS': return '已建模部分可存活'
-    case 'INSUFFICIENT_WITH_MODELED_EFFECTS': return '已建模部分不足'
-    case 'SPECIAL_CASE_REVIEW_REQUIRED': return '需要无敌/机制特判'
-    case 'CALIBRATION_REQUIRED': return '伤害值待校准'
-    default: return '尚未计算'
-  }
-})
+const selectedDamageEstimate = computed(() => damageEstimates.value[selectedMechanicId.value])
 const aiDiff = computed(() => {
   if (!aiCandidate.value) return { added: 0, removed: 0, changed: 0 }
   const current = new Map(snapshot.value.assignments.map((item) => [item.assignmentId, item]))
@@ -134,7 +126,7 @@ onMounted(async () => {
   }
   if (planId.value) await loadPlan()
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
-  survivabilityTargetTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
+  await refreshDamageEstimates()
 })
 
 async function loadPlan() {
@@ -142,16 +134,34 @@ async function loadPlan() {
   try {
     const details = await api.plan(planId.value)
     name.value = details.plan.name
-    snapshot.value = {
+    snapshot.value = withDefaultDamageProfiles({
       ...details.snapshot,
       phases: details.snapshot.phases?.length ? details.snapshot.phases : cloneData(DEFAULT_PHASES),
       mechanics: details.snapshot.mechanics?.length ? details.snapshot.mechanics : cloneData(DEFAULT_MECHANICS),
-    }
+    })
     selectedMechanicId.value = firstAssignedMechanicId(snapshot.value)
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : '计划加载失败'
   } finally {
     busy.value = false
+  }
+}
+
+function withDefaultDamageProfiles(plan: PlanSnapshot): PlanSnapshot {
+  if (!plan.strategyTag.startsWith(DMU_P1_P2_STRATEGY)) return plan
+  const defaultsById = new Map(DEFAULT_MECHANICS.map((mechanic) => [mechanic.mechanicId, mechanic]))
+  return {
+    ...plan,
+    mechanics: plan.mechanics.map((mechanic) => {
+      const fallback = defaultsById.get(mechanic.mechanicId)
+      if (mechanic.damageProfile || !fallback?.damageProfile) return mechanic
+      return {
+        ...mechanic,
+        actionId: mechanic.actionId ?? fallback.actionId,
+        damageType: mechanic.damageType === 'UNKNOWN' ? fallback.damageType : mechanic.damageType,
+        damageProfile: cloneData(fallback.damageProfile),
+      }
+    }),
   }
 }
 
@@ -187,67 +197,53 @@ function changeMode(mode: TrackMode) {
   snapshot.value = makeSnapshot(mode)
   name.value = mode === 'EIGHT' ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞四轨扩展草稿'
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
-  survivabilityTargetTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
-  survivability.value = null
 }
 
 function selectMechanic(mechanicId: string) {
   selectedMechanicId.value = mechanicId
   selectedAssignment.value = null
-  survivability.value = null
 }
 
 function displayInteger(value: number | null): string {
   return value === null ? '—' : Math.round(value).toLocaleString('zh-CN')
 }
 
-async function analyzeSurvivability() {
-  if (!selectedMechanic.value.damageProfile) {
-    survivability.value = {
-      status: 'CALIBRATION_REQUIRED',
-      hardGuarantee: false,
-      incomingDamage: null,
-      damageAfterMitigation: null,
-      effectiveHp: null,
-      remainingHp: null,
-      modeledReduction: null,
-      notices: ['该机制尚无可追溯的伤害校准数据；未创建或保存计划，也未进行猜测计算。'],
-    }
-    return
-  }
-  const currentHp = survivabilityCurrentHp.value
-  const maximumHp = survivabilityMaximumHp.value
-  if (!survivabilityTargetTrackId.value || currentHp === null || maximumHp === null || currentHp < 0 || maximumHp < 1) {
-    error.value = '请先选择受击轨道，并填写当前生命和最大生命。'
-    return
-  }
-  if (currentHp > maximumHp) {
-    error.value = '当前生命不能大于最大生命。'
-    return
-  }
-  survivabilityBusy.value = true
-  survivability.value = null
-  error.value = ''
-  await save()
-  if (!planId.value || error.value) {
-    survivabilityBusy.value = false
-    return
-  }
+function damageRiskLabel(estimate: DamageEstimate | undefined): string {
+  if (!estimate || estimate.status === 'CALIBRATION_REQUIRED') return '伤害值待校准'
+  if (estimate.status === 'SPECIAL_CASE_REVIEW_REQUIRED') return '需要无敌特判'
+  return ({ GREEN: '绿色区间', YELLOW: '黄色区间', RED: '红色区间', UNCLASSIFIED: '未设色带', CALIBRATION_REQUIRED: '伤害值待校准' } as const)[estimate.riskLevel]
+}
+
+function damageRiskClass(estimate: DamageEstimate | undefined): string {
+  return estimate ? `damage-risk-${estimate.riskLevel.toLowerCase()}` : 'damage-risk-calibration_required'
+}
+
+async function refreshDamageEstimates() {
+  const requestId = ++damageEstimateRequest
+  damageEstimateBusy.value = true
+  damageEstimateError.value = ''
   try {
-    survivability.value = await api.analyzeSurvivability(planId.value, selectedMechanicId.value, {
-      targetTrackId: survivabilityTargetTrackId.value,
-      currentHp,
-      maximumHp,
-      partyRangeConfirmed: partyRangeConfirmed.value,
-      enemyEffectConfirmed: enemyEffectConfirmed.value,
-    })
-    message.value = '已完成目标特定的保守生存分析'
+    const estimates = await api.previewDamageEstimates(snapshot.value)
+    if (requestId !== damageEstimateRequest) return
+    damageEstimates.value = Object.fromEntries(estimates.map((estimate) => [estimate.mechanicId, estimate]))
   } catch (reason) {
-    error.value = reason instanceof ApiError ? reason.message : '生存分析失败'
+    if (requestId !== damageEstimateRequest) return
+    damageEstimateError.value = reason instanceof ApiError ? reason.message : '预计伤害计算失败'
   } finally {
-    survivabilityBusy.value = false
+    if (requestId === damageEstimateRequest) damageEstimateBusy.value = false
   }
 }
+
+function scheduleDamageEstimateRefresh() {
+  if (damageEstimateTimer) clearTimeout(damageEstimateTimer)
+  damageEstimateTimer = setTimeout(refreshDamageEstimates, 250)
+}
+
+watch(
+  () => [snapshot.value.mechanics, snapshot.value.assignments],
+  scheduleDamageEstimateRefresh,
+  { deep: true },
+)
 
 function addAssignment() {
   if (!selectedAbilityId.value || !selectedTrackId.value) return
@@ -310,7 +306,6 @@ async function save() {
       }))
       selectedTrackId.value = remapTrackId(selectedTrackId.value) ?? ''
       selectedTargetTrackId.value = remapTrackId(selectedTargetTrackId.value) ?? ''
-      survivabilityTargetTrackId.value = remapTrackId(survivabilityTargetTrackId.value) ?? ''
       snapshot.value.tracks = created.snapshot.tracks
       await router.replace(`/plans/${created.plan.id}`)
     }
@@ -508,6 +503,13 @@ function fallbackAbilities(): AbilityDefinition[] {
               <span>{{ mechanic.target }}</span>
             </small>
             <small class="damage-estimate-note">{{ damageEstimateLabel(mechanic) }}</small>
+            <small
+              v-if="damageEstimates[mechanic.mechanicId]?.damageAfterMitigation != null"
+              :class="['post-mitigation-damage', damageRiskClass(damageEstimates[mechanic.mechanicId])]"
+            >
+              减伤后 {{ displayInteger(damageEstimates[mechanic.mechanicId]!.damageAfterMitigation) }}
+              <template v-if="damageEstimates[mechanic.mechanicId]?.worstTrackSlot"> · 最危险 {{ damageEstimates[mechanic.mechanicId]!.worstTrackSlot }}</template>
+            </small>
           </span>
           <em v-if="assignmentCountByMechanic.get(mechanic.mechanicId)">{{ assignmentCountByMechanic.get(mechanic.mechanicId) }}</em>
           <i :class="mechanic.confidence.toLowerCase()"></i>
@@ -590,47 +592,37 @@ function fallbackAbilities(): AbilityDefinition[] {
           </article>
         </div>
 
-        <section class="survivability-panel">
+        <section class="damage-analysis-panel">
           <header>
             <div>
-              <p class="eyebrow">TARGET-SPECIFIC SURVIVABILITY</p>
-              <h3>减伤承伤校验</h3>
+              <p class="eyebrow">POST-MITIGATION DAMAGE</p>
+              <h3>当前减伤后预计伤害</h3>
             </div>
-            <span :class="['survivability-status', survivability?.status?.toLowerCase() ?? 'idle']">{{ survivabilityStatusLabel }}</span>
+            <span :class="['damage-analysis-status', damageRiskClass(selectedDamageEstimate)]">
+              {{ damageEstimateBusy ? '计算中…' : damageRiskLabel(selectedDamageEstimate) }}
+            </span>
           </header>
-          <div class="survivability-form">
-            <label>受击轨道
-              <select v-model="survivabilityTargetTrackId">
-                <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
-              </select>
-            </label>
-            <label>命中前当前生命
-              <input v-model.number="survivabilityCurrentHp" type="number" min="0" step="100" placeholder="按角色实际值填写" />
-            </label>
-            <label>基础最大生命
-              <input v-model.number="survivabilityMaximumHp" type="number" min="1" step="100" placeholder="按角色实际值填写" />
-            </label>
-            <button class="primary-button" type="button" :disabled="survivabilityBusy" @click="analyzeSurvivability">
-              <Shield :size="16" />{{ survivabilityBusy ? '计算中…' : '计算承伤' }}
-            </button>
+          <p class="damage-thresholds">
+            AOE：≤10万绿色，10万以上至19万黄色，&gt;19万红色；死刑：≤20万绿色，20万以上至29万前黄色，≥29万红色。
+          </p>
+          <div v-if="selectedDamageEstimate?.damageAfterMitigation != null" class="damage-analysis-metrics">
+            <span><small>机制原始总伤害</small><b>{{ displayInteger(selectedDamageEstimate.baselineDamage) }}</b></span>
+            <span><small>已建模减伤</small><b>{{ selectedDamageEstimate.modeledReduction === null ? '—' : `${(selectedDamageEstimate.modeledReduction * 100).toFixed(1)}%` }}</b></span>
+            <span><small>减伤后预计伤害</small><b :class="damageRiskClass(selectedDamageEstimate)">{{ displayInteger(selectedDamageEstimate.damageAfterMitigation) }}</b></span>
+            <span><small>最危险轨道</small><b>{{ selectedDamageEstimate.worstTrackSlot ?? '—' }}</b></span>
           </div>
-          <div class="survivability-confirmations">
-            <label><input v-model="partyRangeConfirmed" type="checkbox" />确认目标处于队伍/地面减伤范围</label>
-            <label><input v-model="enemyEffectConfirmed" type="checkbox" />确认雪仇、牵制、昏乱等施加在伤害来源上</label>
+          <p v-else class="damage-analysis-empty">
+            当前机制没有足够的 FFLogs 样本，暂不显示猜测伤害；可继续编排减伤，待校准后会自动出现结果。
+          </p>
+          <p class="damage-analysis-boundary">
+            预览按当前安排计算：AOE 取全队中减伤后伤害最高的轨道，死刑取坦克轨道中的最高值。护盾、治疗和无敌不从这一个伤害数字中扣除，并会单独提示复核。
+          </p>
+          <p v-if="damageEstimateError" class="damage-analysis-error">
+            <AlertTriangle :size="13" />{{ damageEstimateError }}
+          </p>
+          <div v-if="selectedDamageEstimate?.notices.length" class="damage-analysis-notices">
+            <p v-for="notice in selectedDamageEstimate.notices" :key="notice"><AlertTriangle :size="13" />{{ notice }}</p>
           </div>
-          <p class="survivability-boundary">仅计算已录入且满足目标/范围条件的效果。日志观测伤害属于特定角色、装备和队伍环境，不会被宣称为跨队伍“100% 必定存活”。</p>
-          <template v-if="survivability">
-            <div v-if="survivability.incomingDamage !== null" class="survivability-metrics">
-              <span><small>校准入伤</small><b>{{ displayInteger(survivability.incomingDamage) }}</b></span>
-              <span><small>已建模减伤</small><b>{{ survivability.modeledReduction === null ? '—' : `${(survivability.modeledReduction * 100).toFixed(1)}%` }}</b></span>
-              <span><small>减伤后伤害</small><b>{{ displayInteger(survivability.damageAfterMitigation) }}</b></span>
-              <span><small>有效生命</small><b>{{ displayInteger(survivability.effectiveHp) }}</b></span>
-              <span><small>预计余量</small><b :class="{ negative: (survivability.remainingHp ?? 0) < 0 }">{{ displayInteger(survivability.remainingHp) }}</b></span>
-            </div>
-            <div v-if="survivability.notices.length" class="survivability-notices">
-              <p v-for="notice in survivability.notices" :key="notice"><AlertTriangle :size="13" />{{ notice }}</p>
-            </div>
-          </template>
         </section>
 
         <div v-if="validation" :class="['validation-panel', { valid: validation.valid }]">

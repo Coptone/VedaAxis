@@ -1,6 +1,7 @@
 import type {
   AbilityDefinition,
   AiCandidate,
+  DamageEstimate,
   ExecutionStats,
   ExecutionSummary,
   PlanDetails,
@@ -98,6 +99,11 @@ export const api = {
     request<SurvivabilityAnalysis>(`/plans/${planId}/mechanics/${mechanicId}/survivability`, {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+  previewDamageEstimates: (snapshot: PlanSnapshot) =>
+    request<DamageEstimate[]>('/damage-estimates/preview', {
+      method: 'POST',
+      body: JSON.stringify({ snapshot }),
     }),
   publishPlan: (planId: string) =>
     request<{ snapshot: PlanSnapshot; shareCode: string; validation: RuleValidationResult }>(

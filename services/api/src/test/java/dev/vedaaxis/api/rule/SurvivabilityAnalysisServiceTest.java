@@ -66,6 +66,31 @@ class SurvivabilityAnalysisServiceTest {
         assertThat(result.notices()).anyMatch(value -> value.contains("不能作为跨装备/跨队伍"));
     }
 
+    @Test
+    void includesMitigationScheduledOnAnEarlierTimelineRowWhenItStillCoversTheHit() {
+        AbilityCatalog catalog = mock(AbilityCatalog.class);
+        AbilityDefinition rampart = new AbilityDefinition(
+                7531, "铁壁", "", Set.of(19), 90_000, 1, 20_000,
+                ConfirmationStrategy.STATUS_APPLY, "test", "REVIEWED",
+                new AbilityEffectCatalog().profile(7531));
+        when(catalog.find(7531)).thenReturn(Optional.of(rampart));
+        SurvivabilityAnalysisService service = new SurvivabilityAnalysisService(catalog);
+        UUID earlierRowId = UUID.randomUUID();
+        PlanSnapshot.Assignment assignment = new PlanSnapshot.Assignment(
+                UUID.randomUUID(), earlierRowId, targetTrackId, 7531, null,
+                0, 0, 1_000, 1_000, false,
+                ConfirmationStrategy.STATUS_APPLY, List.of(), null);
+        PlanSnapshot.DamageProfile profile = new PlanSnapshot.DamageProfile(
+                100_000, PlanSnapshot.DamageBasis.OBSERVED_TARGET_ADJUSTED, 10,
+                PlanSnapshot.DamageStatistic.MAX_OBSERVED, "test sample", PlanSnapshot.Confidence.POC_PENDING);
+
+        SurvivabilityAnalysisService.Analysis result = service.analyze(
+                snapshot(profile, List.of(assignment)), mechanicId,
+                new SurvivabilityAnalysisService.Request(targetTrackId, 100_000, 100_000, true, true));
+
+        assertThat(result.damageAfterMitigation()).isEqualTo(80_000);
+    }
+
     private PlanSnapshot snapshot(PlanSnapshot.DamageProfile profile, List<PlanSnapshot.Assignment> assignments) {
         return new PlanSnapshot(
                 "1.3", "0.1.7", UUID.randomUUID(), 1, UUID.randomUUID(), 1,

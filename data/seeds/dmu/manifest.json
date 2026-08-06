@@ -64,6 +64,17 @@
       "result": "TIMING_MISMATCH",
       "artifact": "data/fflogs-poc/WdgtVGLAmj73Mbr8/fight-2/anchor-verification.json"
     },
+    "damageCalibration": {
+      "checkedAt": "2026-08-06",
+      "publicKillSamples": 6,
+      "resolvedMechanics": 11,
+      "unresolvedMechanics": 4,
+      "statistic": "P95",
+      "containsPlayerNames": false,
+      "containsReportCodes": false,
+      "status": "POC_PENDING",
+      "artifact": "data/seeds/dmu/p1-p2-damage-calibration.json"
+    },
     "requirements": [
       "国服或国际服最新版本内验证 territory、Action ID 和阶段锚点",
       "使用 ActionEffect 或状态事件确认关键减伤实际生效",

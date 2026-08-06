@@ -200,7 +200,7 @@ def extract(args: argparse.Namespace) -> Path:
         raise RuntimeError("set FFLOGS_CLIENT_ID and FFLOGS_CLIENT_SECRET in the process environment")
 
     report_code = parse_report_code(args.report)
-    token = oauth_token(args.token_url, client_id, client_secret)
+    token = getattr(args, "access_token", None) or oauth_token(args.token_url, client_id, client_secret)
     output = Path(args.output_dir).resolve() / report_code / f"fight-{args.fight_id}"
     raw = output / "raw"
     raw.mkdir(parents=True, exist_ok=True)

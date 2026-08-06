@@ -10,6 +10,7 @@ vi.mock('../api/client', () => ({
     abilities: vi.fn().mockResolvedValue([]),
     createPlan: vi.fn(),
     updatePlan: vi.fn(),
+    previewDamageEstimates: vi.fn().mockResolvedValue([]),
   },
   ApiError: class ApiError extends Error {},
 }))
@@ -35,17 +36,46 @@ describe('PlanEditorView', () => {
     expect(wrapper.get('[aria-label="计划名称"]').element).toHaveProperty('value', '妖星乱舞 P1/P2 默认减伤表')
     expect(wrapper.get('.mechanic-panel h2').text()).toBe('妖星乱舞 · P1/P2')
     expect(wrapper.get('.mechanic-panel > header > span').text()).toBe('76 项 · 108 个减伤安排')
-    expect(wrapper.get('.assignment-board h2').text()).toBe('攻击 x4')
-    expect(wrapper.findAll('.assignment-card')).toHaveLength(8)
+    expect(wrapper.get('.assignment-board h2').text()).toBe('制裁之光')
+    expect(wrapper.findAll('.assignment-card')).toHaveLength(4)
     expect(wrapper.findAll('.track-column')).toHaveLength(8)
-    expect(wrapper.get('.survivability-panel h3').text()).toBe('减伤承伤校验')
+    expect(wrapper.get('.damage-analysis-panel h3').text()).toBe('当前减伤后预计伤害')
     expect(wrapper.get('.damage-estimate-note').text()).toBe('伤害值待校准')
-
-    const analyzeButton = wrapper.findAll('button').find((button) => button.text().includes('计算承伤'))
-    expect(analyzeButton).toBeDefined()
-    await analyzeButton!.trigger('click')
-    expect(wrapper.get('.survivability-status').text()).toBe('伤害值待校准')
+    expect(wrapper.get('.damage-analysis-status').text()).toBe('伤害值待校准')
+    expect(wrapper.find('input[placeholder="按角色实际值填写"]').exists()).toBe(false)
     expect(api.createPlan).not.toHaveBeenCalled()
+  })
+
+  it('colors the post-mitigation number from the current plan result', async () => {
+    const defaultPlan = dmuP1P2DefaultPlan()
+    const assignedMechanics = new Set(defaultPlan.assignments.map((assignment) => assignment.mechanicId))
+    const firstMechanicId = defaultPlan.mechanics.find((mechanic) => mechanic.damageProfile && assignedMechanics.has(mechanic.mechanicId))!.mechanicId
+    vi.mocked(api.previewDamageEstimates).mockResolvedValueOnce([{
+      mechanicId: firstMechanicId,
+      status: 'CALCULATED',
+      baselineDamage: 300_000,
+      damageAfterMitigation: 200_000,
+      modeledReduction: 1 / 3,
+      riskLevel: 'RED',
+      worstTrackId: 'track-1',
+      worstTrackSlot: 'MT',
+      sampleCount: 6,
+      source: 'FFLogs sample',
+      notices: [],
+    }])
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    expect(wrapper.get('.post-mitigation-damage.damage-risk-red').text()).toContain('减伤后 200,000')
+    expect(wrapper.get('.damage-analysis-metrics .damage-risk-red').text()).toBe('200,000')
+    expect(wrapper.get('.damage-analysis-status').text()).toBe('红色区间')
   })
 
   it('remaps execution and single-target tracks when first saving a default plan', async () => {

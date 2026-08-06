@@ -21,6 +21,8 @@ namespace VedaAxis;
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/vedaaxis";
+    private static readonly string[] FourTrackSlots = ["T1", "H1", "D1", "D2"];
+    private static readonly string[] EightTrackSlots = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
 
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
@@ -98,10 +100,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             current.ApiBaseUrl = PluginConfiguration.ProductionApiBaseUrl;
         }
-        if (string.Equals(current.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase))
-        {
-            current.StrategyTag = "DMU-P1P2";
-        }
+        current.OverlayStyle = OverlayPresentation.PersistedValue(OverlayPresentation.Parse(current.OverlayStyle));
 
         current.Version = PluginConfiguration.CurrentVersion;
         PluginInterface.SavePluginConfig(current);
@@ -177,7 +176,8 @@ public sealed class Plugin : IDalamudPlugin
             overlay.Draw(
                 runtime.Assignments,
                 runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow),
-                Math.Clamp(configuration.OverlayOpacity, 0.1f, 1f));
+                Math.Clamp(configuration.OverlayOpacity, 0.1f, 1f),
+                configuration.OverlayStyle);
             DrawPartyTargets();
             DrawMissingActionDiagnostic();
         }
@@ -190,7 +190,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawConfig()
     {
-        ImGui.SetNextWindowSize(new Vector2(560, 520), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new Vector2(620, 680), ImGuiCond.FirstUseEver);
         if (!ImGui.Begin("VedaAxis 控制台###VedaAxisConfig", ref showConfig))
         {
             ImGui.End();
@@ -207,11 +207,7 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.TextDisabled("覆盖层只绘制描边，不接管鼠标或热键输入。4 轨与 8 轨使用同一运行时。 ");
         ImGui.Separator();
 
-        var slot = configuration.LocalSlot;
-        if (ImGui.InputText("本机轨道", ref slot, 8))
-        {
-            configuration.LocalSlot = slot.Trim().ToUpperInvariant();
-        }
+        DrawLocalSlotSelector();
 
         var opacity = configuration.OverlayOpacity;
         if (ImGui.SliderFloat("覆盖层透明度", ref opacity, 0.1f, 1f, "%.2f"))
@@ -219,6 +215,7 @@ public sealed class Plugin : IDalamudPlugin
             configuration.OverlayOpacity = opacity;
             SaveConfiguration();
         }
+        DrawOverlayStyleSelector();
 
         if (ImGui.Button("重载计划"))
         {
@@ -257,49 +254,13 @@ public sealed class Plugin : IDalamudPlugin
         DrawPartyTargetMapping();
         ImGui.Separator();
         ImGui.Text("账户连接");
-        var apiBaseUrl = configuration.ApiBaseUrl;
-        if (ImGui.InputText("API 地址", ref apiBaseUrl, 240))
-        {
-            configuration.ApiBaseUrl = apiBaseUrl;
-            SaveConfiguration();
-        }
+        DrawApiEndpointSelector();
         if (HasStoredDeviceSession())
         {
             ImGui.TextColored(new Vector4(0.35f, 0.88f, 0.58f, 1f), $"已连接设备 {configuration.DeviceId}");
             ImGui.TextDisabled("本机已完成一次性绑定；插件启动和令牌过期时会自动续期。无需重复输入绑定码。");
-            var strategyTag = configuration.StrategyTag;
-            if (ImGui.InputText("策略标签", ref strategyTag, 80))
-            {
-                configuration.StrategyTag = strategyTag.Trim();
-                SaveConfiguration();
-            }
-            var isEight = configuration.TrackMode == "EIGHT";
-            if (ImGui.RadioButton("4 轨", !isEight))
-            {
-                configuration.TrackMode = "FOUR";
-                SaveConfiguration();
-            }
-            ImGui.SameLine();
-            if (ImGui.RadioButton("8 轨", isEight))
-            {
-                configuration.TrackMode = "EIGHT";
-                SaveConfiguration();
-            }
-            if (ImGui.Button("使用 DMU P1/P2 配置"))
-            {
-                configuration.StrategyTag = "DMU-P1P2";
-                configuration.TrackMode = "EIGHT";
-                SaveConfiguration();
-                status = "已选择 DMU P1/P2；请在 Territory 1363 脱战同步";
-            }
-            ImGui.SameLine();
-            if (ImGui.Button("使用 O8S 联调配置"))
-            {
-                configuration.StrategyTag = "O8S-POC";
-                configuration.TrackMode = "EIGHT";
-                SaveConfiguration();
-                status = "已选择 O8S 联调；请在 Territory 755 脱战同步";
-            }
+            DrawTrackModeSelector();
+            DrawPlanSelector();
             if (ImGui.Button("同步已发布个人计划"))
             {
                 _ = SyncPublishedPlanAsync();
@@ -334,6 +295,175 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         ImGui.End();
+    }
+
+    private void DrawLocalSlotSelector()
+    {
+        var slots = string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
+            ? FourTrackSlots
+            : EightTrackSlots;
+        var selectedSlot = slots.Contains(configuration.LocalSlot, StringComparer.OrdinalIgnoreCase)
+            ? configuration.LocalSlot.ToUpperInvariant()
+            : slots[0];
+        if (ImGui.BeginCombo("本机轨道", selectedSlot))
+        {
+            foreach (var slot in slots)
+            {
+                var selected = string.Equals(slot, selectedSlot, StringComparison.OrdinalIgnoreCase);
+                if (ImGui.Selectable(slot, selected))
+                {
+                    configuration.LocalSlot = slot;
+                    SaveConfiguration();
+                    ReloadPlan();
+                }
+                if (selected)
+                {
+                    ImGui.SetItemDefaultFocus();
+                }
+            }
+            ImGui.EndCombo();
+        }
+    }
+
+    private void DrawOverlayStyleSelector()
+    {
+        var selectedStyle = OverlayPresentation.Parse(configuration.OverlayStyle);
+        if (!ImGui.BeginCombo("提示强度", OverlayPresentation.Label(selectedStyle)))
+        {
+            return;
+        }
+        foreach (var style in new[] { OverlayEmphasis.Standard, OverlayEmphasis.Strong, OverlayEmphasis.Maximum })
+        {
+            var selected = style == selectedStyle;
+            if (ImGui.Selectable(OverlayPresentation.Label(style), selected))
+            {
+                configuration.OverlayStyle = OverlayPresentation.PersistedValue(style);
+                SaveConfiguration();
+            }
+            if (selected)
+            {
+                ImGui.SetItemDefaultFocus();
+            }
+        }
+        ImGui.EndCombo();
+    }
+
+    private void DrawApiEndpointSelector()
+    {
+        var normalized = configuration.ApiBaseUrl?.Trim().TrimEnd('/') ?? string.Empty;
+        var production = string.Equals(normalized, PluginConfiguration.ProductionApiBaseUrl, StringComparison.OrdinalIgnoreCase);
+        if (ImGui.BeginCombo("计划服务", production ? "VedaAxis 公网（推荐）" : "自定义地址（高级）"))
+        {
+            if (ImGui.Selectable("VedaAxis 公网（推荐）", production))
+            {
+                configuration.ApiBaseUrl = PluginConfiguration.ProductionApiBaseUrl;
+                SaveConfiguration();
+            }
+            if (ImGui.Selectable("自定义地址（高级）", !production) && production)
+            {
+                configuration.ApiBaseUrl = string.Empty;
+                SaveConfiguration();
+            }
+            ImGui.EndCombo();
+        }
+        if (production)
+        {
+            ImGui.TextDisabled("日常使用会连接 coptone.link，无需手动填写地址。");
+            return;
+        }
+
+        var apiBaseUrl = configuration.ApiBaseUrl ?? string.Empty;
+        if (ImGui.InputText("自定义 API 地址", ref apiBaseUrl, 240))
+        {
+            configuration.ApiBaseUrl = apiBaseUrl.Trim();
+            SaveConfiguration();
+        }
+    }
+
+    private void DrawTrackModeSelector()
+    {
+        var selectedMode = string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
+            ? "FOUR"
+            : "EIGHT";
+        var label = selectedMode == "FOUR" ? "4 轨（扩展）" : "8 轨（完整队伍）";
+        if (!ImGui.BeginCombo("轨道模式", label))
+        {
+            return;
+        }
+        if (ImGui.Selectable("8 轨（完整队伍）", selectedMode == "EIGHT"))
+        {
+            ApplyTrackMode("EIGHT");
+        }
+        if (ImGui.Selectable("4 轨（扩展）", selectedMode == "FOUR"))
+        {
+            ApplyTrackMode("FOUR");
+        }
+        ImGui.EndCombo();
+    }
+
+    private void DrawPlanSelector()
+    {
+        var o8sSelected = string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase);
+        var label = o8sSelected
+            ? "O8S 联调计划（8 轨）"
+            : string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
+                ? "DMU P1/P2 四轨扩展"
+                : "DMU P1/P2 默认计划";
+        if (!ImGui.BeginCombo("计划类型", label))
+        {
+            return;
+        }
+        if (ImGui.Selectable("DMU P1/P2 默认计划", !o8sSelected))
+        {
+            configuration.StrategyTag = string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
+                ? "DMU-P1P2-FOUR"
+                : "DMU-P1P2";
+            SaveConfiguration();
+            status = "已选择 DMU P1/P2；请在 Territory 1363 脱战同步";
+        }
+        if (ImGui.Selectable("O8S 联调计划（8 轨）", o8sSelected))
+        {
+            configuration.StrategyTag = "O8S-POC";
+            configuration.TrackMode = "EIGHT";
+            NormalizeLocalSlot();
+            SaveConfiguration();
+            status = "已选择 O8S 联调；请在 Territory 755 脱战同步";
+        }
+        ImGui.EndCombo();
+    }
+
+    private void ApplyTrackMode(string mode)
+    {
+        if (string.Equals(configuration.TrackMode, mode, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        configuration.TrackMode = mode;
+        if (mode == "FOUR")
+        {
+            if (string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(configuration.StrategyTag, "DMU-P1P2", StringComparison.OrdinalIgnoreCase))
+            {
+                configuration.StrategyTag = "DMU-P1P2-FOUR";
+            }
+        }
+        else if (string.Equals(configuration.StrategyTag, "DMU-P1P2-FOUR", StringComparison.OrdinalIgnoreCase))
+        {
+            configuration.StrategyTag = "DMU-P1P2";
+        }
+        NormalizeLocalSlot();
+        SaveConfiguration();
+    }
+
+    private void NormalizeLocalSlot()
+    {
+        var slots = string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
+            ? FourTrackSlots
+            : EightTrackSlots;
+        if (!slots.Contains(configuration.LocalSlot, StringComparer.OrdinalIgnoreCase))
+        {
+            configuration.LocalSlot = slots.Contains("H1", StringComparer.OrdinalIgnoreCase) ? "H1" : slots[0];
+        }
     }
 
     private void DrawMissingActionDiagnostic()
@@ -416,7 +546,10 @@ public sealed class Plugin : IDalamudPlugin
             visuals.Add(new PartyTargetVisual(resolution.Member, state));
         }
 
-        partyListOverlay.Draw(visuals, Math.Clamp(configuration.OverlayOpacity, 0.1f, 1f));
+        partyListOverlay.Draw(
+            visuals,
+            Math.Clamp(configuration.OverlayOpacity, 0.1f, 1f),
+            configuration.OverlayStyle);
     }
 
     private void DrawPartyTargetMapping()

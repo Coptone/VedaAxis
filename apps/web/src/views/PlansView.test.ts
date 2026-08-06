@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { createPinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../api/client'
 import PlansView from './PlansView.vue'
@@ -35,7 +36,7 @@ describe('PlansView', () => {
     })
     await router.push('/plans')
     await router.isReady()
-    const wrapper = mount(PlansView, { global: { plugins: [router] } })
+    const wrapper = mount(PlansView, { global: { plugins: [createPinia(), router] } })
     await flushPromises()
 
     await wrapper.get('.create-actions button').trigger('click')
@@ -49,5 +50,6 @@ describe('PlansView', () => {
       trackMode: 'EIGHT',
     })
     expect(router.currentRoute.value.path).toBe('/plans/11111111-1111-4111-8111-111111111111')
+    wrapper.unmount()
   })
 })

@@ -20,6 +20,7 @@
   --red: #f27979;
   --blue: #76a9ff;
   --shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+  --display-scale: 1;
 }
 
 * { box-sizing: border-box; }
@@ -30,7 +31,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; }
 a { color: inherit; text-decoration: none; }
 
-.app-shell { min-height: 100vh; }
+.app-shell { width: calc(100% / var(--display-scale)); min-height: calc(100vh / var(--display-scale)); zoom: var(--display-scale); }
 .topbar { height: 66px; padding: 0 28px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid var(--border-soft); background: rgba(6, 17, 27, 0.87); backdrop-filter: blur(18px); position: sticky; top: 0; z-index: 40; }
 .brand { display: inline-flex; align-items: center; gap: 11px; width: fit-content; }
 .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(82, 212, 200, 0.38); color: var(--cyan); background: linear-gradient(145deg, rgba(82, 212, 200, 0.16), rgba(82, 212, 200, 0.03)); clip-path: polygon(50% 0, 92% 22%, 92% 78%, 50% 100%, 8% 78%, 8% 22%); }
@@ -89,6 +90,12 @@ a { color: inherit; text-decoration: none; }
 .readiness-strip { min-height: 56px; margin-bottom: 22px; padding: 0 17px; display: flex; align-items: center; justify-content: space-between; background: rgba(242, 174, 93, .075); border: 1px solid rgba(242, 174, 93, .2); border-radius: 9px; }
 .readiness-strip > div { display: flex; align-items: center; gap: 12px; color: #d9c1a3; font-size: 13px; }
 .readiness-strip b { color: #f5d6ae; margin-right: 8px; }
+.cloud-sync-strip { min-height: 66px; margin: -8px 0 22px; padding: 12px 17px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; color: var(--cyan); background: rgba(82, 212, 200, .055); border: 1px solid rgba(82, 212, 200, .16); border-radius: 9px; }
+.cloud-sync-strip b, .cloud-sync-strip small { display: block; }
+.cloud-sync-strip b { color: #c9ece8; font-size: 13px; }
+.cloud-sync-strip small, .cloud-sync-strip > span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.cloud-sync-strip > span { margin-top: 0; white-space: nowrap; }
+.compact-button { min-height: 34px; padding: 0 11px; font-size: 12px; }
 .status-badge { width: fit-content; display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; color: var(--cyan); background: rgba(82, 212, 200, .1); border: 1px solid rgba(82, 212, 200, .2); border-radius: 5px; font: 700 10px ui-monospace, monospace; letter-spacing: .06em; }
 .status-badge.warning { color: var(--amber); background: rgba(242,174,93,.08); border-color: rgba(242,174,93,.2); }
 .loading-panel { padding: 70px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 12px; }
@@ -306,6 +313,16 @@ a { color: inherit; text-decoration: none; }
   .damage-analysis-metrics { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* 2K and wider displays need a larger application scale than 1080p. The
+   compensated shell width preserves the responsive layout without horizontal scrolling. */
+@media (min-width: 2200px) {
+  :root { --display-scale: 1.16; }
+}
+
+@media (min-width: 3000px) {
+  :root { --display-scale: 1.26; }
+}
+
 @media (max-width: 760px) {
   .topbar { grid-template-columns: 1fr auto; padding: 0 15px; }
   .main-nav { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 50; box-shadow: var(--shadow); }
@@ -323,6 +340,9 @@ a { color: inherit; text-decoration: none; }
   .create-actions button { flex: 1; }
   .readiness-strip { align-items: flex-start; padding: 14px; gap: 12px; }
   .readiness-strip .status-badge { display: none; }
+  .cloud-sync-strip { grid-template-columns: auto minmax(0, 1fr); }
+  .cloud-sync-strip > span { grid-column: 2; white-space: normal; }
+  .cloud-sync-strip .compact-button { grid-column: 2; justify-self: start; }
   .device-card { grid-template-columns: 1fr; }
   .device-steps { border-right: 0; border-bottom: 1px solid var(--border); }
   .snapshot-summary, .shared-tracks { grid-template-columns: 1fr; }

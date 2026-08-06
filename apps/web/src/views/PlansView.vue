@@ -1,29 +1,52 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowUpRight, CalendarClock, Copy, Grid2X2, Grid3X3, Plus, ShieldAlert } from 'lucide-vue-next'
+import { ArrowUpRight, CalendarClock, Cloud, Copy, Grid2X2, Grid3X3, Plus, RefreshCw, ShieldAlert } from 'lucide-vue-next'
 import { api, ApiError } from '../api/client'
 import type { PlanSummary, TrackMode } from '../types/domain'
 import { DMU_ENCOUNTER_ID, DMU_P1_P2_STRATEGY, DMU_TERRITORY_ID } from '../data/dmuP1P2Default'
 import { O8S_ENCOUNTER_ID, O8S_POC_STRATEGY, O8S_TERRITORY_ID } from '../data/o8sPocDefault'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 const plans = ref<PlanSummary[]>([])
 const loading = ref(true)
 const creating = ref<'FOUR' | 'EIGHT' | 'O8S' | null>(null)
 const copyingId = ref('')
 const error = ref('')
+const lastSyncedAt = ref<Date | null>(null)
+let refreshTimer: ReturnType<typeof window.setInterval> | undefined
 
-onMounted(load)
+onMounted(() => {
+  void load(true)
+  window.addEventListener('focus', refreshWhenVisible)
+  document.addEventListener('visibilitychange', refreshWhenVisible)
+  refreshTimer = window.setInterval(() => {
+    if (!document.hidden) void load(false)
+  }, 30_000)
+})
 
-async function load() {
-  loading.value = true
+onUnmounted(() => {
+  window.removeEventListener('focus', refreshWhenVisible)
+  document.removeEventListener('visibilitychange', refreshWhenVisible)
+  if (refreshTimer) window.clearInterval(refreshTimer)
+})
+
+function refreshWhenVisible() {
+  if (!document.hidden) void load(false)
+}
+
+async function load(showLoading: boolean) {
+  if (showLoading) loading.value = true
   try {
     plans.value = await api.plans()
+    lastSyncedAt.value = new Date()
+    error.value = ''
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : '计划列表加载失败'
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
   }
 }
 
@@ -100,6 +123,18 @@ async function createO8sPoc() {
     <div class="readiness-strip">
       <div><ShieldAlert :size="19" /><span><b>核心能力状态</b> 原生热键栏高亮等待国服实机 PoC</span></div>
       <span class="status-badge warning">POC_PENDING</span>
+    </div>
+
+    <div class="cloud-sync-strip">
+      <Cloud :size="19" />
+      <div>
+        <b>云端计划空间：{{ auth.accountLabel }}</b>
+        <small>计划按登录账户同步；切换到同一账户后，公司与家中的计划会显示一致。</small>
+      </div>
+      <span v-if="lastSyncedAt">刚刚拉取 {{ plans.length }} 个计划</span>
+      <button class="secondary-button compact-button" type="button" :disabled="loading" @click="load(false)">
+        <RefreshCw :size="15" />刷新云端
+      </button>
     </div>
 
     <p v-if="error" class="form-error">{{ error }}</p>

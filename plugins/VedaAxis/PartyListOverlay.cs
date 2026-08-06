@@ -21,7 +21,7 @@ internal sealed unsafe class PartyListOverlay
         this.log = log;
     }
 
-    public void Draw(IReadOnlyList<PartyTargetVisual> targets, float opacity)
+    public void Draw(IReadOnlyList<PartyTargetVisual> targets, float opacity, string overlayStyle)
     {
         if (targets.Count == 0)
         {
@@ -39,6 +39,7 @@ internal sealed unsafe class PartyListOverlay
             var nativeMembers = addon->PartyMembers;
             var memberCount = Math.Clamp(addon->MemberCount, 0, nativeMembers.Length);
             var drawList = ImGui.GetForegroundDrawList();
+            var emphasis = OverlayPresentation.Parse(overlayStyle);
             var unmatched = new List<PartyTargetVisual>(targets);
 
             for (var index = 0; index < memberCount; index++)
@@ -63,9 +64,7 @@ internal sealed unsafe class PartyListOverlay
                     continue;
                 }
 
-                var color = ColorFor(target.State, opacity);
-                drawList.AddRectFilled(start, end, ImGui.GetColorU32(color), 4f);
-                drawList.AddRect(start, end, ImGui.GetColorU32(color with { W = 1f }), 4f, ImDrawFlags.None, 3f);
+                OverlayPresentation.DrawFrame(drawList, start, end, ColorFor(target.State, opacity), target.State, emphasis);
                 unmatched.Remove(target);
             }
         }

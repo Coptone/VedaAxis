@@ -57,9 +57,10 @@ internal sealed unsafe class HotbarOverlay
         return false;
     }
 
-    public void Draw(IReadOnlyList<AssignmentRuntime> assignments, long elapsedMs, float opacity)
+    public void Draw(IReadOnlyList<AssignmentRuntime> assignments, long elapsedMs, float opacity, string overlayStyle)
     {
         opacity = OverlaySafety.NormalizeOpacity(opacity);
+        var emphasis = OverlayPresentation.Parse(overlayStyle);
         var visibleStates = assignments
             .Where(item => item.ShouldDrawOverlay(elapsedMs))
             .GroupBy(item => item.Assignment.ActionId)
@@ -111,9 +112,7 @@ internal sealed unsafe class HotbarOverlay
                 {
                     continue;
                 }
-                var color = ColorFor(state, opacity);
-                drawList.AddRectFilled(start, end, ImGui.GetColorU32(color), 5f);
-                drawList.AddRect(start, end, ImGui.GetColorU32(color with { W = 1f }), 5f, ImDrawFlags.None, 3f);
+                OverlayPresentation.DrawFrame(drawList, start, end, ColorFor(state, opacity), state, emphasis);
             }
         }
     }

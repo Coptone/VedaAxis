@@ -26,6 +26,13 @@ import { cloneData } from '../lib/cloneData'
 import { actionIconUrl } from '../lib/actionIcons'
 import { attackClass, attackClassLabel, damageEstimateLabel, damageTypeLabel, hasDirectDamage } from '../lib/combatPresentation'
 import { abilityEffectSummary } from '../lib/abilityEffects'
+import {
+  abilityFitsTrack,
+  assignmentsCoveringMechanic,
+  localCooldownConflicts,
+  previewDamageEstimatesLocally,
+  type AssignmentCoverage,
+} from '../lib/damageEstimates'
 import { applyTimelineImport } from '../lib/timelineImports'
 import {
   DMU_ENCOUNTER_ID,
@@ -66,8 +73,11 @@ const selectedMechanicId = ref(firstAssignedMechanicId(defaultPlan))
 const selectedTrackId = ref('')
 const selectedTargetTrackId = ref('')
 const selectedAbilityId = ref<number | null>(null)
+const showAllAbilities = ref(false)
 const validation = ref<RuleValidationResult | null>(null)
 const aiCandidate = ref<AiCandidate | null>(null)
+const aiOpen = ref(false)
+const aiInstruction = ref('')
 const busy = ref(false)
 const message = ref('')
 const error = ref('')
@@ -102,8 +112,29 @@ const timelineTitle = computed(() => {
 const selectedMechanic = computed(() => mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value) ?? mechanics.value[0] ?? DEFAULT_MECHANICS[0]!)
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
+const selectedTrack = computed(() => snapshot.value.tracks.find((track) => track.trackId === selectedTrackId.value) ?? null)
+const filteredAbilities = computed(() => {
+  if (showAllAbilities.value) return abilities.value
+  return abilities.value.filter((ability) => abilityFitsTrack(ability, selectedTrack.value))
+})
+const abilityFilterSummary = computed(() => {
+  if (showAllAbilities.value) return `显示全部 ${abilities.value.length} 个技能`
+  const slot = selectedTrack.value?.slot ?? '当前轨道'
+  return `${slot} 可用 ${filteredAbilities.value.length} / ${abilities.value.length} 个技能`
+})
 const selectedAbility = computed(() => selectedAbilityId.value === null ? undefined : abilityMap.value.get(selectedAbilityId.value))
 const selectedDamageEstimate = computed(() => damageEstimates.value[selectedMechanicId.value])
+const selectedCoverage = computed(() => assignmentsCoveringMechanic(snapshot.value, abilities.value, selectedMechanic.value))
+const carriedCoverage = computed(() => selectedCoverage.value.filter((coverage) => coverage.carriedFromAnotherMechanic))
+const cooldownConflicts = computed(() => localCooldownConflicts(snapshot.value, abilities.value))
+const cooldownIssueByAssignmentId = computed(() => new Set(cooldownConflicts.value.map((issue) => issue.assignmentId)))
+const directDamageMechanicCount = computed(() => mechanics.value.filter((mechanic) => hasDirectDamage(mechanic)).length)
+const unassignedDamageMechanicCount = computed(() => mechanics.value
+  .filter((mechanic) => hasDirectDamage(mechanic) && !assignmentCountByMechanic.value.has(mechanic.mechanicId)).length)
+const timelineScopeSummary = computed(() => {
+  const phases = snapshot.value.phases.map((phase) => phase.name).filter(Boolean).join('/')
+  return `${phases || '未分阶段'} · ${mechanics.value.length} 项机制 · ${directDamageMechanicCount.value} 项直接伤害`
+})
 const aiDiff = computed(() => {
   if (!aiCandidate.value) return { added: 0, removed: 0, changed: 0 }
   const current = new Map(snapshot.value.assignments.map((item) => [item.assignmentId, item]))
@@ -128,6 +159,13 @@ onMounted(async () => {
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
   await refreshDamageEstimates()
 })
+
+function ensureSelectedAbilityVisible() {
+  if (selectedAbilityId.value !== null && filteredAbilities.value.some((ability) => ability.actionId === selectedAbilityId.value)) {
+    return
+  }
+  selectedAbilityId.value = filteredAbilities.value[0]?.actionId ?? null
+}
 
 async function loadPlan() {
   busy.value = true
@@ -230,7 +268,10 @@ async function refreshDamageEstimates() {
     damageEstimates.value = Object.fromEntries(estimates.map((estimate) => [estimate.mechanicId, estimate]))
   } catch (reason) {
     if (requestId !== damageEstimateRequest) return
-    damageEstimateError.value = reason instanceof ApiError ? reason.message : '预计伤害计算失败'
+    const message = reason instanceof ApiError ? reason.message : '预计伤害计算失败'
+    const estimates = previewDamageEstimatesLocally(snapshot.value, abilities.value, `服务端预计伤害请求失败，已使用本地参考计算：${message}`)
+    damageEstimates.value = Object.fromEntries(estimates.map((estimate) => [estimate.mechanicId, estimate]))
+    damageEstimateError.value = `服务端预计伤害请求失败，已使用本地参考计算：${message}`
   } finally {
     if (requestId === damageEstimateRequest) damageEstimateBusy.value = false
   }
@@ -246,6 +287,7 @@ watch(
   scheduleDamageEstimateRefresh,
   { deep: true },
 )
+watch([selectedTrackId, showAllAbilities, abilities], ensureSelectedAbilityVisible, { deep: true })
 
 function addAssignment() {
   if (!selectedAbilityId.value || !selectedTrackId.value) return
@@ -353,14 +395,21 @@ async function generateAiCandidate() {
   await save()
   if (!planId.value || error.value) return
   busy.value = true
+  error.value = ''
   try {
-    aiCandidate.value = await api.generateAiCandidate(planId.value)
+    aiCandidate.value = await api.generateAiCandidate(planId.value, aiInstruction.value)
     message.value = `已生成 ${aiCandidate.value.confidence} 候选，尚未应用`
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : 'AI 候选生成失败'
   } finally {
     busy.value = false
   }
+}
+
+function openFullTimelineImport() {
+  importOpen.value = true
+  importUrl.value = 'https://raalm.com/m-spec/timelinev2.html?boss=dancing-mad&spec=sage-sage&buddy=0'
+  message.value = '已打开 DMU 完整机制候选导入；获取后可先只加载机制，不预制减伤'
 }
 
 function applyAiCandidate() {
@@ -407,6 +456,19 @@ function hideBrokenIcon(event: Event) {
   ;(event.currentTarget as HTMLImageElement).hidden = true
 }
 
+function seconds(milliseconds: number | undefined): string {
+  if (!milliseconds) return '0s'
+  return `${Math.round(milliseconds / 1000)}s`
+}
+
+function coverageSourceLabel(coverage: AssignmentCoverage): string {
+  const sourceMechanic = coverage.sourceMechanic
+  const source = sourceMechanic ? `${formatTime(sourceMechanic.plannedAtMs)} ${sourceMechanic.name}` : '未知来源机制'
+  const track = coverage.sourceTrack?.slot ?? '未知轨道'
+  const until = coverage.coversUntilMs === null ? '持续时间未知' : `保守覆盖至 ${formatTime(coverage.coversUntilMs)}`
+  return `${track} · ${source} · ${until}`
+}
+
 function fallbackAbilities(): AbilityDefinition[] {
   return [
     { actionId: 7535, name: '雪仇 / Reprisal', iconPath: 'ui/icon/000000/000806.tex', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED', effect: { scope: 'ENEMY_AREA', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: '', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
@@ -431,7 +493,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         <button class="secondary-button" type="button" :disabled="busy" @click="save"><Save :size="16" />保存草稿</button>
         <button class="secondary-button" type="button" :disabled="busy" @click="validate"><Shield :size="16" />规则校验</button>
         <button class="secondary-button" type="button" :disabled="busy" @click="importOpen = !importOpen"><FileDown :size="16" />导入时间轴</button>
-        <button class="secondary-button" type="button" :disabled="busy" @click="generateAiCandidate"><Sparkles :size="16" />AI 候选</button>
+        <button class="secondary-button" type="button" :disabled="busy" @click="aiOpen = !aiOpen"><Sparkles :size="16" />AI 候选</button>
         <button class="primary-button" type="button" :disabled="busy" @click="publish"><Send :size="16" />发布版本</button>
       </div>
     </div>
@@ -445,6 +507,13 @@ function fallbackAbilities(): AbilityDefinition[] {
       <span>Territory {{ snapshot.territoryId }}</span>
       <span class="status-badge warning"><CircleDashed :size="13" />{{ snapshot.source.confidence }}</span>
       <span>计划 v{{ snapshot.planVersion }} · 时间轴 v{{ snapshot.timelineVersion }}</span>
+    </div>
+    <div class="timeline-scope-strip">
+      <span>{{ timelineScopeSummary }}</span>
+      <span>{{ unassignedDamageMechanicCount }} 项直接伤害暂未安排减伤</span>
+      <button class="secondary-button compact" type="button" :disabled="busy" @click="openFullTimelineImport">
+        <FileDown :size="14" />加载完整机制候选
+      </button>
     </div>
 
     <p v-if="error" class="editor-error"><AlertTriangle :size="16" />{{ error }}</p>
@@ -483,6 +552,24 @@ function fallbackAbilities(): AbilityDefinition[] {
           <button class="secondary-button" type="button" @click="importCandidate = null">放弃候选</button>
           <small>应用会清空 {{ snapshot.assignments.length }} 个旧任务和 {{ snapshot.anchors.length }} 个旧锚点。</small>
         </div>
+      </div>
+    </section>
+
+    <section v-if="aiOpen" class="ai-request-panel">
+      <header>
+        <div><p class="eyebrow">AI CANDIDATE</p><h2>生成可审阅的减伤候选</h2></div>
+        <span class="status-badge warning">不会自动保存或发布</span>
+      </header>
+      <label>调整要求
+        <textarea
+          v-model.trim="aiInstruction"
+          maxlength="2000"
+          placeholder="例如：优先减少 H2 压力，锁定项不动；避免同一轨道连续两个 90 秒技能冲突。"
+        />
+      </label>
+      <div class="candidate-actions">
+        <button class="primary-button" type="button" :disabled="busy" @click="generateAiCandidate"><Sparkles :size="16" />生成候选</button>
+        <small>服务端需要配置 VEDAAXIS_AI_API_KEY。返回结果只会作为候选，经规则校验后由你手动应用。</small>
       </div>
     </section>
 
@@ -550,9 +637,12 @@ function fallbackAbilities(): AbilityDefinition[] {
                 @error="hideBrokenIcon"
               />
               <select v-model.number="selectedAbilityId">
-                <option v-for="ability in abilities" :key="ability.actionId" :value="ability.actionId">{{ ability.name }} · {{ ability.durationMs / 1000 }}s</option>
+                <option v-for="ability in filteredAbilities" :key="ability.actionId" :value="ability.actionId">
+                  {{ ability.name }} · 持续 {{ seconds(ability.durationMs) }} · CD {{ seconds(ability.cooldownMs) }}
+                </option>
               </select>
             </span>
+            <small class="ability-filter-note">{{ abilityFilterSummary }}</small>
           </label>
           <label>单体目标（可选）
             <select v-model="selectedTargetTrackId">
@@ -560,7 +650,8 @@ function fallbackAbilities(): AbilityDefinition[] {
               <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
             </select>
           </label>
-          <button class="primary-button" type="button" @click="addAssignment"><Plus :size="16" />安排技能</button>
+          <label class="show-all-abilities"><input v-model="showAllAbilities" type="checkbox" />显示全部技能</label>
+          <button class="primary-button" type="button" :disabled="!selectedAbilityId" @click="addAssignment"><Plus :size="16" />安排技能</button>
         </div>
 
         <div class="track-grid">
@@ -585,8 +676,10 @@ function fallbackAbilities(): AbilityDefinition[] {
               />
               <div>
                 <b>{{ abilityMap.get(assignment.actionId)?.name ?? `Action ${assignment.actionId}` }}</b>
-                <small>{{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }}</small>
+                <small>施放 {{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }} · 判定 {{ formatTime(assignment.impactAtMs) }}</small>
+                <small v-if="abilityMap.get(assignment.actionId)">持续 {{ seconds(abilityMap.get(assignment.actionId)?.durationMs) }} · CD {{ seconds(abilityMap.get(assignment.actionId)?.cooldownMs) }}</small>
                 <small class="ability-effect-summary">{{ abilityEffectSummary(abilityMap.get(assignment.actionId)) }}</small>
+                <small v-if="cooldownIssueByAssignmentId.has(assignment.assignmentId)" class="cooldown-inline-warning">冷却冲突</small>
               </div>
               <Lock v-if="assignment.locked" :size="13" />
             </button>
@@ -604,6 +697,11 @@ function fallbackAbilities(): AbilityDefinition[] {
               {{ damageEstimateBusy ? '计算中…' : damageRiskLabel(selectedDamageEstimate, selectedMechanic) }}
             </span>
           </header>
+          <div class="coverage-summary">
+            <span><b>{{ assignmentsForMechanic.length }}</b>本机制安排</span>
+            <span><b>{{ carriedCoverage.length }}</b>提前覆盖</span>
+            <span><b>{{ cooldownConflicts.length }}</b>冷却冲突</span>
+          </div>
           <p class="damage-thresholds">
             AOE：≤10万绿色，10万以上至19万黄色，&gt;19万红色；死刑：≤20万绿色，20万以上至29万前黄色，≥29万红色。
           </p>
@@ -621,6 +719,19 @@ function fallbackAbilities(): AbilityDefinition[] {
           <p class="damage-analysis-boundary">
             预览按当前安排计算：AOE 取全队中减伤后伤害最高的轨道，死刑取坦克轨道中的最高值。护盾、治疗和无敌不从这一个伤害数字中扣除，并会单独提示复核。
           </p>
+          <div v-if="carriedCoverage.length" class="coverage-panel">
+            <header><b>提前覆盖到本机制</b><small>这些技能不是本机制行创建的，但持续时间覆盖当前命中</small></header>
+            <p v-for="coverage in carriedCoverage" :key="coverage.assignment.assignmentId">
+              <span>{{ coverage.ability?.name ?? `Action ${coverage.assignment.actionId}` }}</span>
+              {{ coverageSourceLabel(coverage) }}
+            </p>
+          </div>
+          <div v-if="cooldownConflicts.length" class="cooldown-panel">
+            <header><b>本地冷却预警</b><small>保存/发布时服务端也会校验</small></header>
+            <p v-for="issue in cooldownConflicts.slice(0, 5)" :key="issue.assignmentId">
+              <span>{{ issue.trackSlot }}</span>{{ issue.abilityName }} 最早要到 {{ formatTime(issue.availableAtMs) }}，当前窗口最晚 {{ formatTime(issue.latestUseAtMs) }}
+            </p>
+          </div>
           <p v-if="damageEstimateError" class="damage-analysis-error">
             <AlertTriangle :size="13" />{{ damageEstimateError }}
           </p>
@@ -672,6 +783,11 @@ function fallbackAbilities(): AbilityDefinition[] {
           <label>允许起点（毫秒）<input v-model.number="selectedAssignment.earliestUseAtMs" type="number" step="100" /></label>
           <label>允许终点（毫秒）<input v-model.number="selectedAssignment.latestUseAtMs" type="number" step="100" /></label>
           <label>机制命中（毫秒）<input v-model.number="selectedAssignment.impactAtMs" type="number" step="100" /></label>
+          <p v-if="abilityMap.get(selectedAssignment.actionId)" class="inspector-hint">
+            {{ abilityMap.get(selectedAssignment.actionId)?.name }}：持续 {{ seconds(abilityMap.get(selectedAssignment.actionId)?.durationMs) }}，
+            冷却 {{ seconds(abilityMap.get(selectedAssignment.actionId)?.cooldownMs) }}。
+            若提前释放且持续时间覆盖后续命中，后续机制会把它显示为“提前覆盖”。
+          </p>
           <label>单体目标轨道
             <select v-model="selectedAssignment.targetTrackId">
               <option :value="null">无</option>

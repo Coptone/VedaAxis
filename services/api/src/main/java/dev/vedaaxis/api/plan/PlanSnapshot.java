@@ -58,7 +58,17 @@ public record PlanSnapshot(
             @Size(max = 120) String externalId,
             @NotBlank @Size(max = 120) String name,
             @Min(0) long plannedAtMs,
-            @NotNull Confidence confidence) {
+            @NotNull Confidence confidence,
+            @Min(0) long durationMs,
+            TimingMode timingMode) {
+        public TimelinePhase(UUID phaseId, String externalId, String name, long plannedAtMs, Confidence confidence) {
+            this(phaseId, externalId, name, plannedAtMs, confidence, 0, TimingMode.ABSOLUTE);
+        }
+    }
+
+    public enum TimingMode {
+        ABSOLUTE,
+        RELATIVE
     }
 
     public record TimelineMechanic(
@@ -123,7 +133,15 @@ public record PlanSnapshot(
             long impactAtMs,
             boolean locked,
             @NotNull ConfirmationStrategy confirmationStrategy,
-            @NotNull List<Fallback> fallbacks) {
+            @NotNull List<Fallback> fallbacks,
+            UUID targetTrackId) {
+        public Assignment(
+                UUID assignmentId, UUID mechanicId, UUID trackId, long actionId, UUID anchorId,
+                long highlightAtMs, long earliestUseAtMs, long latestUseAtMs, long impactAtMs,
+                boolean locked, ConfirmationStrategy confirmationStrategy, List<Fallback> fallbacks) {
+            this(assignmentId, mechanicId, trackId, actionId, anchorId, highlightAtMs, earliestUseAtMs,
+                    latestUseAtMs, impactAtMs, locked, confirmationStrategy, fallbacks, null);
+        }
     }
 
     public record Fallback(@NotNull UUID trackId, @Min(1) long actionId) {

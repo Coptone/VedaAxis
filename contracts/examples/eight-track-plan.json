@@ -1,6 +1,6 @@
 {
-  "schemaVersion": "1.2",
-  "minimumPluginVersion": "0.1.5",
+  "schemaVersion": "1.3",
+  "minimumPluginVersion": "0.1.7",
   "planId": "0f4b3bc6-3095-4a32-85f8-02c367e1c177",
   "planVersion": 1,
   "timelineId": "ae10b230-ff1a-45df-b8fa-a720e66b4c69",
@@ -20,6 +20,8 @@
       "externalId": "O8S-P1",
       "name": "P1",
       "plannedAtMs": 0,
+      "durationMs": 180000,
+      "timingMode": "ABSOLUTE",
       "confidence": "UNVERIFIED"
     }
   ],

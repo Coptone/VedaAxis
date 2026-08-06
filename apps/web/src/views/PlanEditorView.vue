@@ -24,6 +24,12 @@ import { createTracks, formatTime } from '../lib/tracks'
 import { newId } from '../lib/ids'
 import { cloneData } from '../lib/cloneData'
 import { applyTimelineImport } from '../lib/timelineImports'
+import {
+  DMU_ENCOUNTER_ID,
+  DMU_P1_P2_STRATEGY,
+  DMU_TERRITORY_ID,
+  dmuP1P2DefaultPlan,
+} from '../data/dmuP1P2Default'
 import type {
   AbilityDefinition,
   AiCandidate,
@@ -36,15 +42,15 @@ import type {
   TrackMode,
 } from '../types/domain'
 
-const O8S_ENCOUNTER_ID = '9789ba9a-b761-4c44-b179-2e3e86ee0d3b'
-const O8S_TERRITORY_ID = 755
 const route = useRoute()
 const router = useRouter()
 const planId = ref(typeof route.params.planId === 'string' ? route.params.planId : '')
-const name = ref('O8S 自动战斗 PoC')
+const name = ref('妖星乱舞 P1/P2 默认减伤表')
 const abilities = ref<AbilityDefinition[]>([])
-const selectedMechanicId = ref('0d80a50c-cd3a-4569-a7ce-4766612e3316')
+const defaultPlan = dmuP1P2DefaultPlan()
+const selectedMechanicId = ref(defaultPlan.mechanics[0]?.mechanicId ?? '')
 const selectedTrackId = ref('')
+const selectedTargetTrackId = ref('')
 const selectedAbilityId = ref<number | null>(null)
 const validation = ref<RuleValidationResult | null>(null)
 const aiCandidate = ref<AiCandidate | null>(null)
@@ -56,16 +62,8 @@ const importUrl = ref('https://raalm.com/m-spec/timelinev2.html?boss=dancing-mad
 const includeRecommendations = ref(true)
 const importCandidate = ref<TimelineImportCandidate | null>(null)
 
-const DEFAULT_PHASES: TimelinePhase[] = [
-  { phaseId: '4270bbba-f402-4cc4-bb27-0d566815dd0d', externalId: 'O8S-P1', name: 'P1', plannedAtMs: 0, confidence: 'UNVERIFIED' },
-]
-const DEFAULT_MECHANICS: TimelineMechanic[] = [
-  { mechanicId: '0d80a50c-cd3a-4569-a7ce-4766612e3316', externalId: null, phase: 'P1', name: '呼啸爆破', plannedAtMs: 38_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'REVIEWED' },
-  { mechanicId: 'a6504b58-cb5b-408a-866f-e659912be1d0', externalId: null, phase: 'P1', name: '裁制之光', plannedAtMs: 62_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'UNVERIFIED' },
-  { mechanicId: 'd5c80602-c4b4-46ba-9e99-19c5ebf5f3c8', externalId: null, phase: 'P1', name: '超驱动', plannedAtMs: 69_000, durationMs: 0, type: 'MECHANIC', damageType: 'SPECIAL', target: '连续目标', actionId: null, confidence: 'UNVERIFIED' },
-  { mechanicId: '223e1b3c-ceca-4b62-86b7-90cd7c83b995', externalId: null, phase: 'P1', name: '重力弹', plannedAtMs: 105_000, durationMs: 0, type: 'MECHANIC', damageType: 'MAGICAL', target: '分组', actionId: null, confidence: 'UNVERIFIED' },
-  { mechanicId: 'dffb0bc5-77da-4aa5-9490-71b44804f89e', externalId: null, phase: 'P1', name: '强重力', plannedAtMs: 121_000, durationMs: 0, type: 'RAIDWIDE', damageType: 'MAGICAL', target: '全体', actionId: null, confidence: 'UNVERIFIED' },
-]
+const DEFAULT_PHASES: TimelinePhase[] = cloneData(defaultPlan.phases)
+const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
 const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 
 const mechanics = computed(() => snapshot.value.mechanics)
@@ -115,16 +113,22 @@ async function loadPlan() {
 }
 
 function makeSnapshot(mode: TrackMode): PlanSnapshot {
+  if (mode === 'EIGHT') {
+    const plan = dmuP1P2DefaultPlan()
+    plan.planId = newId()
+    plan.timelineId = newId()
+    return plan
+  }
   return {
-    schemaVersion: '1.2',
-    minimumPluginVersion: '0.1.5',
+    schemaVersion: '1.3',
+    minimumPluginVersion: '0.1.7',
     planId: newId(),
     planVersion: 1,
     timelineId: newId(),
     timelineVersion: 1,
-    encounterId: O8S_ENCOUNTER_ID,
-    territoryId: O8S_TERRITORY_ID,
-    strategyTag: mode === 'EIGHT' ? 'O8S-POC' : 'O8S-FOUR-POC',
+    encounterId: DMU_ENCOUNTER_ID,
+    territoryId: DMU_TERRITORY_ID,
+    strategyTag: 'DMU-P1P2-FOUR',
     trackMode: mode,
     source: { kind: 'PERSONAL', reference: null, confidence: 'UNVERIFIED' },
     phases: cloneData(DEFAULT_PHASES),
@@ -138,7 +142,7 @@ function makeSnapshot(mode: TrackMode): PlanSnapshot {
 function changeMode(mode: TrackMode) {
   if (planId.value || snapshot.value.trackMode === mode) return
   snapshot.value = makeSnapshot(mode)
-  name.value = mode === 'EIGHT' ? 'O8S 自动战斗 PoC' : 'O8S 四轨扩展测试'
+  name.value = mode === 'EIGHT' ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞四轨扩展草稿'
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
 }
 
@@ -151,6 +155,7 @@ function addAssignment() {
     trackId: selectedTrackId.value,
     actionId: selectedAbilityId.value,
     anchorId: null,
+    targetTrackId: selectedTargetTrackId.value || null,
     highlightAtMs: Math.max(0, mechanic.plannedAtMs - 12_000),
     earliestUseAtMs: Math.max(0, mechanic.plannedAtMs - 8_000),
     latestUseAtMs: Math.max(0, mechanic.plannedAtMs - 1_000),
@@ -328,7 +333,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         <button :class="{ active: snapshot.trackMode === 'FOUR' }" :disabled="Boolean(planId)" type="button" @click="changeMode('FOUR')"><Grid2X2 :size="15" />4 轨</button>
         <button :class="{ active: snapshot.trackMode === 'EIGHT' }" :disabled="Boolean(planId)" type="button" @click="changeMode('EIGHT')"><Grid3X3 :size="15" />8 轨</button>
       </div>
-      <span><Clock3 :size="14" />固定预测＋Action 锚点</span>
+      <span><Clock3 :size="14" />P1/P2 绝对时间＋Action 锚点</span>
       <span>Territory {{ snapshot.territoryId }}</span>
       <span class="status-badge warning"><CircleDashed :size="13" />{{ snapshot.source.confidence }}</span>
       <span>计划 v{{ snapshot.planVersion }} · 时间轴 v{{ snapshot.timelineVersion }}</span>
@@ -411,6 +416,12 @@ function fallbackAbilities(): AbilityDefinition[] {
               <option v-for="ability in abilities" :key="ability.actionId" :value="ability.actionId">{{ ability.name }} · {{ ability.durationMs / 1000 }}s</option>
             </select>
           </label>
+          <label>单体目标（可选）
+            <select v-model="selectedTargetTrackId">
+              <option value="">无</option>
+              <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
+            </select>
+          </label>
           <button class="primary-button" type="button" @click="addAssignment"><Plus :size="16" />安排技能</button>
         </div>
 
@@ -460,6 +471,12 @@ function fallbackAbilities(): AbilityDefinition[] {
           <label>允许起点（毫秒）<input v-model.number="selectedAssignment.earliestUseAtMs" type="number" step="100" /></label>
           <label>允许终点（毫秒）<input v-model.number="selectedAssignment.latestUseAtMs" type="number" step="100" /></label>
           <label>机制命中（毫秒）<input v-model.number="selectedAssignment.impactAtMs" type="number" step="100" /></label>
+          <label>单体目标轨道
+            <select v-model="selectedAssignment.targetTrackId">
+              <option :value="null">无</option>
+              <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
+            </select>
+          </label>
           <button class="lock-toggle" type="button" @click="selectedAssignment.locked = !selectedAssignment.locked">
             <Lock v-if="selectedAssignment.locked" :size="16" /><LockOpen v-else :size="16" />
             <span><b>{{ selectedAssignment.locked ? '已锁定' : '允许优化' }}</b><small>AI 不会移动锁定项</small></span>

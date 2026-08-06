@@ -81,6 +81,18 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../../data/seeds/dmu</directory>
+                <includes>
+                    <include>p1-p2-default-plan.json</include>
+                </includes>
+                <targetPath>default-plans</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

@@ -8,11 +8,11 @@ public static class PlanValidator
     public static IReadOnlyList<string> Validate(PlanSnapshot plan)
     {
         List<string> issues = [];
-        if (plan.SchemaVersion is not ("1.0" or "1.1" or "1.2"))
+        if (plan.SchemaVersion is not ("1.0" or "1.1" or "1.2" or "1.3"))
         {
             issues.Add($"不支持的计划结构版本：{plan.SchemaVersion}");
         }
-        if (plan.SchemaVersion is "1.1" or "1.2" && plan.TerritoryId == 0)
+        if (plan.SchemaVersion is "1.1" or "1.2" or "1.3" && plan.TerritoryId == 0)
         {
             issues.Add("计划结构 1.1 及以上必须包含有效的 Territory ID");
         }
@@ -26,6 +26,11 @@ public static class PlanValidator
 
         var trackIds = plan.Tracks.Select(track => track.TrackId).ToHashSet();
         var mechanics = plan.Mechanics ?? [];
+        var phases = plan.Phases ?? [];
+        if (plan.SchemaVersion == "1.3" && phases.Any(phase => phase.DurationMs <= 0))
+        {
+            issues.Add("计划结构 1.3 的阶段必须包含有效持续时间");
+        }
         var mechanicIds = mechanics.Select(mechanic => mechanic.MechanicId).ToHashSet();
         if (mechanicIds.Count != mechanics.Count)
         {
@@ -45,6 +50,10 @@ public static class PlanValidator
             if (!trackIds.Contains(assignment.TrackId))
             {
                 issues.Add($"任务 {assignment.AssignmentId} 引用了不存在的轨道");
+            }
+            if (assignment.TargetTrackId is { } targetTrackId && !trackIds.Contains(targetTrackId))
+            {
+                issues.Add($"任务 {assignment.AssignmentId} 引用了不存在的单体目标轨道");
             }
             if (mechanicIds.Count > 0 && !mechanicIds.Contains(assignment.MechanicId))
             {

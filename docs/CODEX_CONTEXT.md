@@ -29,7 +29,7 @@
 
 ## 3. 当前可依赖的已验证事实
 
-- 当前测试版是 `0.1.6`。
+- 当前测试版是 `0.1.7`。
 - GitHub [`Coptone/VedaAxis`](https://github.com/Coptone/VedaAxis) 的 `main` 是源代码真源；Gitee [`Need4Spd/VedaAxis`](https://gitee.com/Need4Spd/VedaAxis) 是国内镜像。
 - Dalamud 自定义仓库地址为 `https://coptone.link/VedaAxis/pluginmaster.json`；插件包地址为 `https://coptone.link/VedaAxis/release/latest/VedaAxis.zip`。
 - HTTPS 测试环境已隔离部署在 `https://coptone.link/VedaAxis/`：Web 静态文件、仅回环监听的 API 与 PostgreSQL、独立 systemd/Compose 资源和路径级 Nginx 规则均未修改根站点业务。公网健康检查、注册、登录和 M-Spec 导入已通过；数据库备份演练与插件跨网完整闭环仍未完成。
@@ -40,6 +40,7 @@
 - 2026-08-05 的首个游戏内观察确认匹配技能槽会高亮、超时后会变红，证明覆盖层与提醒状态机主路径可运行；该样本是手动预览，未包含完整诊断矩阵，不能据此关闭 `POC-01` 或 `POC-02`。
 - 项目所有者随后确认 O8S 自动战斗生命周期冒烟验证成功；这证明 `InCombat` 自动启动主路径可用，但没有完整诊断、版本和结束路径矩阵，仍不能关闭 `POC-01`。
 - `0.1.5` 的计划契约 1.2 持久化阶段/机制；管理端可按需读取受支持的 M-Spec URL，匿名聚合减伤窗口并在预览后由用户明确应用。导入数据保持 `POC_PENDING`，不会自动保存或发布。
+- `0.1.7` 的计划契约 1.3 增加阶段持续时间、`ABSOLUTE/RELATIVE` 时间模式和单体任务目标轨道。附件 `p1-2.xlsx` 已转为 DMU P1/P2 默认八轨计划（76 个机制、108 次施放提醒、15 个目标标记），自动测试与规则校验通过；尚待国服实机验证时间与队友列表覆盖位置。
 
 ## 4. 当前尚未关闭的关键问题
 

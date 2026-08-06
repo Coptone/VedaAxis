@@ -28,6 +28,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] private static ICondition Condition { get; set; } = null!;
     [PluginService] private static IDutyState DutyState { get; set; } = null!;
     [PluginService] private static IObjectTable ObjectTable { get; set; } = null!;
+    [PluginService] private static IPartyList PartyList { get; set; } = null!;
     [PluginService] private static IFramework Framework { get; set; } = null!;
     [PluginService] private static IGameGui GameGui { get; set; } = null!;
     [PluginService] private static IGameInteropProvider Interop { get; set; } = null!;
@@ -40,6 +41,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PlanRuntime runtime = new(new TimelineClock());
     private readonly CombatLifecycle combatLifecycle = new();
     private readonly HotbarOverlay overlay;
+    private readonly PartyListOverlay partyListOverlay;
     private readonly DeviceAuthorizationClient deviceAuthorizationClient = new();
     private readonly ExecutionUploadQueue executionUploadQueue;
     private readonly SemaphoreSlim executionUploadLock = new(1, 1);
@@ -50,6 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     private string deviceCode = string.Empty;
     private string deviceCodeExpiresAt = string.Empty;
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
+    private readonly Dictionary<Guid, uint> manualPartyTargets = [];
 
     public Plugin()
     {
@@ -58,6 +61,7 @@ public sealed class Plugin : IDalamudPlugin
         planStore = new PlanFileStore(PluginInterface.GetPluginConfigDirectory());
         executionUploadQueue = new ExecutionUploadQueue(PluginInterface.GetPluginConfigDirectory());
         overlay = new HotbarOverlay(GameGui, Log);
+        partyListOverlay = new PartyListOverlay(GameGui, Log);
         ReloadPlan();
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
@@ -91,6 +95,10 @@ public sealed class Plugin : IDalamudPlugin
                 StringComparison.OrdinalIgnoreCase))
         {
             current.ApiBaseUrl = PluginConfiguration.ProductionApiBaseUrl;
+        }
+        if (string.Equals(current.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase))
+        {
+            current.StrategyTag = "DMU-P1P2";
         }
 
         current.Version = PluginConfiguration.CurrentVersion;
@@ -168,6 +176,7 @@ public sealed class Plugin : IDalamudPlugin
                 runtime.Assignments,
                 runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow),
                 Math.Clamp(configuration.OverlayOpacity, 0.1f, 1f));
+            DrawPartyTargets();
             DrawMissingActionDiagnostic();
         }
 
@@ -214,7 +223,7 @@ public sealed class Plugin : IDalamudPlugin
             ReloadPlan();
         }
         ImGui.SameLine();
-        if (ImGui.Button("载入 O8S 测试计划"))
+        if (ImGui.Button("载入 DMU P1/P2 默认计划"))
         {
             var plan = ExamplePlan.Create();
             planStore.Save(plan);
@@ -243,6 +252,7 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.TextWrapped($"计划文件：{planStore.Path}");
         ImGui.TextWrapped($"状态：{status}");
         DrawCombatDiagnostic();
+        DrawPartyTargetMapping();
         ImGui.Separator();
         ImGui.Text("账户连接");
         var apiBaseUrl = configuration.ApiBaseUrl;
@@ -345,6 +355,123 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.End();
     }
 
+    private void DrawPartyTargets()
+    {
+        if (runtime.Plan is null || !runtime.Clock.IsRunning)
+        {
+            return;
+        }
+
+        var elapsed = runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow);
+        var activeTargets = runtime.Assignments
+            .Where(item => item.Assignment.TargetTrackId is not null && item.ShouldDrawOverlay(elapsed))
+            .GroupBy(item => item.Assignment.TargetTrackId!.Value)
+            .ToList();
+        if (activeTargets.Count == 0)
+        {
+            return;
+        }
+
+        var partyMembers = ReadPartyMembers();
+        var tracks = runtime.Plan.Tracks.ToDictionary(track => track.TrackId);
+        List<PartyTargetVisual> visuals = [];
+        foreach (var group in activeTargets)
+        {
+            if (!tracks.TryGetValue(group.Key, out var targetTrack))
+            {
+                continue;
+            }
+            var resolution = PartyTargetResolver.Resolve(targetTrack, partyMembers, manualPartyTargets);
+            if (!resolution.Resolved || resolution.Member is null)
+            {
+                continue;
+            }
+            var state = group.MaxBy(item => PartyStatePriority(item.State))!.State;
+            visuals.Add(new PartyTargetVisual(resolution.Member, state));
+        }
+
+        partyListOverlay.Draw(visuals, Math.Clamp(configuration.OverlayOpacity, 0.1f, 1f));
+    }
+
+    private void DrawPartyTargetMapping()
+    {
+        if (runtime.Plan is null)
+        {
+            return;
+        }
+        var targetTrackIds = runtime.Plan.Assignments
+            .Where(assignment => assignment.TargetTrackId is not null)
+            .Select(assignment => assignment.TargetTrackId!.Value)
+            .Distinct()
+            .ToList();
+        if (targetTrackIds.Count == 0)
+        {
+            return;
+        }
+
+        ImGui.Separator();
+        ImGui.Text("单体减伤目标");
+        ImGui.TextDisabled("优先按职业自动识别；不唯一时可在开打前手动指定。本次映射不保存角色名。 ");
+        var partyMembers = ReadPartyMembers();
+        var tracks = runtime.Plan.Tracks.ToDictionary(track => track.TrackId);
+        foreach (var trackId in targetTrackIds)
+        {
+            if (!tracks.TryGetValue(trackId, out var targetTrack))
+            {
+                continue;
+            }
+            var resolution = PartyTargetResolver.Resolve(targetTrack, partyMembers, manualPartyTargets);
+            var preview = resolution.Resolved && resolution.Member is not null
+                ? $"{(resolution.Manual ? "手动" : "自动")}：{resolution.Member.DisplayName}"
+                : "未识别，请手动选择";
+            ImGui.BeginDisabled(Condition[ConditionFlag.InCombat]);
+            if (ImGui.BeginCombo($"{targetTrack.Slot}##PartyTarget{trackId}", preview))
+            {
+                if (ImGui.Selectable("自动识别", !manualPartyTargets.ContainsKey(trackId)))
+                {
+                    manualPartyTargets.Remove(trackId);
+                }
+                foreach (var member in partyMembers)
+                {
+                    var selected = manualPartyTargets.GetValueOrDefault(trackId) == member.EntityId;
+                    if (ImGui.Selectable($"{member.DisplayName} · Job {member.JobId}##{trackId}-{member.EntityId}", selected))
+                    {
+                        manualPartyTargets[trackId] = member.EntityId;
+                    }
+                }
+                ImGui.EndCombo();
+            }
+            ImGui.EndDisabled();
+        }
+    }
+
+    private static List<PartyMemberSnapshot> ReadPartyMembers()
+    {
+        List<PartyMemberSnapshot> members = [];
+        for (var index = 0; index < PartyList.Length; index++)
+        {
+            var member = PartyList[index];
+            if (member is null || member.EntityId == 0)
+            {
+                continue;
+            }
+            members.Add(new PartyMemberSnapshot(
+                index,
+                member.EntityId,
+                member.ClassJob.RowId,
+                member.Name.TextValue));
+        }
+        return members;
+    }
+
+    private static int PartyStatePriority(AssignmentState state) => state switch
+    {
+        AssignmentState.Missed or AssignmentState.Late => 3,
+        AssignmentState.Highlighting => 2,
+        AssignmentState.Success => 1,
+        _ => 0,
+    };
+
     private void DrawCombatDiagnostic()
     {
         var currentTerritoryId = ClientState.TerritoryType;
@@ -354,7 +481,7 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.Text($"当前 Territory：{currentTerritoryId} · 计划 Territory：{planTerritoryId}");
         if (planTerritoryId == 0)
         {
-            ImGui.TextColored(new Vector4(1f, 0.66f, 0.25f, 1f), "旧版计划缺少 Territory；请同步在线计划或载入 O8S 测试计划");
+            ImGui.TextColored(new Vector4(1f, 0.66f, 0.25f, 1f), "旧版计划缺少 Territory；请同步在线计划或载入 DMU P1/P2 默认计划");
         }
         else if (planTerritoryId != currentTerritoryId)
         {
@@ -372,6 +499,7 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             var plan = planStore.LoadOrCreateExample();
+            manualPartyTargets.Clear();
             var track = plan.Tracks.FirstOrDefault(item =>
                             string.Equals(item.Slot, configuration.LocalSlot, StringComparison.OrdinalIgnoreCase))
                         ?? plan.Tracks.First();

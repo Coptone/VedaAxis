@@ -67,13 +67,15 @@
     "damageCalibration": {
       "checkedAt": "2026-08-06",
       "publicKillSamples": 6,
-      "resolvedMechanics": 11,
-      "unresolvedMechanics": 4,
+      "resolvedMechanics": 59,
+      "nonDamageTimelineMarkers": 17,
+      "unresolvedDamageMechanics": 0,
       "statistic": "P95",
       "containsPlayerNames": false,
       "containsReportCodes": false,
       "status": "POC_PENDING",
-      "artifact": "data/seeds/dmu/p1-p2-damage-calibration.json"
+      "artifact": "data/seeds/dmu/p1-p2-damage-calibration.json",
+      "mapping": "data/seeds/dmu/p1-p2-damage-map.json"
     },
     "requirements": [
       "国服或国际服最新版本内验证 territory、Action ID 和阶段锚点",

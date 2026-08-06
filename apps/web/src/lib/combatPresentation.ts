@@ -33,14 +33,22 @@ export function damageTypeLabel(type: TimelineMechanic['damageType']): string {
   return DAMAGE_TYPE_LABELS[type]
 }
 
+export function hasDirectDamage(mechanic: Pick<TimelineMechanic, 'type' | 'name' | 'damageType' | 'damageProfile'>): boolean {
+  return Boolean(mechanic.damageProfile)
+    || mechanic.type === 'RAIDWIDE'
+    || mechanic.type === 'TANK_BUSTER'
+    || attackClass(mechanic) === 'AUTO_ATTACK'
+    || mechanic.damageType !== 'UNKNOWN'
+}
+
 /**
  * A timeline without a target-adjusted, reviewed calibration must never show a
  * fabricated hit point value. This message deliberately distinguishes the
  * timing/type metadata from a survivability input.
  */
-export function damageEstimateLabel(mechanic: Pick<TimelineMechanic, 'damageProfile'>): string {
+export function damageEstimateLabel(mechanic: Pick<TimelineMechanic, 'type' | 'name' | 'damageType' | 'damageProfile'>): string {
   const profile = mechanic.damageProfile
-  if (!profile) return '伤害值待校准'
+  if (!profile) return hasDirectDamage(mechanic) ? '伤害值待校准' : '时间轴标记 · 无直接伤害'
 
   const statistic = ({
     MAX_OBSERVED: '最大实测',

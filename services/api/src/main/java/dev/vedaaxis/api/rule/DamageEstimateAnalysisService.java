@@ -81,7 +81,7 @@ public class DamageEstimateAnalysisService {
 
     private static List<PlanSnapshot.ExecutionTrack> targetTracks(
             PlanSnapshot snapshot, PlanSnapshot.TimelineMechanic mechanic) {
-        if (mechanic.type() != PlanSnapshot.MechanicType.TANK_BUSTER) {
+        if (mechanic.type() != PlanSnapshot.MechanicType.TANK_BUSTER && !isAutoAttack(mechanic.name())) {
             return snapshot.tracks();
         }
         List<PlanSnapshot.ExecutionTrack> tanks = snapshot.tracks().stream()
@@ -90,6 +90,12 @@ public class DamageEstimateAnalysisService {
                         || track.slot() == TrackSlot.T1)
                 .toList();
         return tanks.isEmpty() ? snapshot.tracks() : tanks;
+    }
+
+    private static boolean isAutoAttack(String name) {
+        String normalized = name == null ? "" : name.trim().toLowerCase();
+        return normalized.equals("攻击") || normalized.startsWith("攻击 ")
+                || normalized.equals("attack") || normalized.startsWith("attack ");
     }
 
     static RiskLevel risk(PlanSnapshot.MechanicType type, long damageAfterMitigation) {

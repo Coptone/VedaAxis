@@ -57,9 +57,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 382208,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x4 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "b90f688a-b41a-586e-9fe6-631aedd6acb6",
@@ -91,9 +99,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 95552,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c077ee01-90ee-5fd5-aba0-24a4981f415b",
@@ -125,9 +141,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 382208,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x4 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "f99a36cb-0804-5c2a-ba26-9074acdbd24c",
@@ -175,11 +199,19 @@
       "name": "呼啦啦爆炎",
       "plannedAtMs": 38000,
       "durationMs": 0,
-      "type": "MECHANIC",
+      "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 130157,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 18,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 5 unique kills · Action 47778/47779 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "8e273ec0-db03-5748-9bad-e574c11e0537",
@@ -190,9 +222,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 95552,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "27dcc97f-45e0-5b08-a77b-efddd91fab76",
@@ -204,8 +244,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "踩塔成员",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47784,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 239424,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 21,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47784 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "7e7ac3a9-6913-57e0-b57e-730e1789edd4",
@@ -217,8 +265,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "踩塔成员",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47786,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 255735,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 23,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47786 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "42bb71a7-d557-5ed2-a218-a679578e44a7",
@@ -229,9 +285,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 191104,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x2 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "4c87436d-d285-5fec-817d-0acf52ea6928",
@@ -243,8 +307,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47783,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 168042,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 36,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47783 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "09815934-ff66-55c9-b447-00262fec84db",
@@ -276,9 +348,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 477760,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x5 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "99744047-46ce-5407-a610-38c50216f7a5",
@@ -334,11 +414,19 @@
       "name": "重力弹",
       "plannedAtMs": 88000,
       "durationMs": 0,
-      "type": "MECHANIC",
+      "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "分摊目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47788,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 183421,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 47,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47788 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "5354bf27-e39d-5db0-9d1b-959cb078056a",
@@ -349,9 +437,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 191104,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x2 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "0bf7646f-f14a-5005-9f1e-fa0cbc7c90f9",
@@ -363,8 +459,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47792,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 20985,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47792 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "f39d532c-9330-58ff-9029-2b94d0dd3cbe",
@@ -376,8 +480,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50179,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 980519,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 6,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 50179 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "7493bb78-1ba3-5730-986a-b5d5d7a21dcb",
@@ -388,9 +500,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 95552,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "b90612da-2a3a-50fe-8fbf-028632c1f97b",
@@ -402,8 +522,16 @@
       "type": "TANK_BUSTER",
       "damageType": "MAGICAL",
       "target": "坦克",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50401,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 1009320,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 7,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 50401 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "e59ad6ad-6008-52a4-a8ae-1d39c0d350f6",
@@ -414,9 +542,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 191104,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x2 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "77a7a3fc-5c73-5b53-86ba-13ef609cb910",
@@ -425,11 +561,19 @@
       "name": "重力弹",
       "plannedAtMs": 106000,
       "durationMs": 0,
-      "type": "MECHANIC",
+      "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "分摊目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47788,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 172875,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 46,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47788 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "66cbb294-11b1-5654-854f-acc502ec3076",
@@ -441,8 +585,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47792,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 22022,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47792 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "217d081f-ad97-587b-b9ee-969a0c50251c",
@@ -453,9 +605,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 573312,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x6 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "0003bf7c-e563-5123-b0b0-725468ac2ab6",
@@ -467,8 +627,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47783,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 129162,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 27,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 5 unique kills · Action 47783 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "dd975d3f-fc74-534d-947b-b6eb77cabe6e",
@@ -477,11 +645,19 @@
       "name": "强重力 x4",
       "plannedAtMs": 121000,
       "durationMs": 0,
-      "type": "MECHANIC",
+      "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "分摊目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47791,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 251825,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 42,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47791 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "85b4da78-ef28-597b-860d-134b990d9cc5",
@@ -513,9 +689,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 573312,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x6 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "d978286f-780e-56f0-aeb6-67c2146c197d",
@@ -573,9 +757,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 95552,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "af36703b-3b88-5b38-a43e-0e9badfac815",
@@ -587,8 +779,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47783,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 174568,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 36,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47783 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c2c728fd-5811-5724-9092-f26a6582460c",
@@ -600,8 +800,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47797,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 191110,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 23,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47797 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "33ee56c5-3e59-569a-b212-ac0f5bded5e1",
@@ -613,8 +821,16 @@
       "type": "MECHANIC",
       "damageType": "MAGICAL",
       "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47798,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 201030,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 23,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47798 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "2c2f987a-9250-54be-baf9-2aa040ca4240",
@@ -636,11 +852,19 @@
       "name": "呼啦啦爆炎",
       "plannedAtMs": 187000,
       "durationMs": 0,
-      "type": "MECHANIC",
+      "type": "RAIDWIDE",
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 214221,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 48,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47778/47779 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "4535512a-141d-56e1-a47b-eb4ad3f0ba9a",
@@ -651,9 +875,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 286656,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x3 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "b724d3a1-a5c9-5db3-95a5-cea107722e86",
@@ -676,10 +908,18 @@
       "plannedAtMs": 203000,
       "durationMs": 0,
       "type": "RAIDWIDE",
-      "damageType": "UNKNOWN",
+      "damageType": "MAGICAL",
       "target": "全体",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 50722,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 265744,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 89,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 50722 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "e177cc83-a905-54c2-9d81-904b98a3c853",
@@ -703,9 +943,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 95552,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "9f42374c-282c-5eaa-869c-efdef04d787d",
@@ -737,9 +985,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 286656,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x3 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "a73671a9-e3b6-5bf6-b2fb-5a1152c9abf2",
@@ -771,9 +1027,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 382208,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x4 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "ea814dc5-b5b8-507f-996a-6bf807d30c24",
@@ -786,7 +1050,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 196808,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 48,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c845b0e0-9ef6-5605-97f3-4ea19d004ff7",
@@ -799,7 +1071,15 @@
       "damageType": "MAGICAL",
       "target": "机制目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 167012,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47830/47831/47832/47833 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "cb276879-6a11-526b-b514-036a2243aa02",
@@ -812,7 +1092,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 183514,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c152e4e6-83db-5a24-b9c1-d1d1d09d8c45",
@@ -838,7 +1126,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 165765,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 48,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "daab4ff5-1314-5ad5-9763-e09c4823f7c2",
@@ -851,7 +1147,15 @@
       "damageType": "MAGICAL",
       "target": "机制目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 158724,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 22,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47830/47831/47832/47833 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "c99268f4-40db-5997-b6d0-064feff894c4",
@@ -864,7 +1168,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 190647,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 23,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "3fe26cf2-be98-509d-a238-7266943fd69b",
@@ -890,7 +1202,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 190944,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 48,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "83153026-7f0b-59d5-a8da-c7a2f0bceefa",
@@ -903,7 +1223,15 @@
       "damageType": "MAGICAL",
       "target": "机制目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 121654,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 23,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47830/47831/47832/47833 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "3b561e30-23bb-5dc7-a1cb-75d4529e3f1d",
@@ -916,7 +1244,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 152985,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "8f5da781-0314-5fa6-b84a-14ac305d2ded",
@@ -942,7 +1278,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 188956,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 48,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "81c5a721-fa5e-5c37-bb6b-a4348f2e1918",
@@ -955,7 +1299,15 @@
       "damageType": "MAGICAL",
       "target": "机制目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 174178,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47830/47831/47832/47833 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "7d3b2e2d-dc32-536b-b83d-ee16ddd18d15",
@@ -968,7 +1320,15 @@
       "damageType": "MAGICAL",
       "target": "分摊目标",
       "actionId": null,
-      "confidence": "POC_PENDING"
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 176809,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 24,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47808/47809/47810 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "29d22adf-d0e6-55ad-a875-dca41f6b8337",
@@ -992,9 +1352,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 95552,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "2c4eda41-a4fa-56e9-8d0e-b310c45650c5",
@@ -1026,9 +1394,17 @@
       "durationMs": 0,
       "type": "MECHANIC",
       "damageType": "PHYSICAL",
-      "target": "机制目标",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "target": "当前一仇",
+      "actionId": 49746,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 573312,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 660,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 49746 x6 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     },
     {
       "mechanicId": "7e742153-bb5e-5aa6-acdb-f071b21dc68a",
@@ -1069,11 +1445,11 @@
       "actionId": 47823,
       "confidence": "POC_PENDING",
       "damageProfile": {
-        "amount": 655135,
+        "amount": 661709,
         "basis": "OBSERVED_TARGET_ADJUSTED",
-        "sampleCount": 9,
+        "sampleCount": 11,
         "statistic": "P95",
-        "source": "FFLogs public zone 76 · 5 unique kills · Action 47823 · 2026-08-06",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47823 · 2026-08-06",
         "confidence": "POC_PENDING"
       }
     },
@@ -1106,10 +1482,18 @@
       "plannedAtMs": 387000,
       "durationMs": 0,
       "type": "RAIDWIDE",
-      "damageType": "UNKNOWN",
+      "damageType": "MAGICAL",
       "target": "全体",
-      "actionId": null,
-      "confidence": "POC_PENDING"
+      "actionId": 47805,
+      "confidence": "POC_PENDING",
+      "damageProfile": {
+        "amount": 255803,
+        "basis": "OBSERVED_TARGET_ADJUSTED",
+        "sampleCount": 40,
+        "statistic": "P95",
+        "source": "FFLogs public zone 76 · 6 unique kills · Action 47805 · 2026-08-06",
+        "confidence": "POC_PENDING"
+      }
     }
   ],
   "anchors": [

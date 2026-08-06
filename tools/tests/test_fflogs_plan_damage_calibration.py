@@ -75,6 +75,47 @@ class FFLogsPlanDamageCalibrationTests(unittest.TestCase):
         self.assertEqual(360_000, by_id["buster"]["amount"])
         self.assertEqual(3, by_id["buster"]["reportSampleCount"])
 
+    def test_reviewed_mapping_supports_auto_sequences_and_alternative_actions(self):
+        reports = []
+        for index in range(3):
+            events = [
+                {"type": "calculateddamage", "fightTimeMs": 1_000, "sourceId": 9,
+                 "targetId": 1, "abilityGameId": 49746, "abilityName": "Attack",
+                 "unmitigatedAmount": 90_000},
+                {"type": "calculateddamage", "fightTimeMs": 4_100, "sourceId": 9,
+                 "targetId": 1, "abilityGameId": 49746, "abilityName": "Attack",
+                 "unmitigatedAmount": 110_000},
+                {"type": "calculateddamage", "fightTimeMs": 10_000 + index * 50, "sourceId": 9,
+                 "targetId": 1, "abilityGameId": 300, "abilityName": "Spread",
+                 "unmitigatedAmount": 130_000},
+                {"type": "calculateddamage", "fightTimeMs": 10_000 + index * 50, "sourceId": 9,
+                 "targetId": 2, "abilityGameId": 301, "abilityName": "Stack",
+                 "unmitigatedAmount": 160_000},
+            ]
+            reports.append(module.build_report_sample(self.metadata(index * 10_000), events))
+        plan = {"encounterId": "test", "mechanics": [
+            {"mechanicId": "autos", "externalId": "R1", "phase": "P1", "name": "攻击 x4",
+             "plannedAtMs": 0, "type": "MECHANIC", "damageType": "PHYSICAL", "target": "机制目标"},
+            {"mechanicId": "choice", "externalId": "R2", "phase": "P1", "name": "分散/分摊",
+             "plannedAtMs": 10_000, "type": "MECHANIC", "damageType": "MAGICAL", "target": "机制目标"},
+        ]}
+        mapping = {"mechanics": {
+            "R1": {"actionIds": [49746], "mode": "AUTO_ATTACK", "hitCount": 4,
+                   "damageType": "PHYSICAL"},
+            "R2": {"actionIds": [300, 301], "mode": "TIME", "aggregation": "ALTERNATIVE",
+                   "damageType": "MAGICAL"},
+        }}
+
+        result = module.build_calibration(
+            plan, reports, collected_at="2026-08-06", mapping=mapping)
+
+        by_id = {item["mechanicId"]: item for item in result["mechanics"]}
+        self.assertEqual(440_000, by_id["autos"]["amount"])
+        self.assertEqual("当前一仇", by_id["autos"]["target"])
+        self.assertEqual(160_000, by_id["choice"]["amount"])
+        self.assertIsNone(by_id["choice"]["actionId"])
+        self.assertEqual([], result["unresolved"])
+
 
 if __name__ == "__main__":
     unittest.main()

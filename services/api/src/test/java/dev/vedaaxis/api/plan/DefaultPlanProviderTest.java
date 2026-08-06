@@ -32,7 +32,7 @@ class DefaultPlanProviderTest {
         assertThat(snapshot.phases()).extracting(PlanSnapshot.TimelinePhase::timingMode)
                 .containsOnly(PlanSnapshot.TimingMode.ABSOLUTE);
         assertThat(snapshot.mechanics()).hasSize(76);
-        assertThat(snapshot.mechanics()).filteredOn(mechanic -> mechanic.damageProfile() != null).hasSize(11);
+        assertThat(snapshot.mechanics()).filteredOn(mechanic -> mechanic.damageProfile() != null).hasSize(59);
         assertThat(snapshot.assignments()).hasSize(108);
         assertThat(snapshot.assignments()).filteredOn(assignment -> assignment.targetTrackId() != null).hasSize(15);
     }
@@ -42,7 +42,7 @@ class DefaultPlanProviderTest {
         var estimates = damageEstimateAnalysisService.preview(provider.create(UUID.randomUUID()));
 
         assertThat(estimates).hasSize(76);
-        assertThat(estimates).filteredOn(estimate -> estimate.damageAfterMitigation() != null).hasSize(11);
+        assertThat(estimates).filteredOn(estimate -> estimate.damageAfterMitigation() != null).hasSize(59);
         assertThat(estimates)
                 .filteredOn(estimate -> estimate.damageAfterMitigation() != null)
                 .allMatch(estimate -> estimate.baselineDamage() >= estimate.damageAfterMitigation());

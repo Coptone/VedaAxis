@@ -16,7 +16,9 @@ FFLogs 样板校验已命中全部 7 个锚点 Action ID，但暴露出 P3 以�
 
 ## P1/P2 伤害校准（2026-08-06）
 
-`p1-p2-damage-calibration.json` 是 6 份不同公开击杀样本的匿名聚合结果：按计划相对时间和目标数量匹配 AOE/死刑，连续多段伤害先按单个目标求和，再跨样本取 P95。当前解析出 11 个机制，另有 4 个机制因样本不足或时间未匹配而保持“待校准”；产物不含玩家名和 FFLogs 报告码，全部继续标记为 `POC_PENDING`。
+`p1-p2-damage-calibration.json` 是 6 份不同公开击杀样本的匿名聚合结果，`p1-p2-damage-map.json` 保存人工复核后的计划行与 Action ID 对照。工具按计划相对时间匹配 AOE、死刑、分摊、踩塔、点名和组合机制；连续多段伤害先按单个目标求和，互斥的多种命中动作只汇总样本而不相加，再跨样本取 P95。普通平 A 使用 Action 49746 的逐次命中 P95，并按源表 `xN` 计算整段伤害。
+
+当前 76 行时间轴中有 59 行获得 `damageProfile`，其余 17 行是开场、Boss 归位、阶段判定、机制咏唱或失败判定等不对应一次直接承伤的时间轴标记，不再显示成“伤害值待校准”。动作的物理/魔法属性由 XIVAPI v2 `Action` sheet 交叉核对；客户端 Action 数据不提供敌方实际伤害量，因此数值仍来自 FFLogs `calculateddamage.unmitigatedAmount`。产物不含玩家名和 FFLogs 报告码，全部继续标记为 `POC_PENDING`。
 
 以后不需要所有者逐条提供 FFLogs 链接。维护者可使用本地 `.env` 中的 OAuth 凭据自动发现近期公开击杀、下载原始事件，再生成匿名校准候选：
 
@@ -24,10 +26,11 @@ FFLogs 样板校验已命中全部 7 个锚点 Action ID，但暴露出 P3 以�
 python tools/fflogs_collect_samples.py --zone-id 76 --encounter-id 1085 --sample-limit 6
 python tools/fflogs_plan_damage_calibration.py \
   --plan data/seeds/dmu/p1-p2-default-plan.json \
+  --mapping data/seeds/dmu/p1-p2-damage-map.json \
   --report-root data/fflogs-poc \
   --collected-at YYYY-MM-DD \
   --output data/seeds/dmu/p1-p2-damage-calibration.json \
   --apply-output data/seeds/dmu/p1-p2-default-plan.json
 ```
 
-`data/fflogs-poc/` 始终忽略提交；只有去标识化的聚合产物可以进入版本库。P95 是特定装备、角色和队伍环境下的观测风险基线，不是官方 boss 伤害公式，也不会自动把置信度提升为 `VERIFIED`。
+`data/fflogs-poc/` 始终忽略提交；只有去标识化的聚合产物可以进入版本库。平 A 的 `xN` 结果假定同一套计划减伤覆盖整段连续攻击；组合机制按单个目标实际只承受一种分支处理。P95 是特定装备、角色和队伍环境下的观测风险基线，不是官方 boss 伤害公式，也不会自动把置信度提升为 `VERIFIED`。

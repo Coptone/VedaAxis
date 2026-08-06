@@ -24,7 +24,7 @@ import { createTracks, formatTime } from '../lib/tracks'
 import { newId } from '../lib/ids'
 import { cloneData } from '../lib/cloneData'
 import { actionIconUrl } from '../lib/actionIcons'
-import { attackClass, attackClassLabel, damageEstimateLabel, damageTypeLabel } from '../lib/combatPresentation'
+import { attackClass, attackClassLabel, damageEstimateLabel, damageTypeLabel, hasDirectDamage } from '../lib/combatPresentation'
 import { abilityEffectSummary } from '../lib/abilityEffects'
 import { applyTimelineImport } from '../lib/timelineImports'
 import {
@@ -208,13 +208,15 @@ function displayInteger(value: number | null): string {
   return value === null ? '—' : Math.round(value).toLocaleString('zh-CN')
 }
 
-function damageRiskLabel(estimate: DamageEstimate | undefined): string {
+function damageRiskLabel(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic = selectedMechanic.value): string {
+  if (!hasDirectDamage(mechanic)) return '无直接伤害'
   if (!estimate || estimate.status === 'CALIBRATION_REQUIRED') return '伤害值待校准'
   if (estimate.status === 'SPECIAL_CASE_REVIEW_REQUIRED') return '需要无敌特判'
   return ({ GREEN: '绿色区间', YELLOW: '黄色区间', RED: '红色区间', UNCLASSIFIED: '未设色带', CALIBRATION_REQUIRED: '伤害值待校准' } as const)[estimate.riskLevel]
 }
 
-function damageRiskClass(estimate: DamageEstimate | undefined): string {
+function damageRiskClass(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic = selectedMechanic.value): string {
+  if (!hasDirectDamage(mechanic)) return 'damage-risk-unclassified'
   return estimate ? `damage-risk-${estimate.riskLevel.toLowerCase()}` : 'damage-risk-calibration_required'
 }
 
@@ -505,7 +507,7 @@ function fallbackAbilities(): AbilityDefinition[] {
             <small class="damage-estimate-note">{{ damageEstimateLabel(mechanic) }}</small>
             <small
               v-if="damageEstimates[mechanic.mechanicId]?.damageAfterMitigation != null"
-              :class="['post-mitigation-damage', damageRiskClass(damageEstimates[mechanic.mechanicId])]"
+              :class="['post-mitigation-damage', damageRiskClass(damageEstimates[mechanic.mechanicId], mechanic)]"
             >
               减伤后 {{ displayInteger(damageEstimates[mechanic.mechanicId]!.damageAfterMitigation) }}
               <template v-if="damageEstimates[mechanic.mechanicId]?.worstTrackSlot"> · 最危险 {{ damageEstimates[mechanic.mechanicId]!.worstTrackSlot }}</template>
@@ -599,7 +601,7 @@ function fallbackAbilities(): AbilityDefinition[] {
               <h3>当前减伤后预计伤害</h3>
             </div>
             <span :class="['damage-analysis-status', damageRiskClass(selectedDamageEstimate)]">
-              {{ damageEstimateBusy ? '计算中…' : damageRiskLabel(selectedDamageEstimate) }}
+              {{ damageEstimateBusy ? '计算中…' : damageRiskLabel(selectedDamageEstimate, selectedMechanic) }}
             </span>
           </header>
           <p class="damage-thresholds">
@@ -612,7 +614,9 @@ function fallbackAbilities(): AbilityDefinition[] {
             <span><small>最危险轨道</small><b>{{ selectedDamageEstimate.worstTrackSlot ?? '—' }}</b></span>
           </div>
           <p v-else class="damage-analysis-empty">
-            当前机制没有足够的 FFLogs 样本，暂不显示猜测伤害；可继续编排减伤，待校准后会自动出现结果。
+            {{ hasDirectDamage(selectedMechanic)
+              ? '当前机制没有足够的 FFLogs 样本，暂不显示猜测伤害；可继续编排减伤，待校准后会自动出现结果。'
+              : '该行用于阶段或机制定位，不对应一次需要计算承伤的直接伤害事件。' }}
           </p>
           <p class="damage-analysis-boundary">
             预览按当前安排计算：AOE 取全队中减伤后伤害最高的轨道，死刑取坦克轨道中的最高值。护盾、治疗和无敌不从这一个伤害数字中扣除，并会单独提示复核。

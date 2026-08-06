@@ -3,10 +3,11 @@
 
 The input report directories are produced by ``fflogs_extract.py`` and remain
 git-ignored. The committed output contains no report code or player identity.
-For every raidwide/tankbuster mechanic, enemy damage events are matched by
-relative fight time and target pattern. Repeated hits from the same action
-within one mechanic window are summed per target before a cross-report P95 is
-calculated.
+By default, raidwide/tankbuster events are matched by relative fight time and
+target pattern. A reviewed mapping file can additionally cover split stacks,
+towers, alternative target patterns, repeated optional occurrences and auto
+attack sequences. Repeated hits from the same action within one mechanic
+window are summed per target before a cross-report P95 is calculated.
 """
 
 from __future__ import annotations
@@ -80,12 +81,18 @@ def build_report_sample(
     impacts: list[Impact] = []
     for action_id, action_events in by_action.items():
         ordered = sorted(action_events, key=lambda event: event["fightTimeMs"])
-        clusters: list[list[dict[str, Any]]] = []
-        for event in ordered:
-            if not clusters or event["fightTimeMs"] - clusters[-1][-1]["fightTimeMs"] > cluster_gap_ms:
-                clusters.append([event])
-            else:
-                clusters[-1].append(event)
+        action_name = next((str(event.get("abilityName")) for event in ordered if event.get("abilityName")), "")
+        if action_name.casefold() == "attack":
+            # Each auto attack is one observation. Grouping attacks within the
+            # normal five-second mechanic window would create arbitrary totals.
+            clusters = [[event] for event in ordered]
+        else:
+            clusters: list[list[dict[str, Any]]] = []
+            for event in ordered:
+                if not clusters or event["fightTimeMs"] - clusters[-1][-1]["fightTimeMs"] > cluster_gap_ms:
+                    clusters.append([event])
+                else:
+                    clusters[-1].append(event)
         for cluster in clusters:
             totals: dict[int, int] = defaultdict(int)
             target_ids: set[int] = set()
@@ -124,39 +131,77 @@ def _matches_target_pattern(mechanic_type: str, impact: Impact) -> bool:
     return False
 
 
+def _mapped_impacts(
+        report: ReportSample, planned_at: int, mapping: dict[str, Any], tolerance_ms: int) -> list[Impact]:
+    action_ids = set(mapping["actionIds"])
+    if mapping["mode"] in {"ACTION_POOL", "AUTO_ATTACK"}:
+        return [impact for impact in report.impacts if impact.action_id in action_ids]
+    return [
+        impact for impact in report.impacts
+        if impact.action_id in action_ids and abs(impact.start_ms - planned_at) <= tolerance_ms
+    ]
+
+
 def build_calibration(
         plan: dict[str, Any], reports: Iterable[ReportSample], *, tolerance_ms: int = 2_500,
-        minimum_reports: int = 3, collected_at: str) -> dict[str, Any]:
+        minimum_reports: int = 3, collected_at: str,
+        mapping: dict[str, Any] | None = None) -> dict[str, Any]:
     unique_reports = {report.sample_key: report for report in reports}
     mechanics: list[dict[str, Any]] = []
     unresolved: list[dict[str, Any]] = []
+    reviewed_mappings = (mapping or {}).get("mechanics") or {}
 
     for mechanic in plan.get("mechanics") or []:
         mechanic_type = mechanic.get("type")
-        if mechanic_type not in {"RAIDWIDE", "TANK_BUSTER"}:
-            continue
         planned_at = int(mechanic["plannedAtMs"])
-        matches: list[tuple[str, Impact]] = []
-        for sample_key, report in unique_reports.items():
-            candidates = [
-                impact for impact in report.impacts
-                if abs(impact.start_ms - planned_at) <= tolerance_ms
-                and _matches_target_pattern(mechanic_type, impact)
+        reviewed = reviewed_mappings.get(mechanic.get("externalId"))
+        if reviewed:
+            matches = [
+                (sample_key, _mapped_impacts(report, planned_at, reviewed, tolerance_ms))
+                for sample_key, report in unique_reports.items()
             ]
-            if candidates:
-                matches.append((sample_key, min(candidates, key=lambda impact: abs(impact.start_ms - planned_at))))
+            selected = [(sample_key, impacts) for sample_key, impacts in matches if impacts]
+            action_ids = list(reviewed["actionIds"])
+        else:
+            if mapping is not None or mechanic_type not in {"RAIDWIDE", "TANK_BUSTER"}:
+                continue
+            matches = []
+            for sample_key, report in unique_reports.items():
+                candidates = [
+                    impact for impact in report.impacts
+                    if abs(impact.start_ms - planned_at) <= tolerance_ms
+                    and _matches_target_pattern(mechanic_type, impact)
+                ]
+                if candidates:
+                    closest = min(candidates, key=lambda impact: abs(impact.start_ms - planned_at))
+                    matches.append((sample_key, [closest]))
+            action_counts = Counter(impact.action_id for _, impacts in matches for impact in impacts)
+            if action_counts:
+                action_id, _ = action_counts.most_common(1)[0]
+                action_ids = [action_id]
+                selected = [
+                    (sample_key, [impact for impact in impacts if impact.action_id == action_id])
+                    for sample_key, impacts in matches
+                ]
+                selected = [(sample_key, impacts) for sample_key, impacts in selected if impacts]
+            else:
+                action_ids = []
+                selected = []
 
-        action_counts = Counter(impact.action_id for _, impact in matches)
-        if not action_counts:
+        if not selected:
             unresolved.append({
                 "mechanicId": mechanic["mechanicId"], "phase": mechanic["phase"],
                 "name": mechanic["name"], "plannedAtMs": planned_at, "reason": "NO_TIME_MATCH",
             })
             continue
-        action_id, _ = action_counts.most_common(1)[0]
-        selected = [(sample_key, impact) for sample_key, impact in matches if impact.action_id == action_id]
         report_count = len({sample_key for sample_key, _ in selected})
-        values = [value for _, impact in selected for value in impact.per_target_totals]
+        hit_count = int((reviewed or {}).get("hitCount") or 1)
+        values = [
+            value * hit_count
+            for _, report_impacts in selected
+            for impact in report_impacts
+            for value in impact.per_target_totals
+        ]
         if report_count < minimum_reports or not values:
             unresolved.append({
                 "mechanicId": mechanic["mechanicId"], "phase": mechanic["phase"],
@@ -164,29 +209,39 @@ def build_calibration(
                 "reason": "INSUFFICIENT_REPORTS", "matchedReportCount": report_count,
             })
             continue
-        errors = [impact.start_ms - planned_at for _, impact in selected]
-        action_name = Counter(impact.name for _, impact in selected).most_common(1)[0][0]
-        amount = percentile_95(values)
-        mechanics.append({
+        impacts = [impact for _, report_impacts in selected for impact in report_impacts]
+        errors = [impact.start_ms - planned_at for impact in impacts]
+        action_names = [name for name, _ in Counter(impact.name for impact in impacts).most_common()]
+        candidate = {
             "mechanicId": mechanic["mechanicId"],
+            "externalId": mechanic.get("externalId"),
             "phase": mechanic["phase"],
             "name": mechanic["name"],
             "plannedAtMs": planned_at,
-            "actionId": action_id,
-            "actionName": action_name,
-            "mechanicType": mechanic_type,
-            "damageType": mechanic.get("damageType", "UNKNOWN"),
-            "amount": amount,
+            "actionId": action_ids[0] if len(action_ids) == 1 else None,
+            "actionIds": action_ids,
+            "actionName": " / ".join(action_names),
+            "actionNames": action_names,
+            "mechanicType": (reviewed or {}).get("mechanicType", mechanic_type),
+            "damageType": (reviewed or {}).get("damageType", mechanic.get("damageType", "UNKNOWN")),
+            "target": (reviewed or {}).get(
+                "target", "当前一仇" if (reviewed or {}).get("mode") == "AUTO_ATTACK" else mechanic.get("target")),
+            "amount": percentile_95(values),
             "statistic": "P95",
             "targetObservationCount": len(values),
             "reportSampleCount": report_count,
-            "medianTimingErrorMs": round(statistics.median(errors)),
-            "maximumAbsoluteTimingErrorMs": max(abs(error) for error in errors),
+            "mappingMode": (reviewed or {}).get("mode", "TIME"),
+            "aggregation": (reviewed or {}).get("aggregation", "MULTI_HIT_SUM"),
+            "hitCount": hit_count,
             "confidence": "POC_PENDING",
-        })
+        }
+        if candidate["mappingMode"] == "TIME":
+            candidate["medianTimingErrorMs"] = round(statistics.median(errors))
+            candidate["maximumAbsoluteTimingErrorMs"] = max(abs(error) for error in errors)
+        mechanics.append(candidate)
 
     return {
-        "schemaVersion": "1.0",
+        "schemaVersion": "1.1" if mapping is not None else "1.0",
         "encounterId": plan.get("encounterId"),
         "collectedAt": collected_at,
         "source": "FFLogs public zone 76 multi-report calibration",
@@ -201,6 +256,8 @@ def build_calibration(
         "warnings": [
             "P95 values are target-adjusted FFLogs observations, not a universal boss damage formula.",
             "Repeated hits from the same action within five seconds are summed per target.",
+            "Alternative action groups pool per-target observations and do not sum mutually exclusive hits.",
+            "Auto-attack xN values assume the same planned mitigation covers the complete sequence.",
             "Candidates require mechanic mapping review before publication and remain POC_PENDING.",
         ],
     }
@@ -213,6 +270,12 @@ def apply_calibration(plan: dict[str, Any], calibration: dict[str, Any]) -> dict
         if not candidate:
             continue
         mechanic["actionId"] = candidate["actionId"]
+        mechanic["type"] = candidate["mechanicType"]
+        mechanic["damageType"] = candidate["damageType"]
+        mechanic["target"] = candidate["target"]
+        action_label = "/".join(str(action_id) for action_id in candidate.get("actionIds") or [])
+        if candidate.get("hitCount", 1) > 1 and candidate.get("mappingMode") == "AUTO_ATTACK":
+            action_label += f" x{candidate['hitCount']}"
         mechanic["damageProfile"] = {
             "amount": candidate["amount"],
             "basis": "OBSERVED_TARGET_ADJUSTED",
@@ -220,7 +283,7 @@ def apply_calibration(plan: dict[str, Any], calibration: dict[str, Any]) -> dict
             "statistic": "P95",
             "source": (
                 f"FFLogs public zone 76 · {candidate['reportSampleCount']} unique kills · "
-                f"Action {candidate['actionId']} · {calibration['collectedAt']}"
+                f"Action {action_label} · {calibration['collectedAt']}"
             ),
             "confidence": "POC_PENDING",
         }
@@ -257,6 +320,8 @@ def main() -> int:
     parser.add_argument("--apply-output", type=Path)
     parser.add_argument("--tolerance-ms", type=int, default=2_500)
     parser.add_argument("--minimum-reports", type=int, default=3)
+    parser.add_argument("--mapping", type=Path,
+                        help="reviewed externalId-to-Action-ID mapping for additional damage mechanics")
     args = parser.parse_args()
 
     plan = json.loads(args.plan.read_text(encoding="utf-8"))
@@ -267,9 +332,11 @@ def main() -> int:
     if not report_dirs:
         parser.error("at least one --report-dir or --report-root is required")
     reports = [load_report_dir(path) for path in report_dirs]
+    mapping = json.loads(args.mapping.read_text(encoding="utf-8")) if args.mapping else None
     calibration = build_calibration(
         plan, reports, tolerance_ms=args.tolerance_ms,
         minimum_reports=args.minimum_reports, collected_at=args.collected_at,
+        mapping=mapping,
     )
     args.output.write_text(json.dumps(calibration, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.apply_output:

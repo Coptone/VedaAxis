@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "encounterId": "c97e8840-1697-476f-a4ac-8c7996df277b",
   "collectedAt": "2026-08-06",
   "source": "FFLogs public zone 76 multi-report calibration",
@@ -11,228 +11,1666 @@
   "promotionAllowed": false,
   "mechanics": [
     {
+      "mechanicId": "b30d861b-a4ac-516f-ba44-4bda76ce99ce",
+      "externalId": "XLSX-P1-R3",
+      "phase": "P1",
+      "name": "攻击 x4",
+      "plannedAtMs": 1000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 382208,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 4,
+      "confidence": "POC_PENDING"
+    },
+    {
       "mechanicId": "b90f688a-b41a-586e-9fe6-631aedd6acb6",
+      "externalId": "XLSX-P1-R4",
       "phase": "P1",
       "name": "恶狠狠毁荡",
       "plannedAtMs": 16000,
       "actionId": 50179,
+      "actionIds": [
+        50179
+      ],
       "actionName": "Revolting Ruin III",
+      "actionNames": [
+        "Revolting Ruin III"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "MAGICAL",
+      "target": "坦克",
       "amount": 980519,
       "statistic": "P95",
       "targetObservationCount": 5,
       "reportSampleCount": 5,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 120,
-      "maximumAbsoluteTimingErrorMs": 475,
+      "maximumAbsoluteTimingErrorMs": 475
+    },
+    {
+      "mechanicId": "4e614c61-8410-5cb8-b70b-1ee4ec6299f2",
+      "externalId": "XLSX-P1-R5",
+      "phase": "P1",
+      "name": "攻击",
+      "plannedAtMs": 18000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 95552,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "c077ee01-90ee-5fd5-aba0-24a4981f415b",
+      "externalId": "XLSX-P1-R6",
       "phase": "P1",
       "name": "恶狠狠毁荡",
       "plannedAtMs": 19000,
       "actionId": 50401,
+      "actionIds": [
+        50401
+      ],
       "actionName": "Revolting Ruin III",
+      "actionNames": [
+        "Revolting Ruin III"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "MAGICAL",
+      "target": "坦克",
       "amount": 977751,
       "statistic": "P95",
       "targetObservationCount": 6,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 226,
-      "maximumAbsoluteTimingErrorMs": 591,
+      "maximumAbsoluteTimingErrorMs": 591
+    },
+    {
+      "mechanicId": "abcf9f0d-7333-546c-b269-02570af4bb61",
+      "externalId": "XLSX-P1-R7",
+      "phase": "P1",
+      "name": "攻击 x4",
+      "plannedAtMs": 20000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 382208,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 4,
       "confidence": "POC_PENDING"
     },
     {
+      "mechanicId": "9de9f751-b113-5300-8a23-d1683fe099b5",
+      "externalId": "XLSX-P1-R11",
+      "phase": "P1",
+      "name": "呼啦啦爆炎",
+      "plannedAtMs": 38000,
+      "actionId": null,
+      "actionIds": [
+        47778,
+        47779
+      ],
+      "actionName": "Flagrant Fire III",
+      "actionNames": [
+        "Flagrant Fire III"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 130157,
+      "statistic": "P95",
+      "targetObservationCount": 18,
+      "reportSampleCount": 5,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 961,
+      "maximumAbsoluteTimingErrorMs": 1125
+    },
+    {
+      "mechanicId": "8e273ec0-db03-5748-9bad-e574c11e0537",
+      "externalId": "XLSX-P1-R12",
+      "phase": "P1",
+      "name": "攻击",
+      "plannedAtMs": 41000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 95552,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "27dcc97f-45e0-5b08-a77b-efddd91fab76",
+      "externalId": "XLSX-P1-R13",
+      "phase": "P1",
+      "name": "波动炮",
+      "plannedAtMs": 43000,
+      "actionId": 47784,
+      "actionIds": [
+        47784
+      ],
+      "actionName": "Wave Cannon",
+      "actionNames": [
+        "Wave Cannon"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "踩塔成员",
+      "amount": 239424,
+      "statistic": "P95",
+      "targetObservationCount": 21,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 148,
+      "maximumAbsoluteTimingErrorMs": 355
+    },
+    {
+      "mechanicId": "7e7ac3a9-6913-57e0-b57e-730e1789edd4",
+      "externalId": "XLSX-P1-R14",
+      "phase": "P1",
+      "name": "爆炸",
+      "plannedAtMs": 46000,
+      "actionId": 47786,
+      "actionIds": [
+        47786
+      ],
+      "actionName": "Explosion",
+      "actionNames": [
+        "Explosion"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "踩塔成员",
+      "amount": 255735,
+      "statistic": "P95",
+      "targetObservationCount": 23,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 780,
+      "maximumAbsoluteTimingErrorMs": 1005
+    },
+    {
+      "mechanicId": "42bb71a7-d557-5ed2-a218-a679578e44a7",
+      "externalId": "XLSX-P1-R15",
+      "phase": "P1",
+      "name": "攻击 x2",
+      "plannedAtMs": 49000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 191104,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 2,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "4c87436d-d285-5fec-817d-0acf52ea6928",
+      "externalId": "XLSX-P1-R16",
+      "phase": "P1",
+      "name": "连环环陷阱",
+      "plannedAtMs": 50000,
+      "actionId": 47783,
+      "actionIds": [
+        47783
+      ],
+      "actionName": "Double-Trouble Trap",
+      "actionNames": [
+        "Double-Trouble Trap"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 168042,
+      "statistic": "P95",
+      "targetObservationCount": 36,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 388,
+      "maximumAbsoluteTimingErrorMs": 609
+    },
+    {
       "mechanicId": "09815934-ff66-55c9-b447-00262fec84db",
+      "externalId": "XLSX-P1-R17",
       "phase": "P1",
       "name": "制裁之光",
       "plannedAtMs": 63000,
       "actionId": 50722,
+      "actionIds": [
+        50722
+      ],
       "actionName": "Light of Judgment",
+      "actionNames": [
+        "Light of Judgment"
+      ],
       "mechanicType": "RAIDWIDE",
       "damageType": "MAGICAL",
+      "target": "全体",
       "amount": 284938,
       "statistic": "P95",
       "targetObservationCount": 43,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 430,
-      "maximumAbsoluteTimingErrorMs": 639,
+      "maximumAbsoluteTimingErrorMs": 639
+    },
+    {
+      "mechanicId": "99a1821e-a0e8-582f-8a3e-50a5c657a83e",
+      "externalId": "XLSX-P1-R18",
+      "phase": "P1",
+      "name": "攻击 x5",
+      "plannedAtMs": 65000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 477760,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 5,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "99744047-46ce-5407-a610-38c50216f7a5",
+      "externalId": "XLSX-P1-R19",
       "phase": "P1",
       "name": "超驱动 x3",
       "plannedAtMs": 66000,
       "actionId": 49739,
+      "actionIds": [
+        49739
+      ],
       "actionName": "Hyperdrive",
+      "actionNames": [
+        "Hyperdrive"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "MAGICAL",
+      "target": "坦克",
       "amount": 1594655,
       "statistic": "P95",
       "targetObservationCount": 6,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 590,
-      "maximumAbsoluteTimingErrorMs": 794,
+      "maximumAbsoluteTimingErrorMs": 794
+    },
+    {
+      "mechanicId": "e3c32fd9-1399-5205-9c1e-756e373576da",
+      "externalId": "XLSX-P1-R22",
+      "phase": "P1",
+      "name": "重力弹",
+      "plannedAtMs": 88000,
+      "actionId": 47788,
+      "actionIds": [
+        47788
+      ],
+      "actionName": "Gravitas",
+      "actionNames": [
+        "Gravitas"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 183421,
+      "statistic": "P95",
+      "targetObservationCount": 47,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 260,
+      "maximumAbsoluteTimingErrorMs": 468
+    },
+    {
+      "mechanicId": "5354bf27-e39d-5db0-9d1b-959cb078056a",
+      "externalId": "XLSX-P1-R23",
+      "phase": "P1",
+      "name": "攻击 x2",
+      "plannedAtMs": 89000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 191104,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 2,
       "confidence": "POC_PENDING"
     },
     {
+      "mechanicId": "0bf7646f-f14a-5005-9f1e-fa0cbc7c90f9",
+      "externalId": "XLSX-P1-R24",
+      "phase": "P1",
+      "name": "岩石弹",
+      "plannedAtMs": 91000,
+      "actionId": 47792,
+      "actionIds": [
+        47792
+      ],
+      "actionName": "Vitrophyre",
+      "actionNames": [
+        "Vitrophyre"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 20985,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1264,
+      "maximumAbsoluteTimingErrorMs": 1471
+    },
+    {
+      "mechanicId": "f39d532c-9330-58ff-9029-2b94d0dd3cbe",
+      "externalId": "XLSX-P1-R25",
+      "phase": "P1",
+      "name": "恶狠狠毁荡",
+      "plannedAtMs": 97000,
+      "actionId": 50179,
+      "actionIds": [
+        50179
+      ],
+      "actionName": "Revolting Ruin III",
+      "actionNames": [
+        "Revolting Ruin III"
+      ],
+      "mechanicType": "TANK_BUSTER",
+      "damageType": "MAGICAL",
+      "target": "坦克",
+      "amount": 980519,
+      "statistic": "P95",
+      "targetObservationCount": 6,
+      "reportSampleCount": 6,
+      "mappingMode": "ACTION_POOL",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "7493bb78-1ba3-5730-986a-b5d5d7a21dcb",
+      "externalId": "XLSX-P1-R26",
+      "phase": "P1",
+      "name": "攻击",
+      "plannedAtMs": 100000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 95552,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "b90612da-2a3a-50fe-8fbf-028632c1f97b",
+      "externalId": "XLSX-P1-R27",
+      "phase": "P1",
+      "name": "恶狠狠毁荡",
+      "plannedAtMs": 100000,
+      "actionId": 50401,
+      "actionIds": [
+        50401
+      ],
+      "actionName": "Revolting Ruin III",
+      "actionNames": [
+        "Revolting Ruin III"
+      ],
+      "mechanicType": "TANK_BUSTER",
+      "damageType": "MAGICAL",
+      "target": "坦克",
+      "amount": 1009320,
+      "statistic": "P95",
+      "targetObservationCount": 7,
+      "reportSampleCount": 6,
+      "mappingMode": "ACTION_POOL",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "e59ad6ad-6008-52a4-a8ae-1d39c0d350f6",
+      "externalId": "XLSX-P1-R28",
+      "phase": "P1",
+      "name": "攻击 x2",
+      "plannedAtMs": 103000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 191104,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 2,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "77a7a3fc-5c73-5b53-86ba-13ef609cb910",
+      "externalId": "XLSX-P1-R29",
+      "phase": "P1",
+      "name": "重力弹",
+      "plannedAtMs": 106000,
+      "actionId": 47788,
+      "actionIds": [
+        47788
+      ],
+      "actionName": "Gravitas",
+      "actionNames": [
+        "Gravitas"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 172875,
+      "statistic": "P95",
+      "targetObservationCount": 46,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 686,
+      "maximumAbsoluteTimingErrorMs": 893
+    },
+    {
+      "mechanicId": "66cbb294-11b1-5654-854f-acc502ec3076",
+      "externalId": "XLSX-P1-R30",
+      "phase": "P1",
+      "name": "岩石弹",
+      "plannedAtMs": 110000,
+      "actionId": 47792,
+      "actionIds": [
+        47792
+      ],
+      "actionName": "Vitrophyre",
+      "actionNames": [
+        "Vitrophyre"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 22022,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 711,
+      "maximumAbsoluteTimingErrorMs": 903
+    },
+    {
+      "mechanicId": "217d081f-ad97-587b-b9ee-969a0c50251c",
+      "externalId": "XLSX-P1-R31",
+      "phase": "P1",
+      "name": "攻击 x6",
+      "plannedAtMs": 112000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 573312,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 6,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "0003bf7c-e563-5123-b0b0-725468ac2ab6",
+      "externalId": "XLSX-P1-R32",
+      "phase": "P1",
+      "name": "连环环陷阱",
+      "plannedAtMs": 118000,
+      "actionId": 47783,
+      "actionIds": [
+        47783
+      ],
+      "actionName": "Double-Trouble Trap",
+      "actionNames": [
+        "Double-Trouble Trap"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 129162,
+      "statistic": "P95",
+      "targetObservationCount": 27,
+      "reportSampleCount": 5,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1134,
+      "maximumAbsoluteTimingErrorMs": 1235
+    },
+    {
+      "mechanicId": "dd975d3f-fc74-534d-947b-b6eb77cabe6e",
+      "externalId": "XLSX-P1-R33",
+      "phase": "P1",
+      "name": "强重力 x4",
+      "plannedAtMs": 121000,
+      "actionId": 47791,
+      "actionIds": [
+        47791
+      ],
+      "actionName": "Gravity III",
+      "actionNames": [
+        "Gravity III"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 251825,
+      "statistic": "P95",
+      "targetObservationCount": 42,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 716,
+      "maximumAbsoluteTimingErrorMs": 1086
+    },
+    {
       "mechanicId": "85b4da78-ef28-597b-860d-134b990d9cc5",
+      "externalId": "XLSX-P1-R34",
       "phase": "P1",
       "name": "制裁之光",
       "plannedAtMs": 133000,
       "actionId": 50722,
+      "actionIds": [
+        50722
+      ],
       "actionName": "Light of Judgment",
+      "actionNames": [
+        "Light of Judgment"
+      ],
       "mechanicType": "RAIDWIDE",
       "damageType": "MAGICAL",
+      "target": "全体",
       "amount": 246985,
       "statistic": "P95",
       "targetObservationCount": 46,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 227,
-      "maximumAbsoluteTimingErrorMs": 493,
+      "maximumAbsoluteTimingErrorMs": 493
+    },
+    {
+      "mechanicId": "1bd76da5-159e-5fc4-8ec5-c1fd899157f1",
+      "externalId": "XLSX-P1-R35",
+      "phase": "P1",
+      "name": "攻击 x6",
+      "plannedAtMs": 135000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 573312,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 6,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "d978286f-780e-56f0-aeb6-67c2146c197d",
+      "externalId": "XLSX-P1-R36",
       "phase": "P1",
       "name": "超驱动 x3",
       "plannedAtMs": 136000,
       "actionId": 49739,
+      "actionIds": [
+        49739
+      ],
       "actionName": "Hyperdrive",
+      "actionNames": [
+        "Hyperdrive"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "MAGICAL",
+      "target": "坦克",
       "amount": 1725360,
       "statistic": "P95",
       "targetObservationCount": 5,
       "reportSampleCount": 5,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 455,
-      "maximumAbsoluteTimingErrorMs": 658,
+      "maximumAbsoluteTimingErrorMs": 658
+    },
+    {
+      "mechanicId": "3df0cec3-07ff-5153-87c3-979a869aa433",
+      "externalId": "XLSX-P1-R39",
+      "phase": "P1",
+      "name": "攻击",
+      "plannedAtMs": 165000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 95552,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "af36703b-3b88-5b38-a43e-0e9badfac815",
+      "externalId": "XLSX-P1-R40",
+      "phase": "P1",
+      "name": "连环环陷阱",
+      "plannedAtMs": 168000,
+      "actionId": 47783,
+      "actionIds": [
+        47783
+      ],
+      "actionName": "Double-Trouble Trap",
+      "actionNames": [
+        "Double-Trouble Trap"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 174568,
+      "statistic": "P95",
+      "targetObservationCount": 36,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 733,
+      "maximumAbsoluteTimingErrorMs": 920
+    },
+    {
+      "mechanicId": "c2c728fd-5811-5724-9092-f26a6582460c",
+      "externalId": "XLSX-P1-R41",
+      "phase": "P1",
+      "name": "圣母的神气",
+      "plannedAtMs": 174000,
+      "actionId": 47797,
+      "actionIds": [
+        47797
+      ],
+      "actionName": "Indulgent Will",
+      "actionNames": [
+        "Indulgent Will"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 191110,
+      "statistic": "P95",
+      "targetObservationCount": 23,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 370,
+      "maximumAbsoluteTimingErrorMs": 643
+    },
+    {
+      "mechanicId": "33ee56c5-3e59-569a-b212-ac0f5bded5e1",
+      "externalId": "XLSX-P1-R42",
+      "phase": "P1",
+      "name": "睡魔的神气",
+      "plannedAtMs": 174000,
+      "actionId": 47798,
+      "actionIds": [
+        47798
+      ],
+      "actionName": "Idyllic Will",
+      "actionNames": [
+        "Idyllic Will"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 201030,
+      "statistic": "P95",
+      "targetObservationCount": 23,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 370,
+      "maximumAbsoluteTimingErrorMs": 643
+    },
+    {
+      "mechanicId": "3d5b6799-7b82-50f7-8f77-84b791889a4a",
+      "externalId": "XLSX-P1-R44",
+      "phase": "P1",
+      "name": "呼啦啦爆炎",
+      "plannedAtMs": 187000,
+      "actionId": null,
+      "actionIds": [
+        47778,
+        47779
+      ],
+      "actionName": "Flagrant Fire III",
+      "actionNames": [
+        "Flagrant Fire III"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 214221,
+      "statistic": "P95",
+      "targetObservationCount": 48,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1134,
+      "maximumAbsoluteTimingErrorMs": 1348
+    },
+    {
+      "mechanicId": "4535512a-141d-56e1-a47b-eb4ad3f0ba9a",
+      "externalId": "XLSX-P1-R45",
+      "phase": "P1",
+      "name": "攻击 x3",
+      "plannedAtMs": 190000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 286656,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 3,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "e1d37557-e042-5f7c-9de1-5f7507e17bbc",
+      "externalId": "XLSX-P1-R47",
+      "phase": "P1",
+      "name": "制裁之光",
+      "plannedAtMs": 203000,
+      "actionId": 50722,
+      "actionIds": [
+        50722
+      ],
+      "actionName": "Light of Judgment",
+      "actionNames": [
+        "Light of Judgment"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "全体",
+      "amount": 265744,
+      "statistic": "P95",
+      "targetObservationCount": 89,
+      "reportSampleCount": 6,
+      "mappingMode": "ACTION_POOL",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "570c9c56-0862-57cd-b401-9e6531fa1929",
+      "externalId": "XLSX-P2-R3",
+      "phase": "P2",
+      "name": "攻击",
+      "plannedAtMs": 213000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 95552,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "9f42374c-282c-5eaa-869c-efdef04d787d",
+      "externalId": "XLSX-P2-R4",
       "phase": "P2",
       "name": "终末双碗",
       "plannedAtMs": 220000,
       "actionId": 49740,
+      "actionIds": [
+        49740
+      ],
       "actionName": "Ultimate Embrace",
+      "actionNames": [
+        "Ultimate Embrace"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "PHYSICAL",
+      "target": "坦克",
       "amount": 2484334,
       "statistic": "P95",
       "targetObservationCount": 8,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 1204,
-      "maximumAbsoluteTimingErrorMs": 1337,
+      "maximumAbsoluteTimingErrorMs": 1337
+    },
+    {
+      "mechanicId": "c08d5701-a11b-506e-a44c-d711fd3613bf",
+      "externalId": "XLSX-P2-R5",
+      "phase": "P2",
+      "name": "攻击 x3",
+      "plannedAtMs": 222000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 286656,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 3,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "a73671a9-e3b6-5bf6-b2fb-5a1152c9abf2",
+      "externalId": "XLSX-P2-R6",
       "phase": "P2",
       "name": "遗弃末世",
       "plannedAtMs": 236000,
       "actionId": 47804,
+      "actionIds": [
+        47804
+      ],
       "actionName": "Forsaken",
+      "actionNames": [
+        "Forsaken"
+      ],
       "mechanicType": "RAIDWIDE",
       "damageType": "MAGICAL",
+      "target": "全体",
       "amount": 340667,
       "statistic": "P95",
       "targetObservationCount": 46,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 420,
-      "maximumAbsoluteTimingErrorMs": 574,
+      "maximumAbsoluteTimingErrorMs": 574
+    },
+    {
+      "mechanicId": "3828403d-4ac6-5c40-9df3-356756299769",
+      "externalId": "XLSX-P2-R7",
+      "phase": "P2",
+      "name": "攻击 x4",
+      "plannedAtMs": 238000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 382208,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 4,
+      "confidence": "POC_PENDING"
+    },
+    {
+      "mechanicId": "ea814dc5-b5b8-507f-996a-6bf807d30c24",
+      "externalId": "XLSX-P2-R8",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 249000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spelldriver / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spelldriver",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 196808,
+      "statistic": "P95",
+      "targetObservationCount": 48,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1270,
+      "maximumAbsoluteTimingErrorMs": 1419
+    },
+    {
+      "mechanicId": "c845b0e0-9ef6-5605-97f3-4ea19d004ff7",
+      "externalId": "XLSX-P2-R9",
+      "phase": "P2",
+      "name": "过去终结/未来终结",
+      "plannedAtMs": 258000,
+      "actionId": null,
+      "actionIds": [
+        47830,
+        47831,
+        47832,
+        47833
+      ],
+      "actionName": "Past's End / Future's End",
+      "actionNames": [
+        "Past's End",
+        "Future's End"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 167012,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1244,
+      "maximumAbsoluteTimingErrorMs": 1620
+    },
+    {
+      "mechanicId": "cb276879-6a11-526b-b514-036a2243aa02",
+      "externalId": "XLSX-P2-R10",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 259000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 183514,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1289,
+      "maximumAbsoluteTimingErrorMs": 1426
+    },
+    {
+      "mechanicId": "4bfe10a5-b3ec-549f-8f99-aea87875702d",
+      "externalId": "XLSX-P2-R12",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 270000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spelldriver / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spelldriver",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 165765,
+      "statistic": "P95",
+      "targetObservationCount": 48,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1305,
+      "maximumAbsoluteTimingErrorMs": 1465
+    },
+    {
+      "mechanicId": "daab4ff5-1314-5ad5-9763-e09c4823f7c2",
+      "externalId": "XLSX-P2-R13",
+      "phase": "P2",
+      "name": "过去终结/未来终结",
+      "plannedAtMs": 279000,
+      "actionId": null,
+      "actionIds": [
+        47830,
+        47831,
+        47832,
+        47833
+      ],
+      "actionName": "Future's End / Past's End",
+      "actionNames": [
+        "Future's End",
+        "Past's End"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 158724,
+      "statistic": "P95",
+      "targetObservationCount": 22,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1328,
+      "maximumAbsoluteTimingErrorMs": 1530
+    },
+    {
+      "mechanicId": "c99268f4-40db-5997-b6d0-064feff894c4",
+      "externalId": "XLSX-P2-R14",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 280000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 190647,
+      "statistic": "P95",
+      "targetObservationCount": 23,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1337,
+      "maximumAbsoluteTimingErrorMs": 1469
+    },
+    {
+      "mechanicId": "7f6dffcf-a8e3-5261-843d-b165cd77868f",
+      "externalId": "XLSX-P2-R16",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 291000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spelldriver / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spelldriver",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 190944,
+      "statistic": "P95",
+      "targetObservationCount": 48,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1346,
+      "maximumAbsoluteTimingErrorMs": 1497
+    },
+    {
+      "mechanicId": "83153026-7f0b-59d5-a8da-c7a2f0bceefa",
+      "externalId": "XLSX-P2-R17",
+      "phase": "P2",
+      "name": "过去终结/未来终结",
+      "plannedAtMs": 300000,
+      "actionId": null,
+      "actionIds": [
+        47830,
+        47831,
+        47832,
+        47833
+      ],
+      "actionName": "Future's End / Past's End",
+      "actionNames": [
+        "Future's End",
+        "Past's End"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 121654,
+      "statistic": "P95",
+      "targetObservationCount": 23,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1390,
+      "maximumAbsoluteTimingErrorMs": 1544
+    },
+    {
+      "mechanicId": "3b561e30-23bb-5dc7-a1cb-75d4529e3f1d",
+      "externalId": "XLSX-P2-R18",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 301000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 152985,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1390,
+      "maximumAbsoluteTimingErrorMs": 1508
+    },
+    {
+      "mechanicId": "03686271-7468-560a-bf19-78f0ec993d2c",
+      "externalId": "XLSX-P2-R20",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 312000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spelldriver / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spelldriver",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 188956,
+      "statistic": "P95",
+      "targetObservationCount": 48,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1383,
+      "maximumAbsoluteTimingErrorMs": 1549
+    },
+    {
+      "mechanicId": "81c5a721-fa5e-5c37-bb6b-a4348f2e1918",
+      "externalId": "XLSX-P2-R21",
+      "phase": "P2",
+      "name": "过去终结/未来终结",
+      "plannedAtMs": 321000,
+      "actionId": null,
+      "actionIds": [
+        47830,
+        47831,
+        47832,
+        47833
+      ],
+      "actionName": "Future's End / Past's End",
+      "actionNames": [
+        "Future's End",
+        "Past's End"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "机制目标",
+      "amount": 174178,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1274,
+      "maximumAbsoluteTimingErrorMs": 1719
+    },
+    {
+      "mechanicId": "7d3b2e2d-dc32-536b-b83d-ee16ddd18d15",
+      "externalId": "XLSX-P2-R22",
+      "phase": "P2",
+      "name": "咏唱危机·波动/散碎/驱动",
+      "plannedAtMs": 322000,
+      "actionId": null,
+      "actionIds": [
+        47808,
+        47809,
+        47810
+      ],
+      "actionName": "Spellwave / Spellscatter",
+      "actionNames": [
+        "Spellwave",
+        "Spellscatter"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "MAGICAL",
+      "target": "分摊目标",
+      "amount": 176809,
+      "statistic": "P95",
+      "targetObservationCount": 24,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "ALTERNATIVE",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1448,
+      "maximumAbsoluteTimingErrorMs": 1561
+    },
+    {
+      "mechanicId": "086fc696-2948-5175-b41e-03068d7809ae",
+      "externalId": "XLSX-P2-R24",
+      "phase": "P2",
+      "name": "攻击",
+      "plannedAtMs": 336000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 95552,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "2c4eda41-a4fa-56e9-8d0e-b310c45650c5",
+      "externalId": "XLSX-P2-R25",
       "phase": "P2",
       "name": "制裁之光",
       "plannedAtMs": 342000,
       "actionId": 47805,
+      "actionIds": [
+        47805
+      ],
       "actionName": "Light of Judgment",
+      "actionNames": [
+        "Light of Judgment"
+      ],
       "mechanicType": "RAIDWIDE",
       "damageType": "MAGICAL",
+      "target": "全体",
       "amount": 255803,
       "statistic": "P95",
       "targetObservationCount": 40,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 560,
-      "maximumAbsoluteTimingErrorMs": 957,
+      "maximumAbsoluteTimingErrorMs": 957
+    },
+    {
+      "mechanicId": "49d6cc04-14b0-5396-9835-1073bc081ac7",
+      "externalId": "XLSX-P2-R26",
+      "phase": "P2",
+      "name": "攻击 x6",
+      "plannedAtMs": 344000,
+      "actionId": 49746,
+      "actionIds": [
+        49746
+      ],
+      "actionName": "Attack",
+      "actionNames": [
+        "Attack"
+      ],
+      "mechanicType": "MECHANIC",
+      "damageType": "PHYSICAL",
+      "target": "当前一仇",
+      "amount": 573312,
+      "statistic": "P95",
+      "targetObservationCount": 660,
+      "reportSampleCount": 6,
+      "mappingMode": "AUTO_ATTACK",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 6,
       "confidence": "POC_PENDING"
     },
     {
       "mechanicId": "af21c0a0-2e2b-5917-9732-7c54a7c9a69e",
+      "externalId": "XLSX-P2-R29",
       "phase": "P2",
       "name": "破坏之翼",
       "plannedAtMs": 370000,
       "actionId": 47823,
+      "actionIds": [
+        47823
+      ],
       "actionName": "Wings of Destruction",
+      "actionNames": [
+        "Wings of Destruction"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "MAGICAL",
-      "amount": 655135,
+      "target": "坦克",
+      "amount": 661709,
       "statistic": "P95",
-      "targetObservationCount": 9,
-      "reportSampleCount": 5,
-      "medianTimingErrorMs": 1194,
-      "maximumAbsoluteTimingErrorMs": 1576,
-      "confidence": "POC_PENDING"
+      "targetObservationCount": 11,
+      "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
+      "medianTimingErrorMs": 1148,
+      "maximumAbsoluteTimingErrorMs": 1576
     },
     {
       "mechanicId": "db748296-83b2-5563-9a93-a21435d0ed6a",
+      "externalId": "XLSX-P2-R30",
       "phase": "P2",
       "name": "终末双碗",
       "plannedAtMs": 377000,
       "actionId": 49740,
+      "actionIds": [
+        49740
+      ],
       "actionName": "Ultimate Embrace",
+      "actionNames": [
+        "Ultimate Embrace"
+      ],
       "mechanicType": "TANK_BUSTER",
       "damageType": "PHYSICAL",
+      "target": "坦克",
       "amount": 1204946,
       "statistic": "P95",
       "targetObservationCount": 12,
       "reportSampleCount": 6,
+      "mappingMode": "TIME",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING",
       "medianTimingErrorMs": 1293,
-      "maximumAbsoluteTimingErrorMs": 1583,
-      "confidence": "POC_PENDING"
-    }
-  ],
-  "unresolved": [
-    {
-      "mechanicId": "f39d532c-9330-58ff-9029-2b94d0dd3cbe",
-      "phase": "P1",
-      "name": "恶狠狠毁荡",
-      "plannedAtMs": 97000,
-      "reason": "INSUFFICIENT_REPORTS",
-      "matchedReportCount": 1
-    },
-    {
-      "mechanicId": "b90612da-2a3a-50fe-8fbf-028632c1f97b",
-      "phase": "P1",
-      "name": "恶狠狠毁荡",
-      "plannedAtMs": 100000,
-      "reason": "INSUFFICIENT_REPORTS",
-      "matchedReportCount": 1
-    },
-    {
-      "mechanicId": "e1d37557-e042-5f7c-9de1-5f7507e17bbc",
-      "phase": "P1",
-      "name": "制裁之光",
-      "plannedAtMs": 203000,
-      "reason": "NO_TIME_MATCH"
+      "maximumAbsoluteTimingErrorMs": 1583
     },
     {
       "mechanicId": "fb33f77d-9152-5a43-a41c-22da122816d6",
+      "externalId": "XLSX-P2-R31",
       "phase": "P2",
       "name": "制裁之光",
       "plannedAtMs": 387000,
-      "reason": "NO_TIME_MATCH"
+      "actionId": 47805,
+      "actionIds": [
+        47805
+      ],
+      "actionName": "Light of Judgment",
+      "actionNames": [
+        "Light of Judgment"
+      ],
+      "mechanicType": "RAIDWIDE",
+      "damageType": "MAGICAL",
+      "target": "全体",
+      "amount": 255803,
+      "statistic": "P95",
+      "targetObservationCount": 40,
+      "reportSampleCount": 6,
+      "mappingMode": "ACTION_POOL",
+      "aggregation": "MULTI_HIT_SUM",
+      "hitCount": 1,
+      "confidence": "POC_PENDING"
     }
   ],
+  "unresolved": [],
   "warnings": [
     "P95 values are target-adjusted FFLogs observations, not a universal boss damage formula.",
     "Repeated hits from the same action within five seconds are summed per target.",
+    "Alternative action groups pool per-target observations and do not sum mutually exclusive hits.",
+    "Auto-attack xN values assume the same planned mitigation covers the complete sequence.",
     "Candidates require mechanic mapping review before publication and remain POC_PENDING."
   ]
 }

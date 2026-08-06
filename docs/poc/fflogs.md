@@ -37,9 +37,9 @@ python tools/fflogs_damage_candidates.py `
 
 ### 多报告 P1/P2 校准
 
-2026-08-06 增加了两段可复现工具链：`fflogs_collect_samples.py` 使用公开 API 自动发现 zone 76、encounter 1085 的近期不同击杀并下载事件；`fflogs_plan_damage_calibration.py` 从被忽略的样本目录中匿名聚合。它按计划相对时间（默认 `±2.5s`）、Action ID 和目标数量匹配 AOE/死刑，同一 Action 在 5 秒内的连续命中先按单个目标求和，再跨不同战斗取 P95，至少需要 3 份报告。
+2026-08-06 增加了两段可复现工具链：`fflogs_collect_samples.py` 使用公开 API 自动发现 zone 76、encounter 1085 的近期不同击杀并下载事件；`fflogs_plan_damage_calibration.py` 从被忽略的样本目录中匿名聚合。校准器结合 `p1-p2-damage-map.json`，按计划相对时间（默认 `±2.5s`）和 Action ID 匹配 AOE、死刑、分摊、踩塔、点名与组合机制；同一 Action 在 5 秒内的连续命中先按单个目标求和，互斥 Action 分支只合并样本而不相加，再跨不同战斗取 P95，至少需要 3 份报告。普通平 A 保持逐次命中，并按计划行的 `xN` 形成整段候选。
 
-本轮读取 6 份不同公开击杀，得到 11 个可追溯候选，另有 4 个机制因时间未匹配或报告数不足而保持待校准。提交的 `data/seeds/dmu/p1-p2-damage-calibration.json` 明确声明不含玩家名与报告码，`promotionAllowed` 为 `false`；原始报告仍只存在于 Git 忽略目录。该结果可驱动计划编辑器的风险预览，但仍是特定版本和样本环境的 `POC_PENDING` 观测基线，必须与实机命中继续交叉验证。
+本轮读取 6 份不同公开击杀，得到 59 个可追溯的直接伤害候选；剩余 17 行在事件中对应开场、阶段切换、机制咏唱、判定或失败伤害，不作为正常承伤项。提交的 `data/seeds/dmu/p1-p2-damage-calibration.json` 明确声明不含玩家名与报告码，`promotionAllowed` 为 `false`；原始报告仍只存在于 Git 忽略目录。XIVAPI v2 `Action` sheet 用于复核 Action 名称和物理/魔法属性，但不提供敌方实际伤害量。该结果可驱动计划编辑器的风险预览，仍是特定版本和样本环境的 `POC_PENDING` 观测基线，必须与实机命中继续交叉验证。
 
 ## 验证结果
 

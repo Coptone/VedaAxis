@@ -92,6 +92,13 @@
                 </includes>
                 <targetPath>default-plans</targetPath>
             </resource>
+            <resource>
+                <directory>${project.basedir}/../../data/seeds/o8s</directory>
+                <includes>
+                    <include>poc-default-plan.json</include>
+                </includes>
+                <targetPath>default-plans</targetPath>
+            </resource>
         </resources>
         <plugins>
             <plugin>

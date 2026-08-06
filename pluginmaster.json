@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.7.0",
+    "AssemblyVersion": "0.1.8.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "新增 DMU P1/P2 默认八轨计划（绝对时间轴），开怪自动启动；单体减伤可按职业自动定位并高亮队友列表，重复职业时可在开打前手动指定。",
+    "Changelog": "新增 O8S Territory 755 云端联调计划；设备只需首次绑定，插件启动后自动续期，并提供 DMU/O8S 快速配置。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1785984129,
+    "LastUpdate": 1786011003,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

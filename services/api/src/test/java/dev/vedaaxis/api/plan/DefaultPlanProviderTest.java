@@ -54,8 +54,34 @@ class DefaultPlanProviderTest {
     @Test
     void onlyMatchesTheExplicitDefaultStrategy() {
         assertThat(provider.match(1363, "DMU-P1P2", TrackMode.EIGHT)).isPresent();
+        assertThat(provider.match(755, "O8S-POC", TrackMode.EIGHT)).isPresent();
+        assertThat(provider.minimumPluginVersion(1363, "DMU-P1P2", TrackMode.EIGHT, "fallback"))
+                .isEqualTo("0.1.7");
+        assertThat(provider.minimumPluginVersion(755, "O8S-POC", TrackMode.EIGHT, "fallback"))
+                .isEqualTo("0.1.8");
         assertThat(provider.match(1363, "OTHER", TrackMode.EIGHT)).isEmpty();
+        assertThat(provider.minimumPluginVersion(1363, "OTHER", TrackMode.EIGHT, "fallback"))
+                .isEqualTo("fallback");
         assertThat(provider.match(1363, "DMU-P1P2", TrackMode.FOUR)).isEmpty();
+    }
+
+    @Test
+    void loadsTheO8sEightTrackLinkageTemplate() {
+        PlanSnapshot snapshot = provider.create(
+                UUID.randomUUID(), 755, "O8S-POC", TrackMode.EIGHT);
+
+        assertThat(snapshot.schemaVersion()).isEqualTo("1.3");
+        assertThat(snapshot.minimumPluginVersion()).isEqualTo("0.1.8");
+        assertThat(snapshot.encounterId()).isEqualTo(DefaultPlanProvider.O8S_ENCOUNTER_ID);
+        assertThat(snapshot.territoryId()).isEqualTo(755);
+        assertThat(snapshot.strategyTag()).isEqualTo("O8S-POC");
+        assertThat(snapshot.tracks()).hasSize(8);
+        assertThat(snapshot.assignments()).hasSize(2);
+        assertThat(snapshot.assignments()).extracting(PlanSnapshot.Assignment::actionId)
+                .containsExactly(24298L, 24310L);
+        assertThat(ruleEngine.validate(snapshot).issues())
+                .filteredOn(issue -> issue.severity() == RuleIssue.Severity.ERROR)
+                .isEmpty();
     }
 
     @Test

@@ -10,6 +10,7 @@ using Dalamud.IoC;
 using Dalamud.Interface.Textures;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using VedaAxis.Core;
@@ -51,6 +52,7 @@ public sealed class Plugin : IDalamudPlugin
     private string status = "尚未加载计划";
     private string deviceCode = string.Empty;
     private string deviceCodeExpiresAt = string.Empty;
+    private string deviceAuthorizationUrl = string.Empty;
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
     private readonly Dictionary<Guid, uint> manualPartyTargets = [];
 
@@ -77,7 +79,7 @@ public sealed class Plugin : IDalamudPlugin
         DutyState.DutyCompleted += OnDutyCompleted;
         Framework.Update += OnFrameworkUpdate;
         InstallActionEffectHook();
-        _ = DrainExecutionQueueAsync();
+        _ = RestoreDeviceSessionAsync();
     }
 
     private static void MigrateConfiguration(PluginConfiguration current)
@@ -261,9 +263,10 @@ public sealed class Plugin : IDalamudPlugin
             configuration.ApiBaseUrl = apiBaseUrl;
             SaveConfiguration();
         }
-        if (configuration.DeviceId is not null)
+        if (HasStoredDeviceSession())
         {
             ImGui.TextColored(new Vector4(0.35f, 0.88f, 0.58f, 1f), $"已连接设备 {configuration.DeviceId}");
+            ImGui.TextDisabled("本机已完成一次性绑定；插件启动和令牌过期时会自动续期。无需重复输入绑定码。");
             var strategyTag = configuration.StrategyTag;
             if (ImGui.InputText("策略标签", ref strategyTag, 80))
             {
@@ -282,7 +285,21 @@ public sealed class Plugin : IDalamudPlugin
                 configuration.TrackMode = "EIGHT";
                 SaveConfiguration();
             }
+            if (ImGui.Button("使用 DMU P1/P2 配置"))
+            {
+                configuration.StrategyTag = "DMU-P1P2";
+                configuration.TrackMode = "EIGHT";
+                SaveConfiguration();
+                status = "已选择 DMU P1/P2；请在 Territory 1363 脱战同步";
+            }
             ImGui.SameLine();
+            if (ImGui.Button("使用 O8S 联调配置"))
+            {
+                configuration.StrategyTag = "O8S-POC";
+                configuration.TrackMode = "EIGHT";
+                SaveConfiguration();
+                status = "已选择 O8S 联调；请在 Territory 755 脱战同步";
+            }
             if (ImGui.Button("同步已发布个人计划"))
             {
                 _ = SyncPublishedPlanAsync();
@@ -297,7 +314,16 @@ public sealed class Plugin : IDalamudPlugin
         {
             ImGui.SameLine();
             ImGui.TextColored(new Vector4(0.33f, 0.86f, 0.91f, 1f), $"绑定码 {deviceCode}（{deviceCodeExpiresAt} 前有效）");
-            ImGui.TextDisabled("在网页 /devices/authorize 输入绑定码；插件会自动轮询。令牌可在网页撤销。 ");
+            if (ImGui.Button("打开绑定页面"))
+            {
+                Util.OpenLink(deviceAuthorizationUrl);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("复制绑定码"))
+            {
+                ImGui.SetClipboardText(deviceCode);
+            }
+            ImGui.TextDisabled("首次在网页“插件绑定”确认即可；成功后本机会自动续期，令牌可在网页撤销。");
         }
         ImGui.Separator();
         ImGui.Text("当前轨道任务");
@@ -654,6 +680,7 @@ public sealed class Plugin : IDalamudPlugin
                 {
                     deviceCode = code;
                     deviceCodeExpiresAt = expiresAt;
+                    deviceAuthorizationUrl = $"{configuration.ApiBaseUrl.TrimEnd('/')}/device?code={Uri.EscapeDataString(code)}";
                     status = "等待网页确认设备";
                 },
                 cancellationToken);
@@ -662,7 +689,8 @@ public sealed class Plugin : IDalamudPlugin
             configuration.RefreshToken = result.Tokens.RefreshToken;
             SaveConfiguration();
             deviceCode = string.Empty;
-            status = "设备授权成功";
+            deviceAuthorizationUrl = string.Empty;
+            status = "设备授权成功；以后将自动续期，无需重复绑定";
             _ = DrainExecutionQueueAsync();
         }
         catch (OperationCanceledException)
@@ -673,6 +701,48 @@ public sealed class Plugin : IDalamudPlugin
         {
             status = $"设备授权失败：{exception.Message}";
             Log.Error(exception, "Device authorization failed");
+        }
+    }
+
+    private bool HasStoredDeviceSession() =>
+        !string.IsNullOrWhiteSpace(configuration.DeviceId)
+        && !string.IsNullOrWhiteSpace(configuration.AccessToken)
+        && !string.IsNullOrWhiteSpace(configuration.RefreshToken);
+
+    private async Task RestoreDeviceSessionAsync()
+    {
+        if (!HasStoredDeviceSession())
+        {
+            return;
+        }
+        if (Condition[ConditionFlag.InCombat])
+        {
+            status = "已恢复本机账户连接；战斗中保持离线快照，不执行网络续期";
+            return;
+        }
+
+        try
+        {
+            var tokens = await deviceAuthorizationClient.RefreshAsync(
+                configuration.ApiBaseUrl, configuration.RefreshToken!, CancellationToken.None);
+            configuration.AccessToken = tokens.AccessToken;
+            configuration.RefreshToken = tokens.RefreshToken;
+            SaveConfiguration();
+            status = "已自动恢复 VedaAxis 账户连接";
+            await DrainExecutionQueueAsync();
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            configuration.DeviceId = null;
+            configuration.AccessToken = null;
+            configuration.RefreshToken = null;
+            SaveConfiguration();
+            status = "设备授权已失效或已在网页撤销，请重新绑定一次";
+        }
+        catch (Exception exception)
+        {
+            status = "已保留本机账户连接；当前无法续期，将在下次联网操作重试";
+            Log.Warning(exception, "Unable to refresh the stored device session during startup");
         }
     }
 

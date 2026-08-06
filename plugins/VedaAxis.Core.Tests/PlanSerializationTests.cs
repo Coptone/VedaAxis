@@ -111,6 +111,23 @@ public sealed class PlanSerializationTests
     }
 
     [Fact]
+    public void DeserializesTheO8sCloudLinkagePlan()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "TestData", "o8s-poc-default-plan.json");
+        var plan = JsonSerializer.Deserialize<PlanSnapshot>(File.ReadAllText(path), Options);
+
+        Assert.NotNull(plan);
+        Assert.Equal("1.3", plan.SchemaVersion);
+        Assert.Equal("0.1.8", plan.MinimumPluginVersion);
+        Assert.Equal(755u, plan.TerritoryId);
+        Assert.Equal("O8S-POC", plan.StrategyTag);
+        Assert.Equal("PUBLIC_TEMPLATE", plan.Source.Kind);
+        Assert.Equal(8, plan.Tracks.Count);
+        Assert.Equal([24298u, 24310u], plan.Assignments.Select(assignment => assignment.ActionId));
+        Assert.Empty(PlanValidator.Validate(plan));
+    }
+
+    [Fact]
     public void DeserializesOptionalMechanicDamageProfile()
     {
         const string json = """

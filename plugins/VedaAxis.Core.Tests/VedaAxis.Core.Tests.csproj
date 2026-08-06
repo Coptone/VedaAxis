@@ -17,5 +17,8 @@
     <None Include="..\..\data\seeds\dmu\p1-p2-default-plan.json"
           Link="TestData\p1-p2-default-plan.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\data\seeds\o8s\poc-default-plan.json"
+          Link="TestData\o8s-poc-default-plan.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -268,3 +268,11 @@ export interface ExecutionStats {
   stateCounts: Partial<Record<'SUCCESS' | 'EARLY' | 'MISSED' | 'LATE' | 'INVALID' | 'CANCELLED', number>>
   averageObservedOffsetMs: number | null
 }
+
+export interface AuthorizedDevice {
+  id: string
+  name: string
+  lastSeenAt: string
+  revokedAt: string | null
+  createdAt: string
+}

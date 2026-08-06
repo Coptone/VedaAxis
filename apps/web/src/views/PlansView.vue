@@ -5,11 +5,12 @@ import { ArrowUpRight, CalendarClock, Copy, Grid2X2, Grid3X3, Plus, ShieldAlert 
 import { api, ApiError } from '../api/client'
 import type { PlanSummary, TrackMode } from '../types/domain'
 import { DMU_ENCOUNTER_ID, DMU_P1_P2_STRATEGY, DMU_TERRITORY_ID } from '../data/dmuP1P2Default'
+import { O8S_ENCOUNTER_ID, O8S_POC_STRATEGY, O8S_TERRITORY_ID } from '../data/o8sPocDefault'
 
 const router = useRouter()
 const plans = ref<PlanSummary[]>([])
 const loading = ref(true)
-const creating = ref<TrackMode | null>(null)
+const creating = ref<'FOUR' | 'EIGHT' | 'O8S' | null>(null)
 const copyingId = ref('')
 const error = ref('')
 
@@ -55,6 +56,24 @@ async function create(mode: TrackMode) {
     creating.value = null
   }
 }
+
+async function createO8sPoc() {
+  creating.value = 'O8S'
+  try {
+    const created = await api.createPlan({
+      name: 'O8S 游戏与网页联调计划',
+      encounterId: O8S_ENCOUNTER_ID,
+      territoryId: O8S_TERRITORY_ID,
+      strategyTag: O8S_POC_STRATEGY,
+      trackMode: 'EIGHT',
+    })
+    await router.push(`/plans/${created.plan.id}`)
+  } catch (reason) {
+    error.value = reason instanceof ApiError ? reason.message : 'O8S 联调计划创建失败'
+  } finally {
+    creating.value = null
+  }
+}
 </script>
 
 <template>
@@ -66,6 +85,9 @@ async function create(mode: TrackMode) {
         <p>编辑整队安排，发布不可变版本，再由插件匹配个人轨道。</p>
       </div>
       <div class="create-actions">
+        <button class="secondary-button" type="button" :disabled="Boolean(creating)" @click="createO8sPoc">
+          <ShieldAlert :size="17" />{{ creating === 'O8S' ? '创建中…' : '新建 O8S 联调计划' }}
+        </button>
         <button class="secondary-button" type="button" :disabled="Boolean(creating)" @click="create('FOUR')">
           <Grid2X2 :size="17" />{{ creating === 'FOUR' ? '创建中…' : '新建 4 轨' }}
         </button>

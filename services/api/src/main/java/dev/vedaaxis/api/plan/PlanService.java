@@ -198,7 +198,8 @@ public class PlanService {
 
     private PlanSnapshot emptySnapshot(UUID planId, CreatePlanRequest request) {
         if (defaultPlanProvider.supports(request.territoryId(), request.strategyTag(), request.trackMode())) {
-            return defaultPlanProvider.create(planId);
+            return defaultPlanProvider.create(
+                    planId, request.territoryId(), request.strategyTag(), request.trackMode());
         }
         List<PlanSnapshot.ExecutionTrack> tracks = request.trackMode().orderedSlots().stream()
                 .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, java.util.Set.of(), slot.name()))
@@ -211,15 +212,18 @@ public class PlanService {
     }
 
     private PlanSnapshot authoritativeSnapshot(PlanRow plan, PlanSnapshot submitted, int version) {
+        TrackMode trackMode = TrackMode.valueOf(plan.trackMode());
+        String minimumPluginVersion = defaultPlanProvider.minimumPluginVersion(
+                plan.territoryId(), plan.strategyTag(), trackMode, "0.1.7");
         List<PlanSnapshot.TimelinePhase> phases = submitted.phases().stream()
                 .map(phase -> new PlanSnapshot.TimelinePhase(
                         phase.phaseId(), phase.externalId(), phase.name(), phase.plannedAtMs(), phase.confidence(),
                         phase.durationMs(), phase.timingMode() == null ? PlanSnapshot.TimingMode.ABSOLUTE : phase.timingMode()))
                 .toList();
         return new PlanSnapshot(
-                "1.3", "0.1.7", UUID.fromString(plan.id()), version,
+                "1.3", minimumPluginVersion, UUID.fromString(plan.id()), version,
                 submitted.timelineId(), submitted.timelineVersion(), UUID.fromString(plan.encounterId()),
-                plan.territoryId(), submitted.strategyTag(), TrackMode.valueOf(plan.trackMode()), submitted.source(),
+                plan.territoryId(), submitted.strategyTag(), trackMode, submitted.source(),
                 phases, submitted.mechanics(), submitted.anchors(), submitted.tracks(), submitted.assignments());
     }
 

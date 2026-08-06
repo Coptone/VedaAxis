@@ -6,6 +6,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,32 +15,66 @@ public final class DefaultPlanProvider {
     public static final UUID DMU_ENCOUNTER_ID = UUID.fromString("c97e8840-1697-476f-a4ac-8c7996df277b");
     public static final long DMU_TERRITORY_ID = 1363;
     public static final String DMU_P1_P2_STRATEGY = "DMU-P1P2";
+    public static final UUID O8S_ENCOUNTER_ID = UUID.fromString("9789ba9a-b761-4c44-b179-2e3e86ee0d3b");
+    public static final long O8S_TERRITORY_ID = 755;
+    public static final String O8S_POC_STRATEGY = "O8S-POC";
 
     private final PlanSnapshot dmuP1P2;
+    private final PlanSnapshot o8sPoc;
 
     public DefaultPlanProvider(ObjectMapper objectMapper) {
-        try (var input = new ClassPathResource("default-plans/p1-p2-default-plan.json").getInputStream()) {
-            dmuP1P2 = objectMapper.readValue(input, PlanSnapshot.class);
-        } catch (IOException | JacksonException exception) {
-            throw new IllegalStateException("Unable to load DMU P1/P2 default plan", exception);
-        }
+        dmuP1P2 = load(objectMapper, "default-plans/p1-p2-default-plan.json");
+        o8sPoc = load(objectMapper, "default-plans/poc-default-plan.json");
     }
 
     public boolean supports(long territoryId, String strategyTag, TrackMode trackMode) {
-        return territoryId == DMU_TERRITORY_ID
-                && DMU_P1_P2_STRATEGY.equalsIgnoreCase(strategyTag.trim())
-                && trackMode == TrackMode.EIGHT;
+        return template(territoryId, strategyTag, trackMode).isPresent();
     }
 
     public PlanSnapshot create(UUID planId) {
-        return new PlanSnapshot(
-                dmuP1P2.schemaVersion(), dmuP1P2.minimumPluginVersion(), planId, 1,
-                dmuP1P2.timelineId(), dmuP1P2.timelineVersion(), dmuP1P2.encounterId(),
-                dmuP1P2.territoryId(), dmuP1P2.strategyTag(), dmuP1P2.trackMode(), dmuP1P2.source(),
-                dmuP1P2.phases(), dmuP1P2.mechanics(), dmuP1P2.anchors(), dmuP1P2.tracks(), dmuP1P2.assignments());
+        return copyWithPlanId(dmuP1P2, planId);
+    }
+
+    public PlanSnapshot create(
+            UUID planId, long territoryId, String strategyTag, TrackMode trackMode) {
+        PlanSnapshot selected = template(territoryId, strategyTag, trackMode)
+                .orElseThrow(() -> new IllegalArgumentException("No default plan matches the requested identity"));
+        return copyWithPlanId(selected, planId);
     }
 
     public Optional<PlanSnapshot> match(long territoryId, String strategyTag, TrackMode trackMode) {
-        return supports(territoryId, strategyTag, trackMode) ? Optional.of(dmuP1P2) : Optional.empty();
+        return template(territoryId, strategyTag, trackMode);
+    }
+
+    public String minimumPluginVersion(
+            long territoryId, String strategyTag, TrackMode trackMode, String fallback) {
+        return template(territoryId, strategyTag, trackMode)
+                .map(PlanSnapshot::minimumPluginVersion)
+                .orElse(fallback);
+    }
+
+    private Optional<PlanSnapshot> template(long territoryId, String strategyTag, TrackMode trackMode) {
+        String normalizedStrategy = strategyTag.trim();
+        return List.of(dmuP1P2, o8sPoc).stream()
+                .filter(plan -> plan.territoryId() == territoryId)
+                .filter(plan -> plan.strategyTag().equalsIgnoreCase(normalizedStrategy))
+                .filter(plan -> plan.trackMode() == trackMode)
+                .findFirst();
+    }
+
+    private PlanSnapshot copyWithPlanId(PlanSnapshot source, UUID planId) {
+        return new PlanSnapshot(
+                source.schemaVersion(), source.minimumPluginVersion(), planId, 1,
+                source.timelineId(), source.timelineVersion(), source.encounterId(),
+                source.territoryId(), source.strategyTag(), source.trackMode(), source.source(),
+                source.phases(), source.mechanics(), source.anchors(), source.tracks(), source.assignments());
+    }
+
+    private PlanSnapshot load(ObjectMapper objectMapper, String path) {
+        try (var input = new ClassPathResource(path).getInputStream()) {
+            return objectMapper.readValue(input, PlanSnapshot.class);
+        } catch (IOException | JacksonException exception) {
+            throw new IllegalStateException("Unable to load default plan " + path, exception);
+        }
     }
 }

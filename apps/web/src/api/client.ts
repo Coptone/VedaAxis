@@ -1,5 +1,6 @@
 import type {
   AbilityDefinition,
+  AuthorizedDevice,
   AiCandidate,
   DamageEstimate,
   ExecutionStats,
@@ -125,5 +126,7 @@ export const api = {
   executionStats: (limit = 100) => request<ExecutionStats>(`/fight-executions/stats?limit=${limit}`),
   approveDevice: (userCode: string) =>
     request<void>(`/device-authorizations/${encodeURIComponent(userCode)}/approve`, { method: 'POST' }),
+  devices: () => request<AuthorizedDevice[]>('/devices'),
+  revokeDevice: (deviceId: string) => request<void>(`/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' }),
   sharedPlan: (shareCode: string) => request<{ name: string; status: string; snapshot: PlanSnapshot }>(`/shares/${shareCode}`),
 }

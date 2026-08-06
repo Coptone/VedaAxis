@@ -582,13 +582,17 @@ public sealed class Plugin : IDalamudPlugin
             var resolution = PartyTargetResolver.Resolve(targetTrack, partyMembers, manualPartyTargets);
             var preview = resolution.Resolved && resolution.Member is not null
                 ? $"{(resolution.Manual ? "手动" : "自动")}：{resolution.Member.DisplayName}"
-                : "未识别，请手动选择";
+                : $"未识别：{PartyTargetResolutionText(resolution.Reason)}";
             ImGui.BeginDisabled(Condition[ConditionFlag.InCombat]);
             if (ImGui.BeginCombo($"{targetTrack.Slot}##PartyTarget{trackId}", preview))
             {
                 if (ImGui.Selectable("自动识别", !manualPartyTargets.ContainsKey(trackId)))
                 {
                     manualPartyTargets.Remove(trackId);
+                }
+                if (partyMembers.Count == 0)
+                {
+                    ImGui.TextDisabled("当前没有读到队伍列表；进本或组队后再打开这里。");
                 }
                 foreach (var member in partyMembers)
                 {
@@ -603,6 +607,16 @@ public sealed class Plugin : IDalamudPlugin
             ImGui.EndDisabled();
         }
     }
+
+    private static string PartyTargetResolutionText(string reason) => reason switch
+    {
+        "NO_PARTY_MEMBERS" => "未读取到队伍",
+        "TARGET_TRACK_HAS_NO_JOB_CONSTRAINT" => "目标轨道缺少职业约束",
+        "NO_JOB_MATCH" or "NO_SLOT_ROLE_MATCH" => "队伍中没有匹配职业",
+        "AMBIGUOUS_JOB_MATCH" => "匹配到多个同职业候选，请手动选择",
+        "AMBIGUOUS_SLOT_ROLE_MATCH" => "匹配到多个同角色候选，请手动选择",
+        _ => "请手动选择",
+    };
 
     private static List<PartyMemberSnapshot> ReadPartyMembers()
     {

@@ -56,4 +56,50 @@ public sealed class PartyTargetResolverTests
         Assert.False(result.Manual);
         Assert.Equal(300u, result.Member?.EntityId);
     }
+
+    [Fact]
+    public void FallsBackToSlotRoleWhenThePlannedJobIsNotInTheParty()
+    {
+        var track = new ExecutionTrack(Guid.NewGuid(), "MT", new HashSet<uint> { 21 }, "主坦 · 战士");
+        var party = new[]
+        {
+            new PartyMemberSnapshot(0, 100, 40, "Sage"),
+            new PartyMemberSnapshot(1, 200, 32, "Dark Knight"),
+        };
+
+        var result = PartyTargetResolver.Resolve(track, party, new Dictionary<Guid, uint>());
+
+        Assert.True(result.Resolved);
+        Assert.False(result.Manual);
+        Assert.Equal("UNIQUE_SLOT_ROLE_MATCH", result.Reason);
+        Assert.Equal(200u, result.Member?.EntityId);
+    }
+
+    [Fact]
+    public void RequiresManualMappingWhenTheSlotRoleFallbackIsAmbiguous()
+    {
+        var track = new ExecutionTrack(Guid.NewGuid(), "ST", new HashSet<uint> { 37 }, "副坦 · 绝枪战士");
+        var party = new[]
+        {
+            new PartyMemberSnapshot(0, 100, 19, "Paladin"),
+            new PartyMemberSnapshot(1, 200, 32, "Dark Knight"),
+            new PartyMemberSnapshot(2, 300, 40, "Sage"),
+        };
+
+        var result = PartyTargetResolver.Resolve(track, party, new Dictionary<Guid, uint>());
+
+        Assert.False(result.Resolved);
+        Assert.Equal("AMBIGUOUS_SLOT_ROLE_MATCH", result.Reason);
+    }
+
+    [Fact]
+    public void ReportsMissingPartyMembersSeparately()
+    {
+        var track = new ExecutionTrack(Guid.NewGuid(), "MT", new HashSet<uint> { 21 }, "主坦");
+
+        var result = PartyTargetResolver.Resolve(track, [], new Dictionary<Guid, uint>());
+
+        Assert.False(result.Resolved);
+        Assert.Equal("NO_PARTY_MEMBERS", result.Reason);
+    }
 }

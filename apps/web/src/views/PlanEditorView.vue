@@ -48,7 +48,15 @@ const planId = ref(typeof route.params.planId === 'string' ? route.params.planId
 const name = ref('妖星乱舞 P1/P2 默认减伤表')
 const abilities = ref<AbilityDefinition[]>([])
 const defaultPlan = dmuP1P2DefaultPlan()
-const selectedMechanicId = ref(defaultPlan.mechanics[0]?.mechanicId ?? '')
+
+function firstAssignedMechanicId(plan: PlanSnapshot): string {
+  const assignedMechanics = new Set(plan.assignments.map((assignment) => assignment.mechanicId))
+  return plan.mechanics.find((mechanic) => assignedMechanics.has(mechanic.mechanicId))?.mechanicId
+    ?? plan.mechanics[0]?.mechanicId
+    ?? ''
+}
+
+const selectedMechanicId = ref(firstAssignedMechanicId(defaultPlan))
 const selectedTrackId = ref('')
 const selectedTargetTrackId = ref('')
 const selectedAbilityId = ref<number | null>(null)
@@ -67,6 +75,13 @@ const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
 const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 
 const mechanics = computed(() => snapshot.value.mechanics)
+const assignmentCountByMechanic = computed(() => {
+  const counts = new Map<string, number>()
+  for (const assignment of snapshot.value.assignments) {
+    counts.set(assignment.mechanicId, (counts.get(assignment.mechanicId) ?? 0) + 1)
+  }
+  return counts
+})
 const timelineTitle = computed(() => {
   if (snapshot.value.source.kind === 'IMPORTED') return 'M-Spec 候选'
   const encounterName = snapshot.value.strategyTag.startsWith('DMU-P1P2') ? '妖星乱舞' : snapshot.value.strategyTag
@@ -110,7 +125,7 @@ async function loadPlan() {
       phases: details.snapshot.phases?.length ? details.snapshot.phases : cloneData(DEFAULT_PHASES),
       mechanics: details.snapshot.mechanics?.length ? details.snapshot.mechanics : cloneData(DEFAULT_MECHANICS),
     }
-    selectedMechanicId.value = snapshot.value.mechanics[0]?.mechanicId ?? ''
+    selectedMechanicId.value = firstAssignedMechanicId(snapshot.value)
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : '计划加载失败'
   } finally {
@@ -293,7 +308,7 @@ function applyMSpecImport() {
   if (!importCandidate.value) return
   const removedAssignments = snapshot.value.assignments.length
   snapshot.value = applyTimelineImport(snapshot.value, importCandidate.value, newId())
-  selectedMechanicId.value = snapshot.value.mechanics[0]?.mechanicId ?? ''
+  selectedMechanicId.value = firstAssignedMechanicId(snapshot.value)
   selectedAssignment.value = null
   validation.value = null
   importCandidate.value = null
@@ -386,7 +401,7 @@ function fallbackAbilities(): AbilityDefinition[] {
 
     <div class="editor-workspace">
       <aside class="mechanic-panel">
-        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ timelineTitle }}</h2></div><span>{{ mechanics.length }} 项</span></header>
+        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ timelineTitle }}</h2></div><span>{{ mechanics.length }} 项 · {{ snapshot.assignments.length }} 个减伤安排</span></header>
         <button
           v-for="mechanic in mechanics"
           :key="mechanic.mechanicId"
@@ -396,6 +411,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         >
           <time>{{ formatTime(mechanic.plannedAtMs) }}</time>
           <span><b>{{ mechanic.name }}</b><small>{{ damageTypeLabel(mechanic.damageType) }} · {{ mechanic.target }}</small></span>
+          <em v-if="assignmentCountByMechanic.get(mechanic.mechanicId)">{{ assignmentCountByMechanic.get(mechanic.mechanicId) }}</em>
           <i :class="mechanic.confidence.toLowerCase()"></i>
         </button>
         <div class="timeline-legend"><span><i class="reviewed"></i>已复核</span><span><i class="unverified"></i>待实证</span></div>

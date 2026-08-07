@@ -56,6 +56,7 @@ import type {
   Assignment,
   DamageEstimate,
   PlanSnapshot,
+  RuleIssue,
   RuleValidationResult,
   TimelineImportCandidate,
   TimelineMechanic,
@@ -136,6 +137,17 @@ interface AssignmentCoverageStatus {
   title: string
   message: string
   farthestMechanic: TimelineMechanic | null
+}
+
+interface RuleIssueDisplay {
+  issue: RuleIssue
+  title: string
+  location: string
+  detail: string
+  assignment: Assignment | null
+  mechanic: TimelineMechanic | null
+  track: PlanSnapshot['tracks'][number] | null
+  ability: AbilityDefinition | null
 }
 
 const ASSIGNMENT_TIME_FIELDS: Array<{ key: AssignmentTimeField; label: string }> = [
@@ -248,6 +260,9 @@ const aiDiff = computed(() => {
     changed: [...candidate.entries()].filter(([id, item]) => current.has(id) && JSON.stringify(current.get(id)) !== JSON.stringify(item)).length,
   }
 })
+const validationErrorCount = computed(() => validation.value?.issues.filter((issue) => issue.severity === 'ERROR').length ?? 0)
+const validationWarningCount = computed(() => validation.value?.issues.filter((issue) => issue.severity === 'WARNING').length ?? 0)
+const validationIssueDisplays = computed(() => validation.value?.issues.map(describeRuleIssue) ?? [])
 const selectedAssignment = ref<Assignment | null>(null)
 const selectedAssignmentAbility = computed(() => selectedAssignment.value ? abilityMap.value.get(selectedAssignment.value.actionId) : undefined)
 const selectedAssignmentMechanic = computed(() => selectedAssignment.value
@@ -485,6 +500,88 @@ function assignmentCoversMechanic(assignment: Assignment, ability: AbilityDefini
 
 function mechanicInlineLabel(mechanic: TimelineMechanic): string {
   return `${formatTime(mechanic.plannedAtMs)} ${mechanic.name}`
+}
+
+function describeRuleIssue(issue: RuleIssue): RuleIssueDisplay {
+  const assignment = snapshot.value.assignments.find((item) => item.assignmentId === issue.reference) ?? null
+  const mechanic = assignment
+    ? allMechanics.value.find((item) => item.mechanicId === assignment.mechanicId) ?? null
+    : allMechanics.value.find((item) => item.mechanicId === issue.reference) ?? null
+  const track = assignment
+    ? snapshot.value.tracks.find((item) => item.trackId === assignment.trackId) ?? null
+    : snapshot.value.tracks.find((item) => item.trackId === issue.reference) ?? null
+  const ability = assignment ? abilityMap.value.get(assignment.actionId) ?? null : null
+  const location = mechanic
+    ? mechanicInlineLabel(mechanic)
+    : track ? trackDisplayLabel(track) : `引用 ${shortReference(issue.reference)}`
+  const detailParts = [
+    track ? trackDisplayLabel(track) : '',
+    ability ? ability.name : '',
+    assignment ? `窗口 ${formatTime(assignment.earliestUseAtMs)}–${formatTime(assignment.latestUseAtMs)}` : '',
+  ].filter(Boolean)
+  return {
+    issue,
+    title: ruleIssueTitle(issue),
+    location,
+    detail: detailParts.length ? detailParts.join(' · ') : issue.message,
+    assignment,
+    mechanic,
+    track,
+    ability,
+  }
+}
+
+function ruleIssueTitle(issue: RuleIssue): string {
+  const labels: Record<string, string> = {
+    ABILITY_NOT_FOUND: '技能目录缺失',
+    COOLDOWN_CONFLICT: '技能冷却冲突',
+    COVERAGE_GAP: '持续时间覆盖不到机制',
+    DUPLICATE_ANCHOR_ID: '时间轴锚点重复',
+    DUPLICATE_ANCHOR_OCCURRENCE: '时间轴事件序号重复',
+    DUPLICATE_ASSIGNMENT: '任务重复',
+    DUPLICATE_MECHANIC_ID: '机制 ID 重复',
+    DUPLICATE_TRACK_ID: '轨道 ID 重复',
+    DUPLICATE_TRACK_SLOT: '轨道位置重复',
+    HIGHLIGHT_AFTER_WINDOW: '亮起时间晚于释放窗口',
+    INVALID_PHASE_DURATION: '阶段持续时间无效',
+    INVALID_USE_WINDOW: '释放窗口无效',
+    JOB_NOT_COMPATIBLE: '技能与轨道职业不兼容',
+    PHASE_TIMING_MODE_REQUIRED: '阶段时间模式缺失',
+    TRACK_MODE_MISMATCH: '轨道数量与模式不匹配',
+    UNKNOWN_ANCHOR: '引用了不存在的锚点',
+    UNKNOWN_MECHANIC: '引用了不存在的机制',
+    UNKNOWN_TARGET_TRACK: '单体目标轨道不存在',
+    UNKNOWN_TRACK: '执行轨道不存在',
+    WINDOW_AFTER_IMPACT: '释放窗口晚于机制判定',
+  }
+  return labels[issue.code] ?? issue.code
+}
+
+function shortReference(reference: string): string {
+  return reference.length > 12 ? `${reference.slice(0, 8)}…${reference.slice(-4)}` : reference
+}
+
+function focusRuleIssue(display: RuleIssueDisplay) {
+  if (display.mechanic) {
+    if (!mechanics.value.some((mechanic) => mechanic.mechanicId === display.mechanic?.mechanicId)) {
+      showTimelineMarkers.value = true
+    }
+    selectedMechanicId.value = display.mechanic.mechanicId
+    syncTimelinePageToSelection()
+  }
+  if (display.track) {
+    selectedTrackId.value = display.track.trackId
+  }
+  if (display.assignment) {
+    selectedAssignment.value = display.assignment
+    selectedTargetTrackId.value = display.assignment.targetTrackId ?? ''
+  }
+}
+
+function isRuleValidationResult(body: unknown): body is RuleValidationResult {
+  if (!body || typeof body !== 'object') return false
+  const candidate = body as Partial<RuleValidationResult>
+  return typeof candidate.valid === 'boolean' && Array.isArray(candidate.issues)
 }
 
 async function loadPlan() {
@@ -774,8 +871,12 @@ async function save() {
 async function validate() {
   await save()
   if (!planId.value || error.value) return
-  validation.value = await api.validatePlan(planId.value)
-  message.value = validation.value.valid ? '规则校验通过' : '发现需要处理的规则问题'
+  try {
+    validation.value = await api.validatePlan(planId.value)
+    message.value = validation.value.valid ? '规则校验通过' : `发现 ${validationErrorCount.value} 个阻止发布的问题`
+  } catch (reason) {
+    error.value = reason instanceof ApiError ? reason.message : '规则校验失败'
+  }
 }
 
 async function publish() {
@@ -788,9 +889,9 @@ async function publish() {
     validation.value = published.validation
     message.value = `已发布 v${published.snapshot.planVersion}，分享码 ${published.shareCode}`
   } catch (reason) {
-    if (reason instanceof ApiError && reason.status === 422) {
-      validation.value = reason.body as RuleValidationResult
-      error.value = '规则校验未通过，计划没有发布'
+    if (reason instanceof ApiError && reason.status === 422 && isRuleValidationResult(reason.body)) {
+      validation.value = reason.body
+      error.value = `规则校验未通过，计划没有发布：${validationErrorCount.value} 个错误、${validationWarningCount.value} 个警告`
     } else {
       error.value = reason instanceof ApiError ? reason.message : '发布失败'
     }
@@ -1138,6 +1239,37 @@ function fallbackAbilities(): AbilityDefinition[] {
     </div>
 
     <p v-if="error" class="editor-error"><AlertTriangle :size="16" />{{ error }}</p>
+
+    <section v-if="validation && !validation.valid" class="validation-banner" aria-live="polite">
+      <header>
+        <div>
+          <p class="eyebrow">PUBLICATION BLOCKED</p>
+          <h2>规则校验未通过</h2>
+        </div>
+        <div class="validation-counts">
+          <span><b>{{ validationErrorCount }}</b>错误</span>
+          <span><b>{{ validationWarningCount }}</b>警告</span>
+        </div>
+      </header>
+      <div class="validation-issue-grid">
+        <button
+          v-for="display in validationIssueDisplays.slice(0, 8)"
+          :key="`${display.issue.code}-${display.issue.reference}`"
+          :class="['validation-issue-card', display.issue.severity.toLowerCase()]"
+          type="button"
+          @click="focusRuleIssue(display)"
+        >
+          <span>{{ display.issue.code }}</span>
+          <b>{{ display.title }}</b>
+          <small>{{ display.location }}</small>
+          <em>{{ display.detail }}</em>
+          <p>{{ display.issue.message }}</p>
+        </button>
+      </div>
+      <p v-if="validationIssueDisplays.length > 8" class="validation-more">
+        还有 {{ validationIssueDisplays.length - 8 }} 条规则问题，完整列表在编辑区底部。
+      </p>
+    </section>
 
     <section v-if="importOpen" class="timeline-import-panel">
       <header>
@@ -1562,9 +1694,23 @@ function fallbackAbilities(): AbilityDefinition[] {
           <header>
             <CheckCircle2 v-if="validation.valid" :size="18" />
             <AlertTriangle v-else :size="18" />
-            <b>{{ validation.valid ? '规则校验通过' : `${validation.issues.length} 个规则问题` }}</b>
+            <b>{{ validation.valid ? '规则校验通过' : `${validationErrorCount} 个错误 · ${validationWarningCount} 个警告` }}</b>
           </header>
-          <p v-for="issue in validation.issues" :key="`${issue.code}-${issue.reference}`"><span>{{ issue.code }}</span>{{ issue.message }}</p>
+          <div v-if="validationIssueDisplays.length" class="validation-issue-list">
+            <button
+              v-for="display in validationIssueDisplays"
+              :key="`${display.issue.code}-${display.issue.reference}`"
+              :class="['validation-issue-row', display.issue.severity.toLowerCase()]"
+              type="button"
+              @click="focusRuleIssue(display)"
+            >
+              <span>{{ display.issue.code }}</span>
+              <b>{{ display.title }}</b>
+              <small>{{ display.location }}</small>
+              <em>{{ display.detail }}</em>
+              <p>{{ display.issue.message }}</p>
+            </button>
+          </div>
         </div>
 
         <div v-if="aiCandidate" class="validation-panel ai-candidate-panel">

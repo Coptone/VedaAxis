@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from '../api/client'
+import { api, ApiError } from '../api/client'
 import { dmuP1P2DefaultPlan } from '../data/dmuP1P2Default'
 import type { AbilityDefinition } from '../types/domain'
 import PlanEditorView from './PlanEditorView.vue'
@@ -11,10 +11,21 @@ vi.mock('../api/client', () => ({
     abilities: vi.fn().mockResolvedValue([]),
     createPlan: vi.fn(),
     updatePlan: vi.fn(),
+    validatePlan: vi.fn(),
+    publishPlan: vi.fn(),
     previewDamageEstimates: vi.fn().mockResolvedValue([]),
     generateAiCandidate: vi.fn(),
   },
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    constructor(
+      public readonly status: number,
+      public readonly code: string,
+      message: string,
+      public readonly body?: unknown,
+    ) {
+      super(message)
+    }
+  },
 }))
 
 describe('PlanEditorView', () => {
@@ -288,6 +299,57 @@ describe('PlanEditorView', () => {
     await flushPromises()
     expect(wrapper.get('.ability-picker-option').classes()).toContain('blocked')
     expect(wrapper.get('.cooldown-overlay').text()).toBeTruthy()
+  })
+
+  it('shows rule validation details when publishing is blocked', async () => {
+    const planId = '11111111-1111-4111-8111-111111111111'
+    const createdSnapshot = dmuP1P2DefaultPlan()
+    createdSnapshot.planId = planId
+    const firstMechanicId = createdSnapshot.assignments[0]!.mechanicId
+    const conflictingAssignment = createdSnapshot.assignments.find((assignment) => assignment.mechanicId !== firstMechanicId)!
+    const conflictingMechanic = createdSnapshot.mechanics.find((mechanic) => mechanic.mechanicId === conflictingAssignment.mechanicId)!
+    vi.mocked(api.createPlan).mockResolvedValue({
+      plan: { id: planId, name: 'test', latestVersion: 1, updatedAt: '2026-08-07T00:00:00Z' },
+      snapshot: createdSnapshot,
+    })
+    vi.mocked(api.updatePlan).mockImplementation(async (_id, planName, planSnapshot) => ({
+      plan: { id: planId, name: planName, latestVersion: 1, updatedAt: '2026-08-07T00:00:00Z' },
+      snapshot: planSnapshot,
+    }))
+    vi.mocked(api.publishPlan).mockRejectedValue(new ApiError(422, 'REQUEST_FAILED', 'Plan validation failed', {
+      valid: false,
+      issues: [{
+        severity: 'ERROR',
+        code: 'COOLDOWN_CONFLICT',
+        message: '测试技能与上一任务的冷却窗口冲突',
+        reference: conflictingAssignment.assignmentId,
+      }],
+    }))
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/plans/new', component: PlanEditorView },
+        { path: '/plans/:planId', component: PlanEditorView },
+      ],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+    await wrapper.findAll('.editor-actions button').find((button) => button.text().includes('发布版本'))!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.editor-error').text()).toContain('规则校验未通过')
+    expect(wrapper.get('.validation-banner h2').text()).toBe('规则校验未通过')
+    expect(wrapper.get('.validation-issue-card').text()).toContain('技能冷却冲突')
+    expect(wrapper.get('.validation-issue-card').text()).toContain('COOLDOWN_CONFLICT')
+
+    await wrapper.get('.validation-issue-card').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.assignment-board h2').text()).toBe(conflictingMechanic.name)
+    expect(wrapper.get('.assignment-card.selected').text()).toContain(String(conflictingAssignment.actionId))
   })
 
   it('remaps execution and single-target tracks when first saving a default plan', async () => {

@@ -79,9 +79,35 @@ class AiCandidateServiceTest {
                 .hasMessageContaining("低风险机制");
     }
 
+    @Test
+    void rejectsAccountsOutsideConfiguredAiAllowlist() {
+        UUID ownerId = UUID.fromString("60000000-0000-4000-8000-000000000001");
+        UUID allowedUserId = UUID.fromString("60000000-0000-4000-8000-000000000002");
+        AiCandidateService service = serviceWithCatalog(
+                Map.of(100L, directAbility(100)),
+                List.of(),
+                allowedUserId.toString());
+
+        assertThatThrownBy(() -> service.generate(
+                ownerId,
+                UUID.fromString("40000000-0000-4000-8000-000000000001"),
+                "",
+                AiCandidateService.OptimizationMode.GLOBAL,
+                null))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("未开通");
+    }
+
     private AiCandidateService serviceWithCatalog(
             Map<Long, AbilityDefinition> abilities,
             List<DamageEstimateAnalysisService.MechanicEstimate> estimates) {
+        return serviceWithCatalog(abilities, estimates, "");
+    }
+
+    private AiCandidateService serviceWithCatalog(
+            Map<Long, AbilityDefinition> abilities,
+            List<DamageEstimateAnalysisService.MechanicEstimate> estimates,
+            String allowedUserIds) {
         AbilityCatalog abilityCatalog = mock(AbilityCatalog.class);
         DamageEstimateAnalysisService damageEstimateAnalysisService = mock(DamageEstimateAnalysisService.class);
         when(abilityCatalog.load()).thenReturn(abilities);
@@ -95,7 +121,8 @@ class AiCandidateServiceTest {
                 RestClient.builder(),
                 "https://example.invalid",
                 "test-key",
-                "test-model");
+                "test-model",
+                allowedUserIds);
     }
 
     private PlanSnapshot snapshot(

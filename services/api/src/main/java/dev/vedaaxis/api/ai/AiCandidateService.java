@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +40,7 @@ public class AiCandidateService {
     private final RestClient restClient;
     private final String apiKey;
     private final String model;
+    private final Set<UUID> allowedUserIds;
 
     public AiCandidateService(
             PlanService planService,
@@ -49,7 +51,8 @@ public class AiCandidateService {
             RestClient.Builder restClientBuilder,
             @Value("${vedaaxis.ai.base-url:https://api.deepseek.com}") String baseUrl,
             @Value("${vedaaxis.ai.api-key:}") String apiKey,
-            @Value("${vedaaxis.ai.model:deepseek-v4-pro}") String model) {
+            @Value("${vedaaxis.ai.model:deepseek-v4-pro}") String model,
+            @Value("${vedaaxis.ai.allowed-user-ids:}") String allowedUserIds) {
         this.planService = planService;
         this.ruleEngine = ruleEngine;
         this.abilityCatalog = abilityCatalog;
@@ -58,6 +61,7 @@ public class AiCandidateService {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
         this.apiKey = apiKey;
         this.model = model;
+        this.allowedUserIds = parseAllowedUserIds(allowedUserIds);
     }
 
     public AiCandidate generate(
@@ -69,6 +73,9 @@ public class AiCandidateService {
         if (apiKey.isBlank()) {
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_NOT_CONFIGURED", "尚未配置 VEDAAXIS_AI_API_KEY");
+        }
+        if (!allowedUserIds.isEmpty() && !allowedUserIds.contains(ownerId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "AI_NOT_ENABLED_FOR_ACCOUNT", "当前账号未开通 AI 候选功能");
         }
 
         PlanSnapshot base = planService.get(ownerId, planId).snapshot();
@@ -178,6 +185,20 @@ public class AiCandidateService {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_FOCUS_TRACK_INVALID", "指向优化轨道不存在");
         }
         return focusTrackId;
+    }
+
+    private Set<UUID> parseAllowedUserIds(String configured) {
+        if (configured == null || configured.isBlank()) return Set.of();
+        return Pattern.compile("[,;\\s]+").splitAsStream(configured.trim())
+                .filter(value -> !value.isBlank())
+                .map(value -> {
+                    try {
+                        return UUID.fromString(value);
+                    } catch (IllegalArgumentException exception) {
+                        throw new IllegalStateException("Invalid vedaaxis.ai.allowed-user-ids entry: " + value);
+                    }
+                })
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private Map<String, Object> optimizationContext(

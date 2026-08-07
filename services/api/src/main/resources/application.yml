@@ -35,3 +35,4 @@ vedaaxis:
     base-url: ${VEDAAXIS_AI_BASE_URL:https://api.deepseek.com}
     api-key: ${VEDAAXIS_AI_API_KEY:}
     model: ${VEDAAXIS_AI_MODEL:deepseek-v4-pro}
+    allowed-user-ids: ${VEDAAXIS_AI_ALLOWED_USER_IDS:}

@@ -113,6 +113,55 @@ describe('PlanEditorView', () => {
     expect(wrapper.text()).not.toContain('天赐祝福 / Benediction')
   })
 
+  it('keeps assignment timing readonly until the visual editor is opened', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+    await wrapper.get('.assignment-card').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.assignment-readonly-grid').text()).toContain('开始高亮')
+    expect(wrapper.find('.inspector-panel input').exists()).toBe(false)
+
+    await wrapper.get('.assignment-edit-button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.assignment-editor-modal').attributes('role')).toBe('dialog')
+    expect(wrapper.findAll('.assignment-editor-controls input[type="range"]')).toHaveLength(4)
+  })
+
+  it('blocks adding a duplicate ability when the current placement window is on cooldown', async () => {
+    vi.mocked(api.abilities).mockResolvedValueOnce([
+      testAbility(999001, '测试团减 / Test Mitigation', [], { allDamageReductionPercent: 10, calculationReadiness: 'DIRECT_REDUCTION' }),
+    ])
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    const addButton = wrapper.get('.quick-assign .primary-button')
+    expect(addButton.attributes('disabled')).toBeUndefined()
+    await addButton.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.quick-assign .primary-button').attributes('disabled')).toBeDefined()
+    await wrapper.get('.ability-picker-trigger').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.ability-picker-option').classes()).toContain('blocked')
+    expect(wrapper.get('.cooldown-overlay').text()).toBeTruthy()
+  })
+
   it('remaps execution and single-target tracks when first saving a default plan', async () => {
     const planId = '11111111-1111-4111-8111-111111111111'
     const createdTrackIds = [

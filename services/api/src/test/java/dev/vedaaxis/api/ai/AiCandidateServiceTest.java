@@ -48,7 +48,8 @@ class AiCandidateServiceTest {
                 snapshot,
                 List.of(focusAssignment, changedOtherAssignment),
                 AiCandidateService.OptimizationMode.FOCUSED,
-                focusTrackId))
+                focusTrackId,
+                new AiCandidateService.AiSafetyOptions(false, true)))
                 .isInstanceOfSatisfying(ApiException.class,
                         exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
     }
@@ -75,7 +76,8 @@ class AiCandidateServiceTest {
                 snapshot,
                 List.of(candidate),
                 AiCandidateService.OptimizationMode.GLOBAL,
-                null))
+                null,
+                new AiCandidateService.AiSafetyOptions(false, true)))
                 .isInstanceOfSatisfying(ApiException.class,
                         exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
     }
@@ -94,9 +96,59 @@ class AiCandidateServiceTest {
                 UUID.fromString("40000000-0000-4000-8000-000000000001"),
                 "",
                 AiCandidateService.OptimizationMode.GLOBAL,
-                null))
+                null,
+                false,
+                false))
                 .isInstanceOfSatisfying(ApiException.class,
                         exception -> assertThat(exception.code()).isEqualTo("AI_NOT_ENABLED_FOR_ACCOUNT"));
+    }
+
+    @Test
+    void preserveExistingAssignmentsRejectsUpdatesToUnlockedAssignments() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot.Assignment original = assignment(
+                UUID.fromString("30000000-0000-4000-8000-000000000001"), mechanicId, trackId, 100);
+        PlanSnapshot.Assignment updated = new PlanSnapshot.Assignment(
+                original.assignmentId(), original.mechanicId(), original.trackId(),
+                original.actionId(), null, 0, 2_000, 3_000, 4_000,
+                false, ConfirmationStrategy.STATUS_APPLY, List.of(), null);
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of(original));
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        assertThatThrownBy(() -> service.enforceSafety(
+                snapshot,
+                List.of(updated),
+                AiCandidateService.OptimizationMode.GLOBAL,
+                null,
+                new AiCandidateService.AiSafetyOptions(true, true)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
+    }
+
+    @Test
+    void disallowGcdActionsRejectsNewGcdAssignments() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of());
+        PlanSnapshot.Assignment candidate = assignment(
+                UUID.fromString("30000000-0000-4000-8000-000000000001"), mechanicId, trackId, 300);
+        AiCandidateService service = serviceWithCatalog(Map.of(300L, gcdAbility(300)), List.of());
+
+        assertThatThrownBy(() -> service.enforceSafety(
+                snapshot,
+                List.of(candidate),
+                AiCandidateService.OptimizationMode.GLOBAL,
+                null,
+                new AiCandidateService.AiSafetyOptions(false, false)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
     }
 
     @Test
@@ -235,11 +287,25 @@ class AiCandidateServiceTest {
         return ability(actionId, MitigationEffectProfile.CalculationReadiness.DIRECT_REDUCTION);
     }
 
+    private AbilityDefinition gcdAbility(long actionId) {
+        return ability(
+                actionId,
+                MitigationEffectProfile.CalculationReadiness.REQUIRES_HEALING_STATS,
+                AbilityDefinition.CastCategory.GCD);
+    }
+
     private AbilityDefinition supportOnlyAbility(long actionId) {
         return ability(actionId, MitigationEffectProfile.CalculationReadiness.REQUIRES_HEALING_STATS);
     }
 
     private AbilityDefinition ability(long actionId, MitigationEffectProfile.CalculationReadiness readiness) {
+        return ability(actionId, readiness, AbilityDefinition.CastCategory.OGCD);
+    }
+
+    private AbilityDefinition ability(
+            long actionId,
+            MitigationEffectProfile.CalculationReadiness readiness,
+            AbilityDefinition.CastCategory castCategory) {
         return new AbilityDefinition(
                 actionId,
                 "Test Ability",
@@ -251,6 +317,7 @@ class AiCandidateServiceTest {
                 ConfirmationStrategy.STATUS_APPLY,
                 "test",
                 "REVIEWED",
+                castCategory,
                 new MitigationEffectProfile(
                         MitigationEffectProfile.Scope.PARTY,
                         readiness == MitigationEffectProfile.CalculationReadiness.DIRECT_REDUCTION ? 10 : 0,

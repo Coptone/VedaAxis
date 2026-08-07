@@ -94,6 +94,8 @@ const aiOpen = ref(false)
 const aiInstruction = ref('')
 const aiOptimizationMode = ref<AiOptimizationMode>('GLOBAL')
 const aiFocusTrackId = ref('')
+const aiPreserveExistingAssignments = ref(true)
+const aiAllowGcdActions = ref(false)
 const busy = ref(false)
 const message = ref('')
 const error = ref('')
@@ -812,6 +814,8 @@ async function generateAiCandidate() {
       instruction: aiInstruction.value,
       mode: aiOptimizationMode.value,
       focusTrackId,
+      preserveExistingAssignments: aiPreserveExistingAssignments.value,
+      allowGcdActions: aiAllowGcdActions.value,
     })
     const modeLabel = aiOptimizationMode.value === 'FOCUSED' ? `指向 ${trackDisplayLabel(aiFocusTrack.value)} ` : '全局 '
     message.value = `已生成 ${modeLabel}${aiCandidate.value.confidence} 候选，尚未应用`
@@ -847,6 +851,12 @@ function fillAiOptimizationInstruction() {
 
   aiInstruction.value = [
     ...modeLines,
+    aiPreserveExistingAssignments.value
+      ? '硬规则：只允许新增安排，不修改或删除任何当前已有减伤；已有安排即使未锁定也必须原样保留。'
+      : '硬规则：可在服务端规则允许范围内调整未锁定安排；locked=true 仍必须原样保留。',
+    aiAllowGcdActions.value
+      ? '硬规则：允许使用 GCD 技能，但只有在 oGCD 不足以覆盖风险时才使用。'
+      : '硬规则：不允许使用 GCD 技能；优先使用 oGCD 减伤、抬血、护盾、增疗和资源。',
     '目标：优化当前减伤与治疗利用率，但不要修改 locked=true 的任务，不要改变轨道/职业边界，不要输出计划外轨道。',
     `HP 风险口径：AOE 按治疗 HP ${displayInteger(healerHpReference.value)} 为 100%；死刑和平A按防护 HP ${displayInteger(tankHpReference.value)} 为 100%。超过 HP 上限为红色，命中后剩余 HP 低于 25% 为黄色，其余为绿色。`,
     '优先级：1）先补足红色/黄色承伤；2）优先利用可覆盖多个机制的长持续团减/团血，减少只覆盖一次的浪费；3）避免同一轨道冷却冲突；4）单减必须保留或补全 targetTrackId；5）治疗、增疗、护盾可作为复核提示，但不要当作百分比减伤直接扣伤害；6）不要为了绿色机制刷纯治疗、增疗资源或未建模盾。',
@@ -1082,9 +1092,9 @@ function coverageTimingLabel(coverage: AssignmentCoverage): string {
 
 function fallbackAbilities(): AbilityDefinition[] {
   return [
-    { actionId: 7535, name: '雪仇 / Reprisal', iconPath: 'ui/icon/000000/000806.tex', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED', effect: { scope: 'ENEMY_AREA', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: '', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
-    { actionId: 24298, name: 'Kerachole', iconPath: 'ui/icon/003000/003666.tex', jobIds: [40], cooldownMs: 30_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED', effect: { scope: 'PARTY', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: 'SGE_KERACHOLE_TAUROCHOLE', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
-    { actionId: 24310, name: 'Holos', iconPath: 'ui/icon/003000/003678.tex', jobIds: [40], cooldownMs: 120_000, maxCharges: 1, durationMs: 20_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED', effect: { scope: 'PARTY', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 300, invulnerability: false, stackingGroup: '', calculationReadiness: 'REQUIRES_HEALING_STATS', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
+    { actionId: 7535, name: '雪仇 / Reprisal', iconPath: 'ui/icon/000000/000806.tex', jobIds: [19, 21, 32, 37], cooldownMs: 60_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'REVIEWED', castCategory: 'OGCD', effect: { scope: 'ENEMY_AREA', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: '', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
+    { actionId: 24298, name: 'Kerachole', iconPath: 'ui/icon/003000/003666.tex', jobIds: [40], cooldownMs: 30_000, maxCharges: 1, durationMs: 15_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED', castCategory: 'OGCD', effect: { scope: 'PARTY', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 0, invulnerability: false, stackingGroup: 'SGE_KERACHOLE_TAUROCHOLE', calculationReadiness: 'DIRECT_REDUCTION', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
+    { actionId: 24310, name: 'Holos', iconPath: 'ui/icon/003000/003678.tex', jobIds: [40], cooldownMs: 120_000, maxCharges: 1, durationMs: 20_000, confirmationStrategy: 'STATUS_APPLY', source: 'Local fallback', confidence: 'UNVERIFIED', castCategory: 'OGCD', effect: { scope: 'PARTY', allDamageReductionPercent: 10, physicalDamageReductionPercent: 0, magicalDamageReductionPercent: 0, maximumHpIncreasePercent: 0, maximumHpBarrierPercent: 0, barrierCurePotency: 300, invulnerability: false, stackingGroup: '', calculationReadiness: 'REQUIRES_HEALING_STATS', conditions: [], source: 'Local fallback', confidence: 'REVIEWED' } },
   ]
 }
 </script>
@@ -1201,8 +1211,24 @@ function fallbackAbilities(): AbilityDefinition[] {
         </select>
       </label>
       <p class="ai-policy-copy">
-        服务端会拒绝计划外轨道/机制/技能、锁定项改动、指向模式下的非目标轨道改动，以及绿色机制上的纯治疗/未建模辅助刷屏。
+        服务端会拒绝计划外轨道/机制/技能、锁定项改动、指向模式下的非目标轨道改动，以及绿色机制上的纯治疗/未建模辅助刷屏；下面两个硬规则会随请求一起发送，并由服务端二次拦截。
       </p>
+      <div class="ai-safety-grid">
+        <label class="ai-safety-option">
+          <input v-model="aiPreserveExistingAssignments" type="checkbox" />
+          <span>
+            <b>只新增，不改现有安排</b>
+            <small>默认开启：AI 只能补空转资源，不能移动、替换或删除当前减伤。</small>
+          </span>
+        </label>
+        <label class="ai-safety-option">
+          <input v-model="aiAllowGcdActions" type="checkbox" />
+          <span>
+            <b>允许使用 GCD 技能</b>
+            <small>默认关闭：均衡预后、鼓舞、士气等读条/占 GCD 技能不会被 AI 新增。</small>
+          </span>
+        </label>
+      </div>
       <label>调整要求
         <textarea
           v-model.trim="aiInstruction"

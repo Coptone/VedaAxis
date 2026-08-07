@@ -4,6 +4,7 @@ export type Confidence = 'POC_PENDING' | 'UNVERIFIED' | 'REVIEWED' | 'VERIFIED'
 export type ConfirmationStrategy = 'ACTION_EFFECT' | 'STATUS_APPLY' | 'COOLDOWN_CHANGE' | 'COMPOSITE'
 export type PhaseTimingMode = 'ABSOLUTE' | 'RELATIVE'
 export type AiOptimizationMode = 'GLOBAL' | 'FOCUSED'
+export type AbilityCastCategory = 'GCD' | 'OGCD' | 'UNKNOWN'
 
 export const TRACK_SLOTS: Record<TrackMode, TrackSlot[]> = {
   FOUR: ['T1', 'H1', 'D1', 'D2'],
@@ -149,6 +150,7 @@ export interface AbilityDefinition {
   confirmationStrategy: ConfirmationStrategy
   source: string
   confidence: string
+  castCategory: AbilityCastCategory
   effect: MitigationEffectProfile
 }
 

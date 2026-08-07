@@ -189,6 +189,8 @@ describe('PlanEditorView', () => {
       instruction: '只优化 H2',
       mode: 'FOCUSED',
       focusTrackId: h2Track.trackId,
+      preserveExistingAssignments: true,
+      allowGcdActions: false,
     })
     expect(wrapper.get('.inline-message').text()).toContain('指向 H2')
   })
@@ -352,6 +354,7 @@ function testAbility(
     confirmationStrategy: 'STATUS_APPLY',
     source: 'test',
     confidence: 'REVIEWED',
+    castCategory: 'OGCD',
     effect: {
       scope: 'PARTY',
       allDamageReductionPercent: 0,

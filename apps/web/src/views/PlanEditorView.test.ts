@@ -276,6 +276,7 @@ describe('PlanEditorView', () => {
     await flushPromises()
 
     const addButton = wrapper.get('.quick-assign .primary-button')
+    expect(wrapper.get('.quick-assign-actions .show-all-abilities').text()).toContain('显示全部技能')
     expect(addButton.attributes('disabled')).toBeUndefined()
     await addButton.trigger('click')
     await flushPromises()

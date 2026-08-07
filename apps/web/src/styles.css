@@ -272,14 +272,15 @@ a { color: inherit; text-decoration: none; }
 .mechanic-item > i.reviewed, .timeline-legend i.reviewed { background: var(--cyan); }
 .timeline-legend { display: flex; gap: 14px; margin: 18px 7px; color: var(--muted); font-size: 9px; }
 .timeline-legend span { display: flex; align-items: center; gap: 6px; }
-.assignment-board { padding: 24px; background: radial-gradient(circle at 50% 0, rgba(51, 114, 124, .07), transparent 34%); overflow: auto; }
+.assignment-board { container-type: inline-size; padding: 24px; background: radial-gradient(circle at 50% 0, rgba(51, 114, 124, .07), transparent 34%); overflow: auto; }
 .board-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 1px solid var(--border-soft); }
 .board-header h2 { margin: 4px 0; font-size: 24px; }
 .board-header p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: 11px; }
 .confidence-chip { color: var(--amber); background: rgba(242,174,93,.07); border: 1px solid rgba(242,174,93,.2); padding: 6px 8px; border-radius: 5px; font: 700 9px ui-monospace, monospace; }
-.quick-assign { display: grid; grid-template-columns: minmax(210px, .9fr) minmax(360px, 1.65fr) minmax(220px, .85fr) max-content max-content; align-items: end; gap: 10px; margin: 18px 0; padding: 13px; background: rgba(13,31,43,.78); border: 1px solid var(--border); border-radius: 8px; }
+.quick-assign { display: grid; grid-template-columns: minmax(170px, .85fr) minmax(280px, 1.45fr) minmax(170px, .85fr) max-content; align-items: end; gap: 10px; margin: 18px 0; padding: 13px; background: rgba(13,31,43,.78); border: 1px solid var(--border); border-radius: 8px; }
+.quick-assign > label { min-width: 0; }
 .quick-assign label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
-.quick-assign select { height: 35px; font-size: 11px; }
+.quick-assign select { width: 100%; min-width: 0; height: 35px; font-size: 11px; }
 .quick-label-row { min-width: 0; min-height: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .quick-label-row b { flex: none; color: #8fb8c2; font-size: 10px; font-weight: 700; }
 .quick-label-row em { min-width: 0; color: #86b9b2; font-style: normal; font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -314,9 +315,10 @@ a { color: inherit; text-decoration: none; }
 .ability-picker-empty { margin: 0; padding: 13px; color: var(--muted); border: 1px dashed rgba(213,239,245,.2); border-radius: 10px; background: rgba(213,239,245,.035); font-size: 10px; }
 .ability-filter-note { min-height: 13px; color: #86b9b2 !important; font-size: 8px !important; }
 .ability-category-note { color: #d8b579 !important; font-size: 8px !important; line-height: 1.35; }
-.show-all-abilities { height: 35px; display: flex !important; align-items: center; gap: 6px !important; white-space: nowrap; }
+.quick-assign-actions { min-width: max-content; display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.show-all-abilities { height: 35px; display: flex !important; align-items: center; justify-content: flex-end; gap: 6px !important; white-space: nowrap; }
 .show-all-abilities input { width: 14px; height: 14px; accent-color: var(--cyan); }
-.quick-assign .primary-button { height: 35px; min-height: 35px; }
+.quick-assign .primary-button { flex: 0 0 auto; height: 35px; min-height: 35px; }
 .track-grid { display: grid; grid-template-columns: repeat(4, minmax(125px, 1fr)); gap: 9px; }
 .track-column { min-height: 152px; border: 1px solid var(--border); border-radius: 8px; background: rgba(9,23,34,.72); overflow: hidden; }
 .track-column > header { display: flex; align-items: center; gap: 8px; min-height: 49px; padding: 8px 10px; border-bottom: 1px solid var(--border-soft); background: rgba(16,34,48,.66); }
@@ -488,6 +490,15 @@ a { color: inherit; text-decoration: none; }
   .hp-reference-controls { grid-template-columns: 1fr; }
   .damage-analysis-metrics { grid-template-columns: repeat(2, 1fr); }
   .assignment-editor-panel > header, .assignment-editor-controls { grid-template-columns: 1fr; }
+}
+
+@container (max-width: 980px) {
+  .quick-assign { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+  .quick-assign-actions { justify-content: flex-start; }
+}
+
+@container (max-width: 680px) {
+  .quick-assign { grid-template-columns: 1fr; }
 }
 
 /* 2K and wider displays need a larger application scale than 1080p. The

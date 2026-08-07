@@ -1378,14 +1378,16 @@ function fallbackAbilities(): AbilityDefinition[] {
               <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">{{ track.slot }} · {{ track.displayName }}</option>
             </select>
           </label>
-          <label class="show-all-abilities"><input v-model="showAllAbilities" type="checkbox" />显示全部技能</label>
-          <button
-            class="primary-button"
-            type="button"
-            :disabled="!selectedAbilityId || selectedAbilityCooldownState.blocked"
-            :title="selectedAbilityCooldownState.blocked ? `技能冷却中，${formatTime(selectedAbilityCooldownState.availableAtMs ?? 0)} 可用` : '安排技能'"
-            @click="addAssignment"
-          ><Plus :size="16" />安排技能</button>
+          <div class="quick-assign-actions">
+            <label class="show-all-abilities"><input v-model="showAllAbilities" type="checkbox" />显示全部技能</label>
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="!selectedAbilityId || selectedAbilityCooldownState.blocked"
+              :title="selectedAbilityCooldownState.blocked ? `技能冷却中，${formatTime(selectedAbilityCooldownState.availableAtMs ?? 0)} 可用` : '安排技能'"
+              @click="addAssignment"
+            ><Plus :size="16" />安排技能</button>
+          </div>
         </div>
 
         <div class="track-grid">

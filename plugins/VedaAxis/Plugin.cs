@@ -55,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     private string deviceCode = string.Empty;
     private string deviceCodeExpiresAt = string.Empty;
     private string deviceAuthorizationUrl = string.Empty;
+    private string customStrategyTagInput = string.Empty;
     private string lastExecutionUploadStatus = "暂无执行上传";
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
     private readonly Dictionary<Guid, uint> manualPartyTargets = [];
@@ -63,6 +64,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         configuration = PluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
         MigrateConfiguration(configuration);
+        customStrategyTagInput = configuration.StrategyTag;
         planStore = new PlanFileStore(PluginInterface.GetPluginConfigDirectory());
         executionUploadQueue = new ExecutionUploadQueue(PluginInterface.GetPluginConfigDirectory());
         overlay = new HotbarOverlay(GameGui, Log);
@@ -405,33 +407,69 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawPlanSelector()
     {
-        var o8sSelected = string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase);
-        var label = o8sSelected
-            ? "O8S 联调计划（8 轨）"
-            : string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
-                ? "DMU P1/P2 四轨扩展"
-                : "DMU P1/P2 默认计划";
+        var label = PlanSelectorLabel();
         if (!ImGui.BeginCombo("计划类型", label))
         {
+            DrawCustomStrategyInput();
             return;
         }
-        if (ImGui.Selectable("DMU P1/P2 默认计划", !o8sSelected))
+        if (ImGui.Selectable("DMU P1/P2 默认计划（8 轨）", string.Equals(configuration.StrategyTag, "DMU-P1P2", StringComparison.OrdinalIgnoreCase)))
         {
-            configuration.StrategyTag = string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
-                ? "DMU-P1P2-FOUR"
-                : "DMU-P1P2";
-            SaveConfiguration();
+            ApplyPlanPreset("DMU-P1P2", "EIGHT");
             status = "已选择 DMU P1/P2；请在 Territory 1363 脱战同步";
         }
-        if (ImGui.Selectable("O8S 联调计划（8 轨）", o8sSelected))
+        if (ImGui.Selectable("DMU P1/P2 四轨扩展", string.Equals(configuration.StrategyTag, "DMU-P1P2-FOUR", StringComparison.OrdinalIgnoreCase)))
         {
-            configuration.StrategyTag = "O8S-POC";
-            configuration.TrackMode = "EIGHT";
-            NormalizeLocalSlot();
-            SaveConfiguration();
+            ApplyPlanPreset("DMU-P1P2-FOUR", "FOUR");
+            status = "已选择 DMU P1/P2 四轨；请在 Territory 1363 脱战同步";
+        }
+        if (ImGui.Selectable("O8S 联调计划（8 轨）", string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase)))
+        {
+            ApplyPlanPreset("O8S-POC", "EIGHT");
             status = "已选择 O8S 联调；请在 Territory 755 脱战同步";
         }
         ImGui.EndCombo();
+        DrawCustomStrategyInput();
+    }
+
+    private string PlanSelectorLabel()
+    {
+        if (string.Equals(configuration.StrategyTag, "DMU-P1P2", StringComparison.OrdinalIgnoreCase))
+        {
+            return "DMU P1/P2 默认计划（8 轨）";
+        }
+        if (string.Equals(configuration.StrategyTag, "DMU-P1P2-FOUR", StringComparison.OrdinalIgnoreCase))
+        {
+            return "DMU P1/P2 四轨扩展";
+        }
+        if (string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase))
+        {
+            return "O8S 联调计划（8 轨）";
+        }
+        return $"自定义：{configuration.StrategyTag}";
+    }
+
+    private void ApplyPlanPreset(string strategyTag, string trackMode)
+    {
+        configuration.StrategyTag = strategyTag;
+        configuration.TrackMode = trackMode;
+        customStrategyTagInput = strategyTag;
+        NormalizeLocalSlot();
+        SaveConfiguration();
+    }
+
+    private void DrawCustomStrategyInput()
+    {
+        ImGui.TextDisabled("网页发布其它方案后，可输入它的方案标签同步。");
+        ImGui.SetNextItemWidth(250);
+        var submitted = ImGui.InputText("自定义方案标签", ref customStrategyTagInput, 80, ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.SameLine();
+        if ((ImGui.Button("应用方案标签") || submitted) && !string.IsNullOrWhiteSpace(customStrategyTagInput))
+        {
+            configuration.StrategyTag = customStrategyTagInput.Trim();
+            SaveConfiguration();
+            status = $"已选择自定义方案 {configuration.StrategyTag}；请确认网页端已发布同名计划";
+        }
     }
 
     private void ApplyTrackMode(string mode)

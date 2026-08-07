@@ -120,6 +120,39 @@ a { color: inherit; text-decoration: none; }
 .plan-card > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: 13px; }
 .plan-meta { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; }
 .plan-meta span { display: flex; align-items: center; gap: 5px; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px; background: rgba(2, 8, 13, .72); backdrop-filter: blur(9px); }
+.create-plan-dialog, .delete-plan-dialog { width: min(760px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; border: 1px solid rgba(82,212,200,.26); border-radius: 18px; background: linear-gradient(145deg, rgba(14,32,45,.98), rgba(7,18,28,.98)); box-shadow: 0 28px 90px rgba(0,0,0,.58); }
+.create-plan-dialog { padding: 22px; }
+.create-plan-dialog > header, .delete-plan-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+.create-plan-dialog h2, .delete-plan-dialog h2 { margin: 4px 0 0; font-size: 24px; }
+.create-plan-dialog small, .delete-plan-dialog small { color: var(--muted); }
+.create-plan-dialog section { margin-top: 18px; }
+.wizard-step { margin: 0 0 10px; color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.encounter-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.encounter-choice { min-height: 128px; padding: 15px; color: inherit; text-align: left; border: 1px solid var(--border); border-radius: 12px; background: rgba(5,17,26,.52); cursor: pointer; transition: .18s ease; }
+.encounter-choice:hover, .encounter-choice.active { border-color: rgba(82,212,200,.55); background: rgba(82,212,200,.08); }
+.encounter-choice b, .encounter-choice small, .encounter-choice span { display: block; }
+.encounter-choice b { font-size: 16px; }
+.encounter-choice small { margin-top: 5px; color: var(--cyan); font: 800 10px ui-monospace, monospace; }
+.encounter-choice span { margin-top: 14px; color: #aebfc9; font-size: 12px; line-height: 1.6; }
+.create-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.create-plan-grid label { display: grid; gap: 8px; color: #aebfc9; font-size: 12px; font-weight: 700; }
+.template-toggle-card { min-height: 78px; padding: 13px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 12px; background: rgba(5,17,26,.52); cursor: pointer; }
+.template-toggle-card input { width: 18px; height: 18px; accent-color: var(--cyan); }
+.template-toggle-card b, .template-toggle-card small { display: block; }
+.template-toggle-card small { margin-top: 5px; line-height: 1.5; }
+.create-plan-dialog footer { margin-top: 22px; padding-top: 15px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-soft); }
+.create-plan-dialog footer > div { margin-right: auto; display: flex; align-items: center; gap: 8px; color: #aedbd6; font-size: 12px; }
+.delete-plan-dialog { max-width: 520px; padding: 24px; }
+.delete-plan-dialog > header { justify-content: flex-start; }
+.delete-plan-dialog > header > span { width: 42px; height: 42px; display: grid; place-items: center; color: var(--red); border: 1px solid rgba(242,121,121,.28); border-radius: 10px; background: rgba(242,121,121,.1); }
+.delete-plan-dialog p { color: #c9d6de; line-height: 1.7; }
+.delete-plan-target { padding: 13px; border: 1px solid rgba(242,121,121,.24); border-radius: 10px; background: rgba(242,121,121,.075); }
+.delete-plan-target b, .delete-plan-target small { display: block; }
+.delete-plan-target small { margin-top: 4px; }
+.delete-plan-dialog footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+.danger-button { color: #fff7f7; background: #d95c61; }
+.danger-button:hover { background: #ef7277; }
 
 /* Device */
 .device-card { display: grid; grid-template-columns: 1fr .9fr; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Net.Http.Headers;
@@ -89,6 +90,11 @@ internal sealed class DeviceAuthorizationClient : IDisposable
             $"{apiBaseUrl.TrimEnd('/')}/api/v1/runtime/plans/match?{query}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            throw new InvalidOperationException(
+                $"没有找到已发布个人计划（Territory {territoryId}，方案 {strategyTag}，{trackMode}）。请先在网页端保存并发布同一副本/方案/轨道的计划，或在插件设置里切换方案。");
+        }
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<RuntimePlanResponse>(jsonOptions, cancellationToken)
                      ?? throw new InvalidDataException("运行时计划响应为空");

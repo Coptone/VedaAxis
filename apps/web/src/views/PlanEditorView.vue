@@ -67,6 +67,7 @@ import type {
 const route = useRoute()
 const router = useRouter()
 const planId = ref(typeof route.params.planId === 'string' ? route.params.planId : '')
+const preferredJobId = Number(route.query.jobId ?? 0)
 const name = ref('妖星乱舞 P1/P2 默认减伤表')
 const abilities = ref<AbilityDefinition[]>([])
 const defaultPlan = dmuP1P2DefaultPlan()
@@ -331,9 +332,14 @@ onMounted(async () => {
     selectedAbilityId.value = abilities.value[0].actionId
   }
   if (planId.value) await loadPlan()
-  selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
+  selectedTrackId.value = preferredTrackId() ?? snapshot.value.tracks[0]?.trackId ?? ''
   await refreshDamageEstimates()
 })
+
+function preferredTrackId(): string | null {
+  if (!preferredJobId) return null
+  return snapshot.value.tracks.find((track) => track.allowedJobIds.includes(preferredJobId))?.trackId ?? null
+}
 
 function ensureSelectedAbilityVisible() {
   if (selectedAbilityId.value !== null && filteredAbilities.value.some((ability) => ability.actionId === selectedAbilityId.value)) {

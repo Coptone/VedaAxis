@@ -100,6 +100,15 @@ public class PlanService {
     }
 
     @Transactional
+    public void delete(UUID ownerId, UUID planId) {
+        ownedPlan(ownerId, planId);
+        mapper.deleteVersions(planId.toString());
+        if (mapper.deletePlan(planId.toString(), ownerId.toString()) != 1) {
+            throw conflict();
+        }
+    }
+
+    @Transactional
     public PlanDetails updateDraft(UUID ownerId, UUID planId, UpdatePlanRequest request) {
         PlanRow current = ownedPlan(ownerId, planId);
         PlanSnapshot authoritative = authoritativeSnapshot(current, request.snapshot(), current.latestVersion() + 1);
@@ -197,7 +206,8 @@ public class PlanService {
     }
 
     private PlanSnapshot emptySnapshot(UUID planId, CreatePlanRequest request) {
-        if (defaultPlanProvider.supports(request.territoryId(), request.strategyTag(), request.trackMode())) {
+        boolean useDefaultTemplate = request.useDefaultTemplate() == null || request.useDefaultTemplate();
+        if (useDefaultTemplate && defaultPlanProvider.supports(request.territoryId(), request.strategyTag(), request.trackMode())) {
             return defaultPlanProvider.create(
                     planId, request.territoryId(), request.strategyTag(), request.trackMode());
         }
@@ -257,7 +267,8 @@ public class PlanService {
     }
 
     public record CreatePlanRequest(
-            String name, UUID encounterId, long territoryId, String strategyTag, TrackMode trackMode) {
+            String name, UUID encounterId, long territoryId, String strategyTag, TrackMode trackMode,
+            Boolean useDefaultTemplate) {
     }
 
     public record UpdatePlanRequest(String name, PlanSnapshot snapshot) {

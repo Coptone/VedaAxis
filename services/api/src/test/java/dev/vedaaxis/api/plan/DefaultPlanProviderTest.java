@@ -63,6 +63,19 @@ class DefaultPlanProviderTest {
         assertThat(provider.minimumPluginVersion(1363, "OTHER", TrackMode.EIGHT, "fallback"))
                 .isEqualTo("fallback");
         assertThat(provider.match(1363, "DMU-P1P2", TrackMode.FOUR)).isEmpty();
+        assertThat(provider.match(1363, "DMU-P1P2-FOUR", TrackMode.FOUR)).isPresent();
+    }
+
+    @Test
+    void createsDmuFourTrackTimelineWithoutEightTrackMitigationAssignments() {
+        PlanSnapshot snapshot = provider.create(
+                UUID.randomUUID(), 1363, "DMU-P1P2-FOUR", TrackMode.FOUR);
+
+        assertThat(snapshot.trackMode()).isEqualTo(TrackMode.FOUR);
+        assertThat(snapshot.strategyTag()).isEqualTo("DMU-P1P2-FOUR");
+        assertThat(snapshot.tracks()).hasSize(4);
+        assertThat(snapshot.mechanics()).hasSize(76);
+        assertThat(snapshot.assignments()).isEmpty();
     }
 
     @Test

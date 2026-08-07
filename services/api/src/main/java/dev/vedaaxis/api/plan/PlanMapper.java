@@ -1,5 +1,6 @@
 package dev.vedaaxis.api.plan;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -125,4 +126,10 @@ public interface PlanMapper {
 
     @Update("UPDATE plan_version SET status = 'SUPERSEDED' WHERE plan_id = #{planId} AND status = 'ACTIVE'")
     int supersedeActive(@Param("planId") String planId);
+
+    @Delete("DELETE FROM plan_version WHERE plan_id = #{planId}")
+    int deleteVersions(@Param("planId") String planId);
+
+    @Delete("DELETE FROM mitigation_plan WHERE id = #{id} AND owner_id = #{ownerId}")
+    int deletePlan(@Param("id") String id, @Param("ownerId") String ownerId);
 }

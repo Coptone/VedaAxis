@@ -88,8 +88,9 @@ export const api = {
   plans: () => request<PlanSummary[]>('/plans'),
   plan: (planId: string) => request<PlanDetails>(`/plans/${planId}`),
   copyPlan: (planId: string) => request<PlanDetails>(`/plans/${planId}/copy`, { method: 'POST' }),
-  createPlan: (payload: { name: string; encounterId: string; territoryId: number; strategyTag: string; trackMode: TrackMode }) =>
+  createPlan: (payload: { name: string; encounterId: string; territoryId: number; strategyTag: string; trackMode: TrackMode; useDefaultTemplate?: boolean }) =>
     request<PlanDetails>('/plans', { method: 'POST', body: JSON.stringify(payload) }),
+  deletePlan: (planId: string) => request<void>(`/plans/${planId}`, { method: 'DELETE' }),
   updatePlan: (planId: string, name: string, snapshot: PlanSnapshot) =>
     request<PlanDetails>(`/plans/${planId}`, {
       method: 'PUT',

@@ -2,7 +2,7 @@
 
 > 最近更新：2026-08-07
 >
-> 当前测试版：`0.1.11`（公网 Web 与插件仓库已部署，API 保持 active/UP）
+> 当前测试版：`0.1.12`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
 >
 > 进度口径：`已完成` 表示已有可复现的验证证据；`进行中` 表示代码或样板已存在，但仍缺少 PRD 要求的完整验收；`待开始` 表示尚未进入实现。
 
@@ -103,6 +103,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 ## 最近里程碑
 
+- 2026-08-08：计划列表与同步体验迭代已部署到 HTTPS 测试环境，并发布插件 `0.1.12`。Web 计划列表新增删除计划入口与二次确认，后端新增 `DELETE /plans/{planId}`，只允许删除当前账号拥有的计划，并先删除 `plan_version` 后删除 `mitigation_plan`，已上传的 `fight_execution` 复盘记录不随计划删除。新建计划入口改为“选择副本 → 选择轨道/职业 → 是否套用默认模板”的弹窗向导；职业选择会在进入编辑器后自动定位到包含该职业的轨道；创建请求新增 `useDefaultTemplate`，旧客户端未传时仍默认套模板。DMU 四轨新增服务端默认时间轴兜底，加载 P1/P2 机制但不预置八轨减伤安排，避免四轨按 `DMU-P1P2-FOUR` 同步时直接 404。插件计划类型下拉新增 DMU 八轨、DMU 四轨、O8S 三个快捷项，并增加自定义方案标签输入；同步 404 时显示 Territory、方案标签和轨道模式，提示去网页发布同一副本/方案/轨道的计划或切换方案。验证通过：`pnpm install --frozen-lockfile`、`pnpm check:web`、Web 37 项测试、`pnpm build:web`、API 43 项测试、API JAR 构建、Python 9 项测试、Core 32 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`。公网 Web 入口为 `assets/index-BemnOlB7.js` 与 `assets/index-BM21OHOb.css`，分别返回 HTTP 200 且长度为 278,678 与 55,668 字节；`/VedaAxis/api/v1/plans` 未登录返回 401；API 内部健康检查为 `UP`。公网 `pluginmaster.json` 为 `0.1.12.0`，`release/latest/VedaAxis.zip` 和 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 与本地一致：`cf3b8b724b436f678cfd1349aca97df50e972b6029df2938e8a8eb10aed080cb`；API JAR SHA-256 为 `4c4e6415a2153ad24dad05384f9507b50bdc46fc6f3512a0b734a7442f5b7eae`。部署前备份位于 `/opt/vedaaxis/backups/20260808-0006-delete-create-sync`；部署中发现新上传 `assets` 目录权限过窄导致资源被前端 fallback，已修正为 `www:www` 与可读权限并复核公网资源长度。
 - 2026-08-07：AI 候选安全约束已增强并部署到 HTTPS 测试环境。Web 默认勾选“只新增，不改现有安排”，并默认关闭“允许使用 GCD 技能”；API 对旧客户端同样按“保留现有安排、禁止新增/改用 GCD”处理，候选即使返回 UPDATE/DELETE 或新 GCD 安排也会在服务端拒绝，不依赖提示词自觉。Flyway v8 为技能目录增加 `cast_category`，生产 PostgreSQL 只读回读为 118 条技能、其中 6 条 GCD：鼓舞激励之策、士气高扬之策、均衡诊断、均衡预后、魂灵风息、均衡预后 II。验证通过：`pnpm check:web`、Web 35 项测试、`pnpm build:web`、API 40 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-GaPRez9Q.js` 与 `assets/index-pWB-AhuL.css`，API JAR SHA-256 为 `5D3211F78D881ABDB16FD659E639839A65DA50594699B5CA4090142ED1504EDB`，API 内部健康检查为 `UP`，Flyway 已将生产库迁移到 v8。部署前备份位于 `/opt/vedaaxis/backups/20260807-192314-ai-safety`。真实 AI 候选仍必须由用户点击生成、查看差异并明确确认后才能写入或发布。
 - 2026-08-07：Web 发布失败可见性热修已部署。计划编辑器在发布返回规则校验 422 时，会在页面顶部显示“规则校验未通过”面板，列出错误/警告数量、规则代码、中文标题、机制时间、轨道、技能与窗口；点击任一规则问题可直接跳到对应机制和任务卡片。底部规则校验区同步改为完整可点击列表。验证通过：`pnpm check:web`、Web 36 项测试、`pnpm build:web` 与 `git diff --check`；公网 Web 入口为 `assets/index-DHokG80u.js` 与 `assets/index-DlNBuUyP.css`，两项静态资源均返回 HTTP 200 且长度分别为 272,233 与 52,457 字节。部署前备份位于 `/opt/vedaaxis/backups/20260807-223026-validation-ui`。该变更仅更新 Web 静态资源，未更新 API JAR 或插件 ZIP。
 - 2026-08-07：提交 `0a85232` 为 AI 候选增加账号 allowlist，并已在服务器环境中配置 AI Key 与指定所有者账号。Key 未进入仓库、数据库或文档；API 35 项测试通过，公网 API 重启后健康检查 `UP`，DeepSeek `deepseek-v4-pro` 最小请求返回 HTTP 200。备份位于 `/opt/vedaaxis/backups/20260807-1701-ai-key-0a85232`。

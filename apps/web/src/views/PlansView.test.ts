@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { createPinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from '../api/client'
+import type { PlanSummary } from '../types/domain'
 import PlansView from './PlansView.vue'
 
 vi.mock('../api/client', () => ({
@@ -10,14 +11,26 @@ vi.mock('../api/client', () => ({
     plans: vi.fn().mockResolvedValue([]),
     createPlan: vi.fn(),
     copyPlan: vi.fn(),
+    deletePlan: vi.fn(),
   },
   ApiError: class ApiError extends Error {},
 }))
 
+function createTestRouter() {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/plans', component: PlansView },
+      { path: '/plans/:planId', component: { template: '<div />' } },
+    ],
+  })
+  return router
+}
+
 describe('PlansView', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('creates the dedicated O8S cloud-linkage plan', async () => {
+  it('creates a plan through the encounter job and template wizard', async () => {
     vi.mocked(api.createPlan).mockResolvedValue({
       plan: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -27,19 +40,16 @@ describe('PlansView', () => {
       },
       snapshot: {} as never,
     })
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/plans', component: PlansView },
-        { path: '/plans/:planId', component: { template: '<div />' } },
-      ],
-    })
+    const router = createTestRouter()
     await router.push('/plans')
     await router.isReady()
     const wrapper = mount(PlansView, { global: { plugins: [createPinia(), router] } })
     await flushPromises()
 
-    await wrapper.get('.create-actions button').trigger('click')
+    await wrapper.get('.create-actions .primary-button').trigger('click')
+    await wrapper.findAll('.encounter-choice')[1]!.trigger('click')
+    await wrapper.findAll('.create-plan-grid select')[1]!.setValue('40')
+    await wrapper.get('.create-plan-dialog footer .primary-button').trigger('click')
     await flushPromises()
 
     expect(api.createPlan).toHaveBeenCalledWith({
@@ -48,8 +58,39 @@ describe('PlansView', () => {
       territoryId: 755,
       strategyTag: 'O8S-POC',
       trackMode: 'EIGHT',
+      useDefaultTemplate: true,
     })
     expect(router.currentRoute.value.path).toBe('/plans/11111111-1111-4111-8111-111111111111')
+    expect(router.currentRoute.value.query.jobId).toBe('40')
+    wrapper.unmount()
+  })
+
+  it('deletes a cloud plan after confirmation', async () => {
+    const plan: PlanSummary = {
+      id: '22222222-2222-4222-8222-222222222222',
+      name: '待删除计划',
+      encounterId: 'c97e8840-1697-476f-a4ac-8c7996df277b',
+      territoryId: 1363,
+      strategyTag: 'DMU-P1P2',
+      trackMode: 'EIGHT',
+      latestVersion: 2,
+      updatedAt: '2026-08-07T00:00:00Z',
+    }
+    vi.mocked(api.plans).mockResolvedValue([plan])
+    vi.mocked(api.deletePlan).mockResolvedValue(undefined)
+    const router = createTestRouter()
+    await router.push('/plans')
+    await router.isReady()
+    const wrapper = mount(PlansView, { global: { plugins: [createPinia(), router] } })
+    await flushPromises()
+
+    await wrapper.get('.plan-card .icon-button.danger').trigger('click')
+    expect(wrapper.get('.delete-plan-dialog').text()).toContain('待删除计划')
+    await wrapper.get('.delete-plan-confirm').trigger('click')
+    await flushPromises()
+
+    expect(api.deletePlan).toHaveBeenCalledWith(plan.id)
+    expect(wrapper.text()).not.toContain('待删除计划')
     wrapper.unmount()
   })
 })

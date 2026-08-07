@@ -22,8 +22,8 @@
     "LoadPriority": 0,
     "AcceptsFeedback": true,
     "RepoUrl": "https://gitee.com/Need4Spd/VedaAxis",
-    "DownloadLinkInstall": "https://coptone.link/VedaAxis/release/latest/VedaAxis.zip",
-    "DownloadLinkUpdate": "https://coptone.link/VedaAxis/release/latest/VedaAxis.zip",
+    "DownloadLinkInstall": "https://gitee.com/Need4Spd/VedaAxis/raw/main/repository/VedaAxis.zip",
+    "DownloadLinkUpdate": "https://gitee.com/Need4Spd/VedaAxis/raw/main/repository/VedaAxis.zip",
     "DownloadLinkTesting": null,
     "IsHide": false,
     "IsTestingExclusive": false

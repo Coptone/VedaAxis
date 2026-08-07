@@ -295,7 +295,8 @@ const selectedAssignmentTimelineTicks = computed(() => allMechanics.value
 
 onMounted(async () => {
   try {
-    abilities.value = await api.abilities()
+    const loadedAbilities = await api.abilities()
+    abilities.value = loadedAbilities.length ? loadedAbilities : fallbackAbilities()
     selectedAbilityId.value = abilities.value[0]?.actionId ?? null
   } catch {
     abilities.value = fallbackAbilities()
@@ -1248,6 +1249,7 @@ function fallbackAbilities(): AbilityDefinition[] {
                 referrerpolicy="no-referrer"
                 @error="hideBrokenIcon"
               />
+              <span v-else class="action-icon action-icon-card action-icon-placeholder">?</span>
               <div>
                 <b>{{ abilityMap.get(assignment.actionId)?.name ?? `Action ${assignment.actionId}` }}</b>
                 <small>施放 {{ formatTime(assignment.earliestUseAtMs) }}–{{ formatTime(assignment.latestUseAtMs) }} · 判定 {{ formatTime(assignment.impactAtMs) }}</small>

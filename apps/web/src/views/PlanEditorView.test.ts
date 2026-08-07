@@ -42,6 +42,7 @@ describe('PlanEditorView', () => {
     expect(wrapper.findAll('.mechanic-item')).toHaveLength(12)
     expect(wrapper.get('.assignment-board h2').text()).toBe('攻击 x4')
     expect(wrapper.findAll('.assignment-card')).toHaveLength(8)
+    expect(wrapper.findAll('.assignment-card .action-icon-placeholder')).toHaveLength(8)
     expect(wrapper.findAll('.track-column')).toHaveLength(8)
     expect(wrapper.get('.damage-analysis-panel h3').text()).toBe('当前减伤后预计伤害')
     expect(wrapper.get('.damage-estimate-note').text()).toContain('P95 实测')

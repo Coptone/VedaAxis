@@ -7,7 +7,7 @@ import dev.vedaaxis.api.plan.TrackSlot;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -40,7 +40,7 @@ class SurvivabilityAnalysisServiceTest {
                 7531, "铁壁", "", Set.of(19), 90_000, 1, 20_000,
                 ConfirmationStrategy.STATUS_APPLY, "test", "REVIEWED",
                 new AbilityEffectCatalog().profile(7531));
-        when(catalog.find(7531)).thenReturn(Optional.of(rampart));
+        when(catalog.load()).thenReturn(Map.of(7531L, rampart));
         SurvivabilityAnalysisService service = new SurvivabilityAnalysisService(catalog);
         PlanSnapshot.Assignment assignment = new PlanSnapshot.Assignment(
                 UUID.randomUUID(), mechanicId, targetTrackId, 7531, null,
@@ -73,7 +73,7 @@ class SurvivabilityAnalysisServiceTest {
                 7531, "铁壁", "", Set.of(19), 90_000, 1, 20_000,
                 ConfirmationStrategy.STATUS_APPLY, "test", "REVIEWED",
                 new AbilityEffectCatalog().profile(7531));
-        when(catalog.find(7531)).thenReturn(Optional.of(rampart));
+        when(catalog.load()).thenReturn(Map.of(7531L, rampart));
         SurvivabilityAnalysisService service = new SurvivabilityAnalysisService(catalog);
         UUID earlierRowId = UUID.randomUUID();
         PlanSnapshot.Assignment assignment = new PlanSnapshot.Assignment(

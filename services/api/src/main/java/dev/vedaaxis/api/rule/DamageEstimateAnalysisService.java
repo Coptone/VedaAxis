@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,12 +25,17 @@ import java.util.UUID;
 @Service
 public class DamageEstimateAnalysisService {
     private final SurvivabilityAnalysisService survivabilityAnalysisService;
+    private final AbilityCatalog abilityCatalog;
 
-    public DamageEstimateAnalysisService(SurvivabilityAnalysisService survivabilityAnalysisService) {
+    public DamageEstimateAnalysisService(
+            SurvivabilityAnalysisService survivabilityAnalysisService,
+            AbilityCatalog abilityCatalog) {
         this.survivabilityAnalysisService = survivabilityAnalysisService;
+        this.abilityCatalog = abilityCatalog;
     }
 
     public List<MechanicEstimate> preview(PlanSnapshot snapshot) {
+        Map<Long, AbilityDefinition> abilitiesByActionId = abilityCatalog.load();
         List<MechanicEstimate> estimates = new ArrayList<>();
         for (PlanSnapshot.TimelineMechanic mechanic : snapshot.mechanics()) {
             if (mechanic.damageProfile() == null) {
@@ -38,7 +44,7 @@ public class DamageEstimateAnalysisService {
             }
             List<PlanSnapshot.ExecutionTrack> targets = targetTracks(snapshot, mechanic);
             List<TargetEstimate> targetEstimates = targets.stream()
-                    .map(track -> analyzeTarget(snapshot, mechanic, track))
+                    .map(track -> analyzeTarget(snapshot, mechanic, track, abilitiesByActionId))
                     .filter(estimate -> estimate.analysis().damageAfterMitigation() != null)
                     .toList();
             if (targetEstimates.isEmpty()) {
@@ -72,10 +78,12 @@ public class DamageEstimateAnalysisService {
     private TargetEstimate analyzeTarget(
             PlanSnapshot snapshot,
             PlanSnapshot.TimelineMechanic mechanic,
-            PlanSnapshot.ExecutionTrack track) {
+            PlanSnapshot.ExecutionTrack track,
+            Map<Long, AbilityDefinition> abilitiesByActionId) {
         SurvivabilityAnalysisService.Analysis analysis = survivabilityAnalysisService.analyze(
                 snapshot, mechanic.mechanicId(),
-                new SurvivabilityAnalysisService.Request(track.trackId(), 1, 1, true, true));
+                new SurvivabilityAnalysisService.Request(track.trackId(), 1, 1, true, true),
+                abilitiesByActionId);
         return new TargetEstimate(track, analysis);
     }
 

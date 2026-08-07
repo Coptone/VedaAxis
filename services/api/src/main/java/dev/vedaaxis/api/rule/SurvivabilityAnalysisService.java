@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,6 +23,14 @@ public class SurvivabilityAnalysisService {
     }
 
     public Analysis analyze(PlanSnapshot snapshot, UUID mechanicId, Request request) {
+        return analyze(snapshot, mechanicId, request, abilityCatalog.load());
+    }
+
+    Analysis analyze(
+            PlanSnapshot snapshot,
+            UUID mechanicId,
+            Request request,
+            Map<Long, AbilityDefinition> abilitiesByActionId) {
         PlanSnapshot.TimelineMechanic mechanic = snapshot.mechanics().stream()
                 .filter(candidate -> candidate.mechanicId().equals(mechanicId))
                 .findFirst()
@@ -38,7 +47,7 @@ public class SurvivabilityAnalysisService {
         Set<Long> includedActionIds = new HashSet<>();
         boolean conditionsConfirmed = true;
         for (PlanSnapshot.Assignment assignment : snapshot.assignments()) {
-            AbilityDefinition ability = abilityCatalog.find(assignment.actionId()).orElse(null);
+            AbilityDefinition ability = abilitiesByActionId.get(assignment.actionId());
             if (!isRelevantToImpact(assignment, ability, mechanic)) {
                 continue;
             }

@@ -7,12 +7,14 @@ import dev.vedaaxis.api.plan.TrackSlot;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DamageEstimateAnalysisServiceTest {
@@ -39,9 +41,9 @@ class DamageEstimateAnalysisServiceTest {
                 7531, "铁壁", "", Set.of(19), 90_000, 1, 20_000,
                 ConfirmationStrategy.STATUS_APPLY, "test", "REVIEWED",
                 new AbilityEffectCatalog().profile(7531));
-        when(catalog.find(7531)).thenReturn(Optional.of(rampart));
+        when(catalog.load()).thenReturn(Map.of(7531L, rampart));
         SurvivabilityAnalysisService survivability = new SurvivabilityAnalysisService(catalog);
-        DamageEstimateAnalysisService service = new DamageEstimateAnalysisService(survivability);
+        DamageEstimateAnalysisService service = new DamageEstimateAnalysisService(survivability, catalog);
         UUID mechanicId = UUID.randomUUID();
         UUID mt = UUID.randomUUID();
         UUID healer = UUID.randomUUID();
@@ -73,6 +75,7 @@ class DamageEstimateAnalysisServiceTest {
         assertThat(result.worstTrackSlot()).isEqualTo(TrackSlot.H1);
         assertThat(result.riskLevel()).isEqualTo(DamageEstimateAnalysisService.RiskLevel.YELLOW);
         assertThat(result.notices()).anyMatch(value -> value.contains("整段机制"));
+        verify(catalog, times(1)).load();
     }
 
     @Test
@@ -82,9 +85,9 @@ class DamageEstimateAnalysisServiceTest {
                 7531, "铁壁", "", Set.of(19), 90_000, 1, 20_000,
                 ConfirmationStrategy.STATUS_APPLY, "test", "REVIEWED",
                 new AbilityEffectCatalog().profile(7531));
-        when(catalog.find(7531)).thenReturn(Optional.of(rampart));
+        when(catalog.load()).thenReturn(Map.of(7531L, rampart));
         DamageEstimateAnalysisService service = new DamageEstimateAnalysisService(
-                new SurvivabilityAnalysisService(catalog));
+                new SurvivabilityAnalysisService(catalog), catalog);
         UUID mechanicId = UUID.randomUUID();
         UUID mt = UUID.randomUUID();
         UUID healer = UUID.randomUUID();
@@ -114,5 +117,6 @@ class DamageEstimateAnalysisServiceTest {
         assertThat(result.damageAfterMitigation()).isEqualTo(144_000);
         assertThat(result.worstTrackSlot()).isEqualTo(TrackSlot.MT);
         assertThat(result.riskLevel()).isEqualTo(DamageEstimateAnalysisService.RiskLevel.UNCLASSIFIED);
+        verify(catalog, times(1)).load();
     }
 }

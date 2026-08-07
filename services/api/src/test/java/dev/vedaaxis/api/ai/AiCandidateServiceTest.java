@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -48,8 +49,8 @@ class AiCandidateServiceTest {
                 List.of(focusAssignment, changedOtherAssignment),
                 AiCandidateService.OptimizationMode.FOCUSED,
                 focusTrackId))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("非目标轨道");
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
     }
 
     @Test
@@ -75,8 +76,8 @@ class AiCandidateServiceTest {
                 List.of(candidate),
                 AiCandidateService.OptimizationMode.GLOBAL,
                 null))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("低风险机制");
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
     }
 
     @Test
@@ -94,8 +95,59 @@ class AiCandidateServiceTest {
                 "",
                 AiCandidateService.OptimizationMode.GLOBAL,
                 null))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("未开通");
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_NOT_ENABLED_FOR_ACCOUNT"));
+    }
+
+    @Test
+    void appliesAiDeltaOperationsToBaseAssignments() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot.Assignment original = assignment(
+                UUID.fromString("30000000-0000-4000-8000-000000000001"), mechanicId, trackId, 100);
+        PlanSnapshot.Assignment updated = new PlanSnapshot.Assignment(
+                original.assignmentId(), original.mechanicId(), original.trackId(),
+                original.actionId(), null, 0, 2_000, 3_000, 4_000,
+                false, ConfirmationStrategy.STATUS_APPLY, List.of(), null);
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of(original));
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        List<PlanSnapshot.Assignment> result = service.resolveCandidateAssignments(
+                snapshot,
+                new AiCandidateService.AiPayload(
+                        null,
+                        List.of(new AiCandidateService.AiOperation("UPDATE", original.assignmentId(), updated)),
+                        List.of("moved earlier"),
+                        List.of()));
+
+        assertThat(result).containsExactly(updated);
+    }
+
+    @Test
+    void rejectsAiDeltaOperationForUnknownAssignment() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        UUID unknownAssignmentId = UUID.fromString("30000000-0000-4000-8000-000000000099");
+        PlanSnapshot.Assignment original = assignment(
+                UUID.fromString("30000000-0000-4000-8000-000000000001"), mechanicId, trackId, 100);
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of(original));
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        assertThatThrownBy(() -> service.resolveCandidateAssignments(
+                snapshot,
+                new AiCandidateService.AiPayload(
+                        null,
+                        List.of(new AiCandidateService.AiOperation("DELETE", unknownAssignmentId, null)),
+                        List.of(),
+                        List.of())))
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
     }
 
     private AiCandidateService serviceWithCatalog(
@@ -111,6 +163,7 @@ class AiCandidateServiceTest {
         AbilityCatalog abilityCatalog = mock(AbilityCatalog.class);
         DamageEstimateAnalysisService damageEstimateAnalysisService = mock(DamageEstimateAnalysisService.class);
         when(abilityCatalog.load()).thenReturn(abilities);
+        when(abilityCatalog.all()).thenReturn(abilities.values().stream().toList());
         when(damageEstimateAnalysisService.preview(org.mockito.ArgumentMatchers.any())).thenReturn(estimates);
         return new AiCandidateService(
                 mock(dev.vedaaxis.api.plan.PlanService.class),
@@ -122,7 +175,8 @@ class AiCandidateServiceTest {
                 "https://example.invalid",
                 "test-key",
                 "test-model",
-                allowedUserIds);
+                allowedUserIds,
+                1_000);
     }
 
     private PlanSnapshot snapshot(

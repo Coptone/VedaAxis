@@ -10,12 +10,15 @@ import dev.vedaaxis.api.rule.PlanRuleEngine;
 import dev.vedaaxis.api.rule.RuleValidationResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,13 +55,19 @@ public class AiCandidateService {
             @Value("${vedaaxis.ai.base-url:https://api.deepseek.com}") String baseUrl,
             @Value("${vedaaxis.ai.api-key:}") String apiKey,
             @Value("${vedaaxis.ai.model:deepseek-v4-pro}") String model,
-            @Value("${vedaaxis.ai.allowed-user-ids:}") String allowedUserIds) {
+            @Value("${vedaaxis.ai.allowed-user-ids:}") String allowedUserIds,
+            @Value("${vedaaxis.ai.timeout-ms:90000}") long timeoutMs) {
         this.planService = planService;
         this.ruleEngine = ruleEngine;
         this.abilityCatalog = abilityCatalog;
         this.damageEstimateAnalysisService = damageEstimateAnalysisService;
         this.objectMapper = objectMapper;
-        this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofMillis(Math.max(1_000, timeoutMs)));
+        this.restClient = restClientBuilder.baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.apiKey = apiKey;
         this.model = model;
         this.allowedUserIds = parseAllowedUserIds(allowedUserIds);
@@ -85,7 +94,8 @@ public class AiCandidateService {
                 : null;
         AiPayload payload = requestCandidate(
                 base, instruction == null ? "" : instruction.trim(), requestedMode, normalizedFocusTrackId);
-        enforceSafety(base, payload.assignments(), requestedMode, normalizedFocusTrackId);
+        List<PlanSnapshot.Assignment> candidateAssignments = resolveCandidateAssignments(base, payload);
+        enforceSafety(base, candidateAssignments, requestedMode, normalizedFocusTrackId);
 
         PlanSnapshot candidateSnapshot = new PlanSnapshot(
                 base.schemaVersion(), base.minimumPluginVersion(), base.planId(), base.planVersion(),
@@ -94,11 +104,11 @@ public class AiCandidateService {
                         PlanSnapshot.SourceKind.AI_CANDIDATE,
                         "DeepSeek " + model,
                         PlanSnapshot.Confidence.UNVERIFIED),
-                base.phases(), base.mechanics(), base.anchors(), base.tracks(), payload.assignments());
+                base.phases(), base.mechanics(), base.anchors(), base.tracks(), candidateAssignments);
         RuleValidationResult validation = ruleEngine.validate(candidateSnapshot);
         String confidence = validation.valid() ? "RULE_VALIDATED" : "UNVERIFIED";
         return new AiCandidate(
-                "1.0", UUID.randomUUID(), base.planId(), payload.assignments(),
+                "1.0", UUID.randomUUID(), base.planId(), candidateAssignments,
                 payload.reasons(), payload.warnings(), confidence, "DeepSeek", model, Instant.now(), validation);
     }
 
@@ -109,38 +119,44 @@ public class AiCandidateService {
             OptimizationMode mode,
             UUID focusTrackId) {
         try {
-            String planJson = objectMapper.writeValueAsString(base);
-            String abilityJson = objectMapper.writeValueAsString(relevantAbilities(base));
+            String planJson = objectMapper.writeValueAsString(compactPlanContext(base));
+            String abilityJson = objectMapper.writeValueAsString(relevantAbilitySummaries(base));
             String damagePreviewJson = objectMapper.writeValueAsString(mechanicRiskSummary(base));
             String optimizationContextJson = objectMapper.writeValueAsString(optimizationContext(base, mode, focusTrackId));
             String systemPrompt = """
-                    你是 FFXIV 减伤计划候选生成器。只输出 JSON，不得输出 Markdown。
-                    JSON 格式必须是：
-                    {"assignments":[完整最终计划 assignment 对象数组],"reasons":[字符串],"warnings":[字符串]}。
-                    不得修改 locked=true 的任务；不得生成新轨道；不得假设未提供的技能数据；只能使用可用技能目录中的 actionId；
-                    时间单位全部为毫秒，且 highlightAtMs <= earliestUseAtMs <= latestUseAtMs <= impactAtMs。
-                    assignments 必须返回完整最终列表：没有改变的任务也要原样带回，不能只返回增量。
-                    优化目标是提高减伤、护盾、治疗和增疗利用率：优先补足 RED/YELLOW 风险，优先让长持续技能覆盖多个机制，
-                    避免同一轨道冷却冲突；单体减伤必须保留 targetTrackId。
-                    不要给 GREEN 风险机制新增纯治疗、增疗资源或未建模护盾；这些技能只在 RED/YELLOW、连续高压或明确缺口时使用。
-                    不能只按裸伤害大小排序。必须同时参考 attackClass：AOE 以全队生存和团减为主，TANK_BUSTER 以防护/单体/敌方减伤为主，
-                    AUTO_ATTACK 只在连续坦克压力或风险非绿色时处理，普通 MECHANIC 需要按 target 和备注谨慎处理。
-                    治疗、护盾和无敌可作为复核候选，但不得把纯治疗或未建模护盾伪装成百分比减伤。
-                    当 optimizationMode=FOCUSED 时，只允许新增、删除或修改 focusTrackId 对应轨道上的非锁定任务；
-                    其它轨道只能作为上下文，必须逐项原样返回。
+                    You are a Final Fantasy XIV mitigation-planning candidate generator.
+                    Output JSON only. Do not output Markdown.
+                    Required JSON format:
+                    {"operations":[{"op":"ADD|UPDATE|DELETE","assignmentId":"uuid for UPDATE/DELETE","assignment":{assignment object for ADD/UPDATE}}],"reasons":["..."],"warnings":["..."]}.
+                    Return only changed assignments as operations. Do not return the full assignments list unless you cannot express the answer as operations.
+                    For no useful change, return {"operations":[],"reasons":["..."],"warnings":["..."]}.
+                    Assignment object fields must match the current plan assignment shape exactly:
+                    assignmentId, mechanicId, trackId, actionId, anchorId, highlightAtMs, earliestUseAtMs, latestUseAtMs, impactAtMs, locked, confirmationStrategy, fallbacks, targetTrackId.
+                    Never modify or delete locked=true assignments.
+                    Never create new tracks or mechanics.
+                    Only use actionId values from the available ability catalog.
+                    All times are milliseconds and must satisfy highlightAtMs <= earliestUseAtMs <= latestUseAtMs <= impactAtMs.
+                    Optimize mitigation, shield, healing and healing-buff utilization: prioritize RED/YELLOW risks, use long-duration skills to cover multiple mechanics, and avoid cooldown conflicts on the same track.
+                    Preserve targetTrackId for single-target mitigation.
+                    Do not add pure healing, healing buffs, resource skills, or unmodeled shields to GREEN mechanics unless there is a clear sustained-pressure gap.
+                    Do not optimize only by raw damage size. Use attackClass: AOE uses party survival and raid mitigation, TANK_BUSTER uses tank/self/target/enemy mitigation, AUTO_ATTACK only matters under sustained tank pressure, and MECHANIC requires target/context review.
+                    Healing, shields, and invulnerability may be candidate support, but do not pretend pure healing or unmodeled shields are percentage mitigation.
+                    When optimizationMode=FOCUSED, only ADD, UPDATE, or DELETE unlocked assignments on focusTrackId. Other tracks are read-only context.
                     """;
-            String userPrompt = "现有计划 JSON：\n" + planJson
-                    + "\n可用技能目录 JSON：\n" + abilityJson
-                    + "\n当前伤害预览摘要 JSON：\n" + damagePreviewJson
-                    + "\n优化模式 JSON：\n" + optimizationContextJson
-                    + "\n用户要求：\n" + (instruction.isBlank() ? "在不改锁定项的前提下优化覆盖和冲突。" : instruction);
+            String userPrompt = "Current compact plan JSON:\n" + planJson
+                    + "\nAvailable ability catalog JSON:\n" + abilityJson
+                    + "\nCurrent damage/risk preview JSON:\n" + damagePreviewJson
+                    + "\nOptimization mode JSON:\n" + optimizationContextJson
+                    + "\nUser instruction:\n" + (instruction.isBlank()
+                    ? "Optimize coverage and conflicts without changing locked assignments."
+                    : instruction);
             Map<String, Object> request = Map.of(
                     "model", model,
                     "messages", List.of(
                             Map.of("role", "system", "content", systemPrompt),
                             Map.of("role", "user", "content", userPrompt)),
                     "response_format", Map.of("type", "json_object"),
-                    "max_tokens", 8192,
+                    "max_tokens", 4096,
                     "stream", false);
 
             Map<String, Object> response = restClient.post()
@@ -163,7 +179,9 @@ public class AiCandidateService {
                 throw invalidResponse("content 为空");
             }
             AiPayload payload = objectMapper.readValue(content, AiPayload.class);
-            if (payload.assignments() == null || payload.reasons() == null || payload.warnings() == null) {
+            if ((payload.assignments() == null && payload.operations() == null)
+                    || payload.reasons() == null
+                    || payload.warnings() == null) {
                 throw invalidResponse("候选字段不完整");
             }
             return payload;
@@ -174,6 +192,72 @@ public class AiCandidateService {
         } catch (JacksonException | ClassCastException exception) {
             throw invalidResponse("JSON 无法解析");
         }
+    }
+
+    List<PlanSnapshot.Assignment> resolveCandidateAssignments(PlanSnapshot base, AiPayload payload) {
+        if (payload.assignments() != null) {
+            return List.copyOf(payload.assignments());
+        }
+        if (payload.operations() == null) {
+            throw invalidResponse("缺少 assignments 或 operations");
+        }
+
+        LinkedHashMap<UUID, PlanSnapshot.Assignment> assignmentsById = new LinkedHashMap<>();
+        for (PlanSnapshot.Assignment assignment : base.assignments()) {
+            assignmentsById.put(assignment.assignmentId(), assignment);
+        }
+
+        for (AiOperation operation : payload.operations()) {
+            if (operation == null || operation.op() == null || operation.op().isBlank()) {
+                throw invalidResponse("operation 缺少 op");
+            }
+            String op = operation.op().trim().toUpperCase(Locale.ROOT);
+            switch (op) {
+                case "ADD" -> {
+                    PlanSnapshot.Assignment assignment = requireOperationAssignment(operation, op);
+                    if (assignmentsById.containsKey(assignment.assignmentId())) {
+                        throw invalidResponse("ADD 使用了已存在的 assignmentId " + assignment.assignmentId());
+                    }
+                    assignmentsById.put(assignment.assignmentId(), assignment);
+                }
+                case "UPDATE" -> {
+                    PlanSnapshot.Assignment assignment = requireOperationAssignment(operation, op);
+                    UUID assignmentId = operation.assignmentId() == null
+                            ? assignment.assignmentId()
+                            : operation.assignmentId();
+                    if (!assignmentId.equals(assignment.assignmentId())) {
+                        throw invalidResponse("UPDATE 的 assignmentId 与 assignment.assignmentId 不一致");
+                    }
+                    if (!assignmentsById.containsKey(assignment.assignmentId())) {
+                        throw invalidResponse("UPDATE 引用了不存在的 assignmentId " + assignment.assignmentId());
+                    }
+                    assignmentsById.put(assignment.assignmentId(), assignment);
+                }
+                case "DELETE" -> {
+                    UUID assignmentId = operation.assignmentId();
+                    if (assignmentId == null && operation.assignment() != null) {
+                        assignmentId = operation.assignment().assignmentId();
+                    }
+                    if (assignmentId == null) {
+                        throw invalidResponse("DELETE 缺少 assignmentId");
+                    }
+                    if (!assignmentsById.containsKey(assignmentId)) {
+                        throw invalidResponse("DELETE 引用了不存在的 assignmentId " + assignmentId);
+                    }
+                    assignmentsById.remove(assignmentId);
+                }
+                default -> throw invalidResponse("未支持的 operation " + operation.op());
+            }
+        }
+
+        return List.copyOf(assignmentsById.values());
+    }
+
+    private PlanSnapshot.Assignment requireOperationAssignment(AiOperation operation, String op) {
+        if (operation.assignment() == null) {
+            throw invalidResponse(op + " 缺少 assignment");
+        }
+        return operation.assignment();
     }
 
     private UUID requireFocusTrack(PlanSnapshot base, UUID focusTrackId) {
@@ -232,6 +316,57 @@ public class AiCandidateService {
                 .filter(ability -> ability.jobIds().isEmpty()
                         || ability.jobIds().stream().anyMatch(jobIds::contains))
                 .toList();
+    }
+
+    private Map<String, Object> compactPlanContext(PlanSnapshot snapshot) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("schemaVersion", snapshot.schemaVersion());
+        context.put("minimumPluginVersion", snapshot.minimumPluginVersion());
+        context.put("planId", snapshot.planId());
+        context.put("planVersion", snapshot.planVersion());
+        context.put("timelineId", snapshot.timelineId());
+        context.put("timelineVersion", snapshot.timelineVersion());
+        context.put("encounterId", snapshot.encounterId());
+        context.put("territoryId", snapshot.territoryId());
+        context.put("strategyTag", snapshot.strategyTag());
+        context.put("trackMode", snapshot.trackMode());
+        context.put("tracks", snapshot.tracks());
+        context.put("mechanics", snapshot.mechanics());
+        context.put("assignments", snapshot.assignments());
+        return context;
+    }
+
+    private List<Map<String, Object>> relevantAbilitySummaries(PlanSnapshot snapshot) {
+        return relevantAbilities(snapshot).stream()
+                .map(this::abilitySummary)
+                .toList();
+    }
+
+    private Map<String, Object> abilitySummary(AbilityDefinition ability) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("actionId", ability.actionId());
+        summary.put("name", ability.name());
+        summary.put("jobIds", ability.jobIds());
+        summary.put("cooldownMs", ability.cooldownMs());
+        summary.put("maxCharges", ability.maxCharges());
+        summary.put("durationMs", ability.durationMs());
+        summary.put("confirmationStrategy", ability.confirmationStrategy());
+        if (ability.effect() != null) {
+            Map<String, Object> effect = new LinkedHashMap<>();
+            effect.put("scope", ability.effect().scope());
+            effect.put("allDamageReductionPercent", ability.effect().allDamageReductionPercent());
+            effect.put("physicalDamageReductionPercent", ability.effect().physicalDamageReductionPercent());
+            effect.put("magicalDamageReductionPercent", ability.effect().magicalDamageReductionPercent());
+            effect.put("maximumHpIncreasePercent", ability.effect().maximumHpIncreasePercent());
+            effect.put("maximumHpBarrierPercent", ability.effect().maximumHpBarrierPercent());
+            effect.put("barrierCurePotency", ability.effect().barrierCurePotency());
+            effect.put("invulnerability", ability.effect().invulnerability());
+            effect.put("stackingGroup", ability.effect().stackingGroup());
+            effect.put("calculationReadiness", ability.effect().calculationReadiness());
+            effect.put("conditions", ability.effect().conditions());
+            summary.put("effect", effect);
+        }
+        return summary;
     }
 
     private List<AiMechanicRisk> mechanicRiskSummary(PlanSnapshot snapshot) {
@@ -388,8 +523,15 @@ public class AiCandidateService {
 
     public record AiPayload(
             List<PlanSnapshot.Assignment> assignments,
+            List<AiOperation> operations,
             List<String> reasons,
             List<String> warnings) {
+    }
+
+    public record AiOperation(
+            String op,
+            UUID assignmentId,
+            PlanSnapshot.Assignment assignment) {
     }
 
     private record AiMechanicRisk(

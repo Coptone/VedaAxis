@@ -135,6 +135,75 @@ describe('PlanEditorView', () => {
 
     expect(wrapper.get('.assignment-editor-modal').attributes('role')).toBe('dialog')
     expect(wrapper.findAll('.assignment-editor-controls input[type="range"]')).toHaveLength(4)
+    expect(wrapper.get('.assignment-editor-cancel').text()).toBe('取消')
+  })
+
+  it('reverts timing changes when cancelling the editor', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+    await wrapper.get('.assignment-card').trigger('click')
+    await wrapper.get('.assignment-edit-button').trigger('click')
+    await flushPromises()
+
+    const impactInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[3]!
+    const originalImpact = Number((impactInput.element as HTMLInputElement).value)
+    await impactInput.setValue(String(originalImpact + 1_000))
+    expect(Number((impactInput.element as HTMLInputElement).value)).toBe(originalImpact + 1_000)
+
+    await wrapper.get('.assignment-editor-cancel').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.assignment-editor-modal').exists()).toBe(false)
+
+    await wrapper.get('.assignment-edit-button').trigger('click')
+    await flushPromises()
+    const revertedImpactInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[3]!
+    expect(Number((revertedImpactInput.element as HTMLInputElement).value)).toBe(originalImpact)
+  })
+
+  it('updates assignment timing by dragging a marker on the timeline', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+    await wrapper.get('.assignment-card').trigger('click')
+    await wrapper.get('.assignment-edit-button').trigger('click')
+    await flushPromises()
+
+    const canvas = wrapper.get('.assignment-timeline-canvas')
+    Object.defineProperty(canvas.element, 'getBoundingClientRect', {
+      value: () => ({
+        left: 0,
+        right: 1_000,
+        top: 0,
+        bottom: 240,
+        width: 1_000,
+        height: 240,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+    const impactInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[3]!
+    const originalImpact = Number((impactInput.element as HTMLInputElement).value)
+
+    await wrapper.get('.assignment-marker.impact').trigger('pointerdown', { clientX: 100, pointerId: 1 })
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 850 }))
+    window.dispatchEvent(new MouseEvent('pointerup', { clientX: 850 }))
+    await flushPromises()
+
+    expect(Number((impactInput.element as HTMLInputElement).value)).not.toBe(originalImpact)
   })
 
   it('blocks adding a duplicate ability when the current placement window is on cooldown', async () => {

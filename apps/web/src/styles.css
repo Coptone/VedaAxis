@@ -421,8 +421,13 @@ a { color: inherit; text-decoration: none; }
 .assignment-range { position: absolute; bottom: 80px; height: 13px; border-radius: 999px; }
 .assignment-range.window { background: rgba(82,212,200,.48); box-shadow: 0 0 16px rgba(82,212,200,.14); }
 .assignment-range.coverage { bottom: 100px; background: rgba(125,227,170,.35); box-shadow: 0 0 16px rgba(125,227,170,.12); }
-.assignment-marker { position: absolute; bottom: 66px; min-width: 1px; height: 96px; border-left: 1px solid currentColor; color: #c7d9df; }
+.assignment-marker { position: absolute; z-index: 3; bottom: 66px; min-width: 1px; height: 96px; padding: 0; border: 0; border-left: 1px solid currentColor; color: #c7d9df; background: transparent; text-align: left; cursor: ew-resize; touch-action: none; }
+.assignment-marker::after { content: ''; position: absolute; left: -11px; top: -13px; width: 23px; height: 118px; border-radius: 999px; background: transparent; }
 .assignment-marker b { position: absolute; left: 8px; top: -8px; padding: 2px 6px; border-radius: 999px; background: rgba(5,17,26,.78); border: 1px solid rgba(213,239,245,.16); color: inherit; font-size: 9px; white-space: nowrap; }
+.assignment-marker:hover, .assignment-marker.dragging { filter: brightness(1.25); }
+.assignment-marker:hover b, .assignment-marker.dragging b { border-color: currentColor; box-shadow: 0 0 0 3px rgba(82,212,200,.08), 0 0 18px rgba(82,212,200,.16); }
+.assignment-marker:focus-visible { outline: none; }
+.assignment-marker:focus-visible b { border-color: currentColor; box-shadow: 0 0 0 3px rgba(82,212,200,.18); }
 .assignment-marker.highlight { color: #8fb8c2; }
 .assignment-marker.release { color: var(--cyan); }
 .assignment-marker.latest { color: #a2e7d3; }
@@ -439,6 +444,7 @@ a { color: inherit; text-decoration: none; }
 .assignment-editor-target select { height: 35px; }
 .assignment-editor-panel footer { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .assignment-editor-panel footer p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.assignment-editor-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex: none; }
 
 @media (max-width: 1050px) {
   .auth-layout { grid-template-columns: 1fr 390px; gap: 36px; }
@@ -507,4 +513,6 @@ a { color: inherit; text-decoration: none; }
   .assignment-editor-modal { padding: 14px; }
   .assignment-editor-panel { width: calc(100vw - 28px); max-height: calc(100vh - 28px); padding: 15px; border-radius: 18px; }
   .assignment-editor-panel footer { align-items: stretch; flex-direction: column; }
+  .assignment-editor-actions { width: 100%; }
+  .assignment-editor-actions button { flex: 1; }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   AlertTriangle,
@@ -103,6 +103,9 @@ const damageEstimateBusy = ref(false)
 const damageEstimateError = ref('')
 const timelinePage = ref(0)
 const assignmentEditorOpen = ref(false)
+const assignmentEditorOriginal = ref<Assignment | null>(null)
+const assignmentTimelineRef = ref<HTMLElement | null>(null)
+const draggingAssignmentField = ref<AssignmentTimeField | null>(null)
 let damageEstimateRequest = 0
 let damageEstimateTimer: ReturnType<typeof setTimeout> | undefined
 const TIMELINE_PAGE_SIZE = 12
@@ -664,7 +667,11 @@ watch([selectedTrackId, showAllAbilities, abilities], ensureSelectedAbilityVisib
 watch([mechanics, showTimelineMarkers], ensureSelectedMechanicVisible, { deep: true, immediate: true })
 watch([selectedMechanicId, mechanics], syncTimelinePageToSelection, { deep: true, immediate: true })
 watch(selectedAssignment, (assignment) => {
-  if (!assignment) assignmentEditorOpen.value = false
+  if (!assignment) closeAssignmentEditor()
+})
+
+onBeforeUnmount(() => {
+  stopAssignmentTimelineDrag()
 })
 
 function addAssignment() {
@@ -899,6 +906,75 @@ function assignmentTimelinePercent(milliseconds: number | null | undefined): str
   const start = selectedAssignmentTimelineStartMs.value
   const span = Math.max(1, selectedAssignmentTimelineEndMs.value - start)
   return `${Math.min(100, Math.max(0, ((milliseconds - start) / span) * 100)).toFixed(3)}%`
+}
+
+function cloneAssignmentForEditor(assignment: Assignment): Assignment {
+  return {
+    ...assignment,
+    fallbacks: assignment.fallbacks.map((fallback) => ({ ...fallback })),
+  }
+}
+
+function openAssignmentEditor() {
+  if (!selectedAssignment.value) return
+  assignmentEditorOriginal.value = cloneAssignmentForEditor(selectedAssignment.value)
+  assignmentEditorOpen.value = true
+}
+
+function closeAssignmentEditor() {
+  assignmentEditorOpen.value = false
+  assignmentEditorOriginal.value = null
+  stopAssignmentTimelineDrag()
+}
+
+function cancelAssignmentEditor() {
+  if (selectedAssignment.value && assignmentEditorOriginal.value) {
+    Object.assign(selectedAssignment.value, cloneAssignmentForEditor(assignmentEditorOriginal.value))
+  }
+  closeAssignmentEditor()
+}
+
+function assignmentTimeFromPointer(event: Pick<PointerEvent, 'clientX'>): number | null {
+  const element = assignmentTimelineRef.value
+  if (!element) return null
+  const rect = element.getBoundingClientRect()
+  if (rect.width <= 0) return null
+  const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
+  const start = selectedAssignmentTimelineStartMs.value
+  const span = selectedAssignmentTimelineEndMs.value - start
+  return start + ratio * span
+}
+
+function startAssignmentTimelineDrag(field: AssignmentTimeField, event: PointerEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  draggingAssignmentField.value = field
+  const target = event.currentTarget
+  if (target instanceof HTMLElement && typeof target.setPointerCapture === 'function') {
+    target.setPointerCapture(event.pointerId)
+  }
+  updateAssignmentTimeFromPointer(field, event)
+  window.addEventListener('pointermove', handleAssignmentTimelinePointerMove)
+  window.addEventListener('pointerup', stopAssignmentTimelineDrag, { once: true })
+  window.addEventListener('pointercancel', stopAssignmentTimelineDrag, { once: true })
+}
+
+function handleAssignmentTimelinePointerMove(event: PointerEvent) {
+  if (!draggingAssignmentField.value) return
+  updateAssignmentTimeFromPointer(draggingAssignmentField.value, event)
+}
+
+function updateAssignmentTimeFromPointer(field: AssignmentTimeField, event: Pick<PointerEvent, 'clientX'>) {
+  const time = assignmentTimeFromPointer(event)
+  if (time === null) return
+  setSelectedAssignmentTime(field, time)
+}
+
+function stopAssignmentTimelineDrag() {
+  draggingAssignmentField.value = null
+  window.removeEventListener('pointermove', handleAssignmentTimelinePointerMove)
+  window.removeEventListener('pointerup', stopAssignmentTimelineDrag)
+  window.removeEventListener('pointercancel', stopAssignmentTimelineDrag)
 }
 
 function setSelectedAssignmentTime(field: AssignmentTimeField, rawValue: unknown) {
@@ -1391,7 +1467,7 @@ function fallbackAbilities(): AbilityDefinition[] {
             <span v-if="selectedAssignmentCoverageEndMs() !== null" class="mini-coverage" :style="{ left: assignmentTimelinePercent(selectedAssignment.earliestUseAtMs), width: `calc(${assignmentTimelinePercent(selectedAssignmentCoverageEndMs())} - ${assignmentTimelinePercent(selectedAssignment.earliestUseAtMs)})` }"></span>
             <i class="mini-impact" :style="{ left: assignmentTimelinePercent(selectedAssignment.impactAtMs) }"></i>
           </div>
-          <button class="assignment-edit-button" type="button" @click="assignmentEditorOpen = true">
+          <button class="assignment-edit-button" type="button" @click="openAssignmentEditor">
             <Pencil :size="15" />编辑释放窗口
           </button>
           <button class="lock-toggle" type="button" @click="selectedAssignment.locked = !selectedAssignment.locked">
@@ -1408,7 +1484,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         role="dialog"
         aria-modal="true"
         aria-label="编辑释放窗口"
-        @click.self="assignmentEditorOpen = false"
+        @click.self="cancelAssignmentEditor"
       >
         <div class="assignment-editor-panel">
           <header>
@@ -1425,7 +1501,7 @@ function fallbackAbilities(): AbilityDefinition[] {
             </div>
           </header>
 
-          <div class="assignment-timeline-canvas">
+          <div ref="assignmentTimelineRef" class="assignment-timeline-canvas">
             <span
               v-for="mechanic in selectedAssignmentTimelineTicks"
               :key="mechanic.mechanicId"
@@ -1436,10 +1512,34 @@ function fallbackAbilities(): AbilityDefinition[] {
             ></span>
             <span class="assignment-range window" :style="{ left: assignmentTimelinePercent(selectedAssignment.earliestUseAtMs), width: `calc(${assignmentTimelinePercent(selectedAssignment.latestUseAtMs)} - ${assignmentTimelinePercent(selectedAssignment.earliestUseAtMs)})` }"></span>
             <span v-if="selectedAssignmentCoverageEndMs() !== null" class="assignment-range coverage" :style="{ left: assignmentTimelinePercent(selectedAssignment.earliestUseAtMs), width: `calc(${assignmentTimelinePercent(selectedAssignmentCoverageEndMs())} - ${assignmentTimelinePercent(selectedAssignment.earliestUseAtMs)})` }"></span>
-            <span class="assignment-marker highlight" :style="{ left: assignmentTimelinePercent(selectedAssignment.highlightAtMs) }"><b>亮起</b></span>
-            <span class="assignment-marker release" :style="{ left: assignmentTimelinePercent(selectedAssignment.earliestUseAtMs) }"><b>释放</b></span>
-            <span class="assignment-marker latest" :style="{ left: assignmentTimelinePercent(selectedAssignment.latestUseAtMs) }"><b>最晚</b></span>
-            <span class="assignment-marker impact" :style="{ left: assignmentTimelinePercent(selectedAssignment.impactAtMs) }"><b>判定</b></span>
+            <button
+              type="button"
+              :class="['assignment-marker', 'highlight', { dragging: draggingAssignmentField === 'highlightAtMs' }]"
+              :style="{ left: assignmentTimelinePercent(selectedAssignment.highlightAtMs) }"
+              title="拖动设置亮起时间"
+              @pointerdown="startAssignmentTimelineDrag('highlightAtMs', $event)"
+            ><b>亮起</b></button>
+            <button
+              type="button"
+              :class="['assignment-marker', 'release', { dragging: draggingAssignmentField === 'earliestUseAtMs' }]"
+              :style="{ left: assignmentTimelinePercent(selectedAssignment.earliestUseAtMs) }"
+              title="拖动设置释放时间"
+              @pointerdown="startAssignmentTimelineDrag('earliestUseAtMs', $event)"
+            ><b>释放</b></button>
+            <button
+              type="button"
+              :class="['assignment-marker', 'latest', { dragging: draggingAssignmentField === 'latestUseAtMs' }]"
+              :style="{ left: assignmentTimelinePercent(selectedAssignment.latestUseAtMs) }"
+              title="拖动设置最晚释放时间"
+              @pointerdown="startAssignmentTimelineDrag('latestUseAtMs', $event)"
+            ><b>最晚</b></button>
+            <button
+              type="button"
+              :class="['assignment-marker', 'impact', { dragging: draggingAssignmentField === 'impactAtMs' }]"
+              :style="{ left: assignmentTimelinePercent(selectedAssignment.impactAtMs) }"
+              title="拖动设置机制判定时间"
+              @pointerdown="startAssignmentTimelineDrag('impactAtMs', $event)"
+            ><b>判定</b></button>
             <div class="assignment-axis">
               <span>{{ formatTime(selectedAssignmentTimelineStartMs) }}</span>
               <span>{{ formatTime(selectedAssignmentTimelineEndMs) }}</span>
@@ -1477,8 +1577,11 @@ function fallbackAbilities(): AbilityDefinition[] {
             </select>
           </label>
           <footer>
-            <p>绿色条表示技能持续覆盖范围，青色条表示允许释放窗口。拖动滑条可快速调整，也可以直接输入毫秒值。</p>
-            <button class="primary-button" type="button" @click="assignmentEditorOpen = false">完成</button>
+            <p>绿色条表示技能持续覆盖范围，青色条表示允许释放窗口。可以直接拖动时间轴上的节点，也可以用滑条或输入毫秒值微调。</p>
+            <div class="assignment-editor-actions">
+              <button class="secondary-button assignment-editor-cancel" type="button" @click="cancelAssignmentEditor">取消</button>
+              <button class="primary-button assignment-editor-done" type="button" @click="closeAssignmentEditor">完成</button>
+            </div>
           </footer>
         </div>
       </div>

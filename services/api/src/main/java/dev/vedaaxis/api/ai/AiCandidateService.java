@@ -78,7 +78,9 @@ public class AiCandidateService {
             UUID planId,
             String instruction,
             OptimizationMode mode,
-            UUID focusTrackId) {
+            UUID focusTrackId,
+            Boolean preserveExistingAssignments,
+            Boolean allowGcdActions) {
         if (apiKey.isBlank()) {
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_NOT_CONFIGURED", "尚未配置 VEDAAXIS_AI_API_KEY");
@@ -92,10 +94,13 @@ public class AiCandidateService {
         UUID normalizedFocusTrackId = requestedMode == OptimizationMode.FOCUSED
                 ? requireFocusTrack(base, focusTrackId)
                 : null;
+        AiSafetyOptions safetyOptions = new AiSafetyOptions(
+                preserveExistingAssignments == null || preserveExistingAssignments,
+                Boolean.TRUE.equals(allowGcdActions));
         AiPayload payload = requestCandidate(
-                base, instruction == null ? "" : instruction.trim(), requestedMode, normalizedFocusTrackId);
+                base, instruction == null ? "" : instruction.trim(), requestedMode, normalizedFocusTrackId, safetyOptions);
         List<PlanSnapshot.Assignment> candidateAssignments = resolveCandidateAssignments(base, payload);
-        enforceSafety(base, candidateAssignments, requestedMode, normalizedFocusTrackId);
+        enforceSafety(base, candidateAssignments, requestedMode, normalizedFocusTrackId, safetyOptions);
 
         PlanSnapshot candidateSnapshot = new PlanSnapshot(
                 base.schemaVersion(), base.minimumPluginVersion(), base.planId(), base.planVersion(),
@@ -117,12 +122,13 @@ public class AiCandidateService {
             PlanSnapshot base,
             String instruction,
             OptimizationMode mode,
-            UUID focusTrackId) {
+            UUID focusTrackId,
+            AiSafetyOptions safetyOptions) {
         try {
             String planJson = objectMapper.writeValueAsString(compactPlanContext(base));
             String abilityJson = objectMapper.writeValueAsString(relevantAbilitySummaries(base));
             String damagePreviewJson = objectMapper.writeValueAsString(mechanicRiskSummary(base));
-            String optimizationContextJson = objectMapper.writeValueAsString(optimizationContext(base, mode, focusTrackId));
+            String optimizationContextJson = objectMapper.writeValueAsString(optimizationContext(base, mode, focusTrackId, safetyOptions));
             String systemPrompt = """
                     You are a Final Fantasy XIV mitigation-planning candidate generator.
                     Output JSON only. Do not output Markdown.
@@ -142,6 +148,8 @@ public class AiCandidateService {
                     Do not optimize only by raw damage size. Use attackClass: AOE uses party survival and raid mitigation, TANK_BUSTER uses tank/self/target/enemy mitigation, AUTO_ATTACK only matters under sustained tank pressure, and MECHANIC requires target/context review.
                     Healing, shields, and invulnerability may be candidate support, but do not pretend pure healing or unmodeled shields are percentage mitigation.
                     When optimizationMode=FOCUSED, only ADD, UPDATE, or DELETE unlocked assignments on focusTrackId. Other tracks are read-only context.
+                    When preserveExistingAssignments=true, return only ADD operations and never UPDATE or DELETE an existing assignment.
+                    When allowGcdActions=false, do not ADD or UPDATE any assignment to use an ability whose castCategory is GCD.
                     """;
             String userPrompt = "Current compact plan JSON:\n" + planJson
                     + "\nAvailable ability catalog JSON:\n" + abilityJson
@@ -288,7 +296,8 @@ public class AiCandidateService {
     private Map<String, Object> optimizationContext(
             PlanSnapshot base,
             OptimizationMode mode,
-            UUID focusTrackId) {
+            UUID focusTrackId,
+            AiSafetyOptions safetyOptions) {
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("optimizationMode", mode.name());
         if (mode == OptimizationMode.FOCUSED && focusTrackId != null) {
@@ -303,6 +312,14 @@ public class AiCandidateService {
         } else {
             context.put("writeScope", "ALL_UNLOCKED_ASSIGNMENTS");
         }
+        context.put("preserveExistingAssignments", safetyOptions.preserveExistingAssignments());
+        context.put("allowGcdActions", safetyOptions.allowGcdActions());
+        context.put("existingAssignmentPolicy", safetyOptions.preserveExistingAssignments()
+                ? "Only ADD new assignments. Existing assignments are immutable even when locked=false."
+                : "Unlocked assignments may be updated or deleted within the write scope.");
+        context.put("gcdPolicy", safetyOptions.allowGcdActions()
+                ? "GCD abilities may be proposed when useful."
+                : "Do not propose GCD abilities. Prefer oGCD mitigation, healing, healing buffs, shields, and resources.");
         context.put("lowRiskSupportPolicy", "Do not add or modify support-only healing/resource/unmodeled-shield assignments on GREEN mechanics.");
         context.put("tankbusterPolicy", "Do not over-optimize tankbusters by raw damage; prefer tank/self/target/enemy mitigation and preserve raid resources unless party risk also exists.");
         return context;
@@ -351,6 +368,7 @@ public class AiCandidateService {
         summary.put("maxCharges", ability.maxCharges());
         summary.put("durationMs", ability.durationMs());
         summary.put("confirmationStrategy", ability.confirmationStrategy());
+        summary.put("castCategory", ability.castCategory());
         if (ability.effect() != null) {
             Map<String, Object> effect = new LinkedHashMap<>();
             effect.put("scope", ability.effect().scope());
@@ -404,7 +422,8 @@ public class AiCandidateService {
             PlanSnapshot base,
             List<PlanSnapshot.Assignment> candidate,
             OptimizationMode mode,
-            UUID focusTrackId) {
+            UUID focusTrackId,
+            AiSafetyOptions safetyOptions) {
         Map<UUID, PlanSnapshot.Assignment> candidateById = new HashMap<>();
         for (PlanSnapshot.Assignment assignment : candidate) {
             if (candidateById.put(assignment.assignmentId(), assignment) != null) {
@@ -412,9 +431,18 @@ public class AiCandidateService {
             }
         }
 
+        Map<UUID, PlanSnapshot.Assignment> baseById = base.assignments().stream()
+                .collect(Collectors.toMap(PlanSnapshot.Assignment::assignmentId, Function.identity()));
         for (PlanSnapshot.Assignment locked : base.assignments().stream().filter(PlanSnapshot.Assignment::locked).toList()) {
             if (!locked.equals(candidateById.get(locked.assignmentId()))) {
                 throw invalidResponse("AI 修改或删除了锁定任务 " + locked.assignmentId());
+            }
+        }
+        if (safetyOptions.preserveExistingAssignments()) {
+            for (PlanSnapshot.Assignment existing : base.assignments()) {
+                if (!existing.equals(candidateById.get(existing.assignmentId()))) {
+                    throw invalidResponse("AI 修改或删除了现有任务 " + existing.assignmentId());
+                }
             }
         }
 
@@ -426,13 +454,31 @@ public class AiCandidateService {
         if (candidate.stream().anyMatch(assignment -> !mechanicIds.contains(assignment.mechanicId()))) {
             throw invalidResponse("AI 引用了计划之外的机制");
         }
-        HashSet<Long> actionIds = new HashSet<>(abilityCatalog.load().keySet());
+        Map<Long, AbilityDefinition> abilitiesByActionId = abilityCatalog.load();
+        HashSet<Long> actionIds = new HashSet<>(abilitiesByActionId.keySet());
         if (candidate.stream().anyMatch(assignment -> !actionIds.contains(assignment.actionId()))) {
             throw invalidResponse("AI 引用了技能目录之外的 actionId");
         }
+        if (!safetyOptions.allowGcdActions()) {
+            enforceNoNewOrChangedGcdAssignments(candidate, baseById, abilitiesByActionId);
+        }
 
         enforceFocusedScope(base, candidate, candidateById, mode, focusTrackId);
-        enforceLowRiskSupportPolicy(base, candidate);
+        enforceLowRiskSupportPolicy(base, candidate, abilitiesByActionId);
+    }
+
+    private void enforceNoNewOrChangedGcdAssignments(
+            List<PlanSnapshot.Assignment> candidate,
+            Map<UUID, PlanSnapshot.Assignment> baseById,
+            Map<Long, AbilityDefinition> abilitiesByActionId) {
+        for (PlanSnapshot.Assignment assignment : candidate) {
+            PlanSnapshot.Assignment baseAssignment = baseById.get(assignment.assignmentId());
+            if (baseAssignment != null && baseAssignment.equals(assignment)) continue;
+            AbilityDefinition ability = abilitiesByActionId.get(assignment.actionId());
+            if (ability != null && ability.castCategory() == AbilityDefinition.CastCategory.GCD) {
+                throw invalidResponse("AI 试图新增或改动 GCD 技能 " + assignment.actionId());
+            }
+        }
     }
 
     private void enforceFocusedScope(
@@ -459,7 +505,10 @@ public class AiCandidateService {
         }
     }
 
-    private void enforceLowRiskSupportPolicy(PlanSnapshot base, List<PlanSnapshot.Assignment> candidate) {
+    private void enforceLowRiskSupportPolicy(
+            PlanSnapshot base,
+            List<PlanSnapshot.Assignment> candidate,
+            Map<Long, AbilityDefinition> abilitiesByActionId) {
         Map<UUID, PlanSnapshot.Assignment> baseById = base.assignments().stream()
                 .collect(Collectors.toMap(PlanSnapshot.Assignment::assignmentId, Function.identity()));
         Map<UUID, DamageEstimateAnalysisService.MechanicEstimate> estimateByMechanic =
@@ -467,7 +516,6 @@ public class AiCandidateService {
                         .collect(Collectors.toMap(
                                 DamageEstimateAnalysisService.MechanicEstimate::mechanicId,
                                 Function.identity()));
-        Map<Long, AbilityDefinition> abilitiesByActionId = abilityCatalog.load();
         for (PlanSnapshot.Assignment assignment : candidate) {
             PlanSnapshot.Assignment baseAssignment = baseById.get(assignment.assignmentId());
             if (baseAssignment != null && baseAssignment.equals(assignment)) continue;
@@ -532,6 +580,11 @@ public class AiCandidateService {
             String op,
             UUID assignmentId,
             PlanSnapshot.Assignment assignment) {
+    }
+
+    public record AiSafetyOptions(
+            boolean preserveExistingAssignments,
+            boolean allowGcdActions) {
     }
 
     private record AiMechanicRisk(

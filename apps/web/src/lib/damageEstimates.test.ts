@@ -18,6 +18,7 @@ const reprisal: AbilityDefinition = {
   confirmationStrategy: 'STATUS_APPLY',
   source: 'test',
   confidence: 'REVIEWED',
+  castCategory: 'OGCD',
   effect: {
     scope: 'ENEMY_AREA',
     allDamageReductionPercent: 10,

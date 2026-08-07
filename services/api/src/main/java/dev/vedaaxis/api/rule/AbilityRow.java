@@ -10,7 +10,8 @@ public record AbilityRow(
         long durationMs,
         String confirmationStrategy,
         String source,
-        String confidence) {
+        String confidence,
+        String castCategory) {
     AbilityDefinition toDefinition(MitigationEffectProfile effect) {
         java.util.Set<Integer> jobs = jobIds == null || jobIds.isBlank()
                 ? java.util.Set.of()
@@ -19,8 +20,11 @@ public record AbilityRow(
                         .filter(value -> !value.isEmpty())
                         .map(Integer::valueOf)
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        AbilityDefinition.CastCategory category = castCategory == null || castCategory.isBlank()
+                ? AbilityDefinition.CastCategory.OGCD
+                : AbilityDefinition.CastCategory.valueOf(castCategory);
         return new AbilityDefinition(
                 actionId, name, iconPath, jobs, cooldownMs, maxCharges, durationMs,
-                dev.vedaaxis.api.plan.ConfirmationStrategy.valueOf(confirmationStrategy), source, confidence, effect);
+                dev.vedaaxis.api.plan.ConfirmationStrategy.valueOf(confirmationStrategy), source, confidence, category, effect);
     }
 }

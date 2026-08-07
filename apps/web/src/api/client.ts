@@ -115,7 +115,13 @@ export const api = {
   abilities: () => request<AbilityDefinition[]>('/abilities'),
   generateAiCandidate: (
     planId: string,
-    payload: { instruction?: string; mode?: AiOptimizationMode; focusTrackId?: string | null } | string = '',
+    payload: {
+      instruction?: string
+      mode?: AiOptimizationMode
+      focusTrackId?: string | null
+      preserveExistingAssignments?: boolean
+      allowGcdActions?: boolean
+    } | string = '',
   ) =>
     request<AiCandidate>(`/plans/${planId}/ai-candidates`, {
       method: 'POST',

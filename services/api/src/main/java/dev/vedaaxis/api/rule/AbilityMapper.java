@@ -9,7 +9,7 @@ import java.util.List;
 public interface AbilityMapper {
     @Select("""
             SELECT action_id, name, icon_path, job_ids, cooldown_ms, max_charges, duration_ms,
-                   confirmation_strategy, source, confidence
+                   confirmation_strategy, source, confidence, cast_category
             FROM ability_definition ORDER BY name
             """)
     List<AbilityRow> findAll();

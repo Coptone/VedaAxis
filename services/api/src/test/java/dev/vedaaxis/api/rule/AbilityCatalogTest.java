@@ -87,4 +87,22 @@ class AbilityCatalogTest {
         assertThat(catalog.all().stream().map(AbilityDefinition::actionId))
                 .containsAll(expectedActionIds);
     }
+
+    @Test
+    void tagsKnownPlanningGcdSpells() {
+        List<Long> expectedGcdActionIds = List.of(
+                185L,   // Adloquium
+                186L,   // Succor
+                24291L, // Eukrasian Diagnosis
+                24292L, // Eukrasian Prognosis
+                24318L, // Pneuma
+                37034L  // Eukrasian Prognosis II
+        );
+
+        assertThat(catalog.all())
+                .filteredOn(ability -> expectedGcdActionIds.contains(ability.actionId()))
+                .hasSize(expectedGcdActionIds.size())
+                .allSatisfy(ability -> assertThat(ability.castCategory())
+                        .isEqualTo(AbilityDefinition.CastCategory.GCD));
+    }
 }

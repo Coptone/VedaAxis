@@ -1025,8 +1025,13 @@ function coverageSourceLabel(coverage: AssignmentCoverage): string {
   const sourceMechanic = coverage.sourceMechanic
   const source = sourceMechanic ? `${formatTime(sourceMechanic.plannedAtMs)} ${sourceMechanic.name}` : '未知来源机制'
   const track = coverage.sourceTrack?.slot ?? '未知轨道'
+  return `${track} · 创建于 ${source}`
+}
+
+function coverageTimingLabel(coverage: AssignmentCoverage): string {
+  const release = `释放 ${formatTime(coverage.assignment.earliestUseAtMs)}`
   const until = coverage.coversUntilMs === null ? '持续时间未知' : `保守覆盖至 ${formatTime(coverage.coversUntilMs)}`
-  return `${track} · ${source} · ${until}`
+  return `${release} · ${until}`
 }
 
 function fallbackAbilities(): AbilityDefinition[] {
@@ -1391,16 +1396,53 @@ function fallbackAbilities(): AbilityDefinition[] {
           </p>
           <div v-if="carriedCoverage.length" class="coverage-panel">
             <header><b>提前覆盖到本机制</b><small>这些技能不是本机制行创建的，但持续时间覆盖当前命中</small></header>
-            <p v-for="coverage in carriedCoverage" :key="coverage.assignment.assignmentId">
-              <span>{{ coverage.ability?.name ?? `Action ${coverage.assignment.actionId}` }}</span>
-              {{ coverageSourceLabel(coverage) }}
-            </p>
+            <div class="analysis-row-list">
+              <article v-for="coverage in carriedCoverage" :key="coverage.assignment.assignmentId" class="analysis-row coverage-row">
+                <span class="action-icon-shell analysis-row-icon">
+                  <img
+                    v-if="actionIconUrl(coverage.ability)"
+                    class="action-icon"
+                    :src="actionIconUrl(coverage.ability)!"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                    @error="hideBrokenIcon"
+                  />
+                  <span v-else class="action-icon action-icon-placeholder" aria-hidden="true">技</span>
+                </span>
+                <span>
+                  <b>{{ coverage.ability?.name ?? `Action ${coverage.assignment.actionId}` }}</b>
+                  <small>{{ coverageSourceLabel(coverage) }}</small>
+                  <em>{{ coverageTimingLabel(coverage) }}</em>
+                </span>
+              </article>
+            </div>
           </div>
           <div v-if="cooldownConflicts.length" class="cooldown-panel">
             <header><b>本地冷却预警</b><small>保存/发布时服务端也会校验</small></header>
-            <p v-for="issue in cooldownConflicts.slice(0, 5)" :key="issue.assignmentId">
-              <span>{{ issue.trackSlot }}</span>{{ issue.abilityName }} 最早要到 {{ formatTime(issue.availableAtMs) }}，当前窗口最晚 {{ formatTime(issue.latestUseAtMs) }}
-            </p>
+            <div class="analysis-row-list">
+              <article v-for="issue in cooldownConflicts.slice(0, 5)" :key="issue.assignmentId" class="analysis-row cooldown-row">
+                <span class="action-icon-shell analysis-row-icon">
+                  <img
+                    v-if="actionIconUrl(abilityMap.get(issue.actionId))"
+                    class="action-icon"
+                    :src="actionIconUrl(abilityMap.get(issue.actionId))!"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    referrerpolicy="no-referrer"
+                    @error="hideBrokenIcon"
+                  />
+                  <span v-else class="action-icon action-icon-placeholder" aria-hidden="true">CD</span>
+                </span>
+                <span>
+                  <b>{{ issue.abilityName }}</b>
+                  <small>{{ issue.trackSlot }} · 最早要到 {{ formatTime(issue.availableAtMs) }}，当前窗口最晚 {{ formatTime(issue.latestUseAtMs) }}</small>
+                  <em>还差 {{ compactDuration(issue.availableAtMs - issue.latestUseAtMs) }}</em>
+                </span>
+              </article>
+            </div>
           </div>
           <p v-if="damageEstimateError" class="damage-analysis-error">
             <AlertTriangle :size="13" />{{ damageEstimateError }}

@@ -21,6 +21,7 @@ export interface AssignmentCoverage {
 export interface CooldownConflict {
   assignmentId: string
   previousAssignmentId: string | null
+  actionId: number
   trackSlot: string
   abilityName: string
   availableAtMs: number
@@ -123,6 +124,7 @@ export function localCooldownConflicts(snapshot: PlanSnapshot, abilities: Abilit
         conflicts.push({
           assignmentId: assignment.assignmentId,
           previousAssignmentId,
+          actionId: assignment.actionId,
           trackSlot: trackById.get(assignment.trackId)?.slot ?? assignment.trackId.slice(0, 8),
           abilityName: ability.name,
           availableAtMs: scheduledAtMs,

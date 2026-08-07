@@ -3,6 +3,7 @@ export type TrackSlot = 'T1' | 'MT' | 'ST' | 'H1' | 'H2' | 'D1' | 'D2' | 'D3' | 
 export type Confidence = 'POC_PENDING' | 'UNVERIFIED' | 'REVIEWED' | 'VERIFIED'
 export type ConfirmationStrategy = 'ACTION_EFFECT' | 'STATUS_APPLY' | 'COOLDOWN_CHANGE' | 'COMPOSITE'
 export type PhaseTimingMode = 'ABSOLUTE' | 'RELATIVE'
+export type AiOptimizationMode = 'GLOBAL' | 'FOCUSED'
 
 export const TRACK_SLOTS: Record<TrackMode, TrackSlot[]> = {
   FOUR: ['T1', 'H1', 'D1', 'D2'],

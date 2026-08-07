@@ -52,6 +52,7 @@ import {
 import type {
   AbilityDefinition,
   AiCandidate,
+  AiOptimizationMode,
   Assignment,
   DamageEstimate,
   PlanSnapshot,
@@ -91,6 +92,8 @@ const validation = ref<RuleValidationResult | null>(null)
 const aiCandidate = ref<AiCandidate | null>(null)
 const aiOpen = ref(false)
 const aiInstruction = ref('')
+const aiOptimizationMode = ref<AiOptimizationMode>('GLOBAL')
+const aiFocusTrackId = ref('')
 const busy = ref(false)
 const message = ref('')
 const error = ref('')
@@ -184,6 +187,11 @@ const selectedMechanic = computed(() =>
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
 const selectedTrack = computed(() => snapshot.value.tracks.find((track) => track.trackId === selectedTrackId.value) ?? null)
+const aiFocusTrack = computed(() =>
+  snapshot.value.tracks.find((track) => track.trackId === aiFocusTrackId.value)
+  ?? selectedTrack.value
+  ?? snapshot.value.tracks[0]
+  ?? null)
 const filteredAbilities = computed(() => {
   if (showAllAbilities.value) return abilities.value
   return abilities.value.filter((ability) => abilityFitsTrack(ability, selectedTrack.value))
@@ -316,6 +324,16 @@ function ensureSelectedAbilityVisible() {
   }
   selectedAbilityId.value = filteredAbilities.value[0]?.actionId ?? null
   abilityPickerOpen.value = false
+}
+
+function ensureAiFocusTrackVisible() {
+  if (!snapshot.value.tracks.length) {
+    aiFocusTrackId.value = ''
+    return
+  }
+  if (snapshot.value.tracks.some((track) => track.trackId === aiFocusTrackId.value)) return
+  const selected = snapshot.value.tracks.find((track) => track.trackId === selectedTrackId.value)
+  aiFocusTrackId.value = selected?.trackId ?? snapshot.value.tracks[0]!.trackId
 }
 
 function ensureSelectedMechanicVisible() {
@@ -664,6 +682,7 @@ watch(
   { deep: true },
 )
 watch([selectedTrackId, showAllAbilities, abilities], ensureSelectedAbilityVisible, { deep: true })
+watch([selectedTrackId, () => snapshot.value.tracks], ensureAiFocusTrackVisible, { deep: true, immediate: true })
 watch([mechanics, showTimelineMarkers], ensureSelectedMechanicVisible, { deep: true, immediate: true })
 watch([selectedMechanicId, mechanics], syncTimelinePageToSelection, { deep: true, immediate: true })
 watch(selectedAssignment, (assignment) => {
@@ -736,6 +755,7 @@ async function save() {
       }))
       selectedTrackId.value = remapTrackId(selectedTrackId.value) ?? ''
       selectedTargetTrackId.value = remapTrackId(selectedTargetTrackId.value) ?? ''
+      aiFocusTrackId.value = remapTrackId(aiFocusTrackId.value) ?? ''
       snapshot.value.tracks = created.snapshot.tracks
       await router.replace(`/plans/${created.plan.id}`)
     }
@@ -780,11 +800,21 @@ async function publish() {
 async function generateAiCandidate() {
   await save()
   if (!planId.value || error.value) return
+  const focusTrackId = aiOptimizationMode.value === 'FOCUSED' ? aiFocusTrack.value?.trackId : null
+  if (aiOptimizationMode.value === 'FOCUSED' && !focusTrackId) {
+    error.value = '指向优化需要先选择一个职业轨道'
+    return
+  }
   busy.value = true
   error.value = ''
   try {
-    aiCandidate.value = await api.generateAiCandidate(planId.value, aiInstruction.value)
-    message.value = `已生成 ${aiCandidate.value.confidence} 候选，尚未应用`
+    aiCandidate.value = await api.generateAiCandidate(planId.value, {
+      instruction: aiInstruction.value,
+      mode: aiOptimizationMode.value,
+      focusTrackId,
+    })
+    const modeLabel = aiOptimizationMode.value === 'FOCUSED' ? `指向 ${trackDisplayLabel(aiFocusTrack.value)} ` : '全局 '
+    message.value = `已生成 ${modeLabel}${aiCandidate.value.confidence} 候选，尚未应用`
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : 'AI 候选生成失败'
   } finally {
@@ -806,14 +836,30 @@ function fillAiOptimizationInstruction() {
     .filter((line): line is string => line !== null)
     .slice(0, 12)
 
+  const modeLines = aiOptimizationMode.value === 'FOCUSED'
+    ? [
+        `优化模式：指向优化，只调整 ${trackDisplayLabel(aiFocusTrack.value)} 的未锁定任务；其它轨道只作为上下文参考，必须原样保留。`,
+        '指向目标：结合其它人已经安排的团减、单减和治疗，减少本轨道重复交资源，优先补本轨道红/黄风险和冷却冲突。',
+      ]
+    : [
+        '优化模式：全局优化，可调整所有未锁定任务；目标是全队总体风险下降和资源利用率提高。',
+      ]
+
   aiInstruction.value = [
+    ...modeLines,
     '目标：优化当前减伤与治疗利用率，但不要修改 locked=true 的任务，不要改变轨道/职业边界，不要输出计划外轨道。',
     `HP 风险口径：AOE 按治疗 HP ${displayInteger(healerHpReference.value)} 为 100%；死刑和平A按防护 HP ${displayInteger(tankHpReference.value)} 为 100%。超过 HP 上限为红色，命中后剩余 HP 低于 25% 为黄色，其余为绿色。`,
-    '优先级：1）先补足红色/黄色承伤；2）优先利用可覆盖多个机制的长持续团减/团血，减少只覆盖一次的浪费；3）避免同一轨道冷却冲突；4）单减必须保留或补全 targetTrackId；5）治疗、增疗、护盾可作为复核提示，但不要当作百分比减伤直接扣伤害。',
+    '优先级：1）先补足红色/黄色承伤；2）优先利用可覆盖多个机制的长持续团减/团血，减少只覆盖一次的浪费；3）避免同一轨道冷却冲突；4）单减必须保留或补全 targetTrackId；5）治疗、增疗、护盾可作为复核提示，但不要当作百分比减伤直接扣伤害；6）不要为了绿色机制刷纯治疗、增疗资源或未建模盾。',
+    '机制口径：AOE、死刑、平A不要混在一起按裸伤害排序；死刑优先看防护/单减/敌方减伤是否覆盖，AOE优先看团减与全队血线，平A只在连续坦克压力或非绿色风险时处理。',
     '重点机制：',
     riskyLines.length ? riskyLines.join('\n') : '当前没有明显红/黄承伤；请优先提高多机制覆盖率、减少冷却空转，并保留现有可用安排。',
   ].join('\n')
   aiOpen.value = true
+}
+
+function trackDisplayLabel(track: PlanSnapshot['tracks'][number] | null): string {
+  if (!track) return '未选择轨道'
+  return `${track.slot}${track.displayName ? ` · ${track.displayName}` : ''}`
 }
 
 function openFullTimelineImport() {
@@ -1125,6 +1171,38 @@ function fallbackAbilities(): AbilityDefinition[] {
         <div><p class="eyebrow">AI CANDIDATE</p><h2>生成可审阅的减伤候选</h2></div>
         <span class="status-badge warning">不会自动保存或发布</span>
       </header>
+      <div class="ai-mode-grid" role="radiogroup" aria-label="AI 优化模式">
+        <button
+          :class="['ai-mode-option', { active: aiOptimizationMode === 'GLOBAL' }]"
+          type="button"
+          role="radio"
+          :aria-checked="aiOptimizationMode === 'GLOBAL'"
+          @click="aiOptimizationMode = 'GLOBAL'"
+        >
+          <b>全局优化</b>
+          <span>调整所有未锁定任务，优先降低全队红/黄风险与资源浪费。</span>
+        </button>
+        <button
+          :class="['ai-mode-option', { active: aiOptimizationMode === 'FOCUSED' }]"
+          type="button"
+          role="radio"
+          :aria-checked="aiOptimizationMode === 'FOCUSED'"
+          @click="aiOptimizationMode = 'FOCUSED'"
+        >
+          <b>指向优化</b>
+          <span>只改选定职业轨道，其它人的安排作为只读上下文。</span>
+        </button>
+      </div>
+      <label v-if="aiOptimizationMode === 'FOCUSED'" class="ai-focus-track">优化目标轨道
+        <select v-model="aiFocusTrackId">
+          <option v-for="track in snapshot.tracks" :key="track.trackId" :value="track.trackId">
+            {{ trackDisplayLabel(track) }}
+          </option>
+        </select>
+      </label>
+      <p class="ai-policy-copy">
+        服务端会拒绝计划外轨道/机制/技能、锁定项改动、指向模式下的非目标轨道改动，以及绿色机制上的纯治疗/未建模辅助刷屏。
+      </p>
       <label>调整要求
         <textarea
           v-model.trim="aiInstruction"

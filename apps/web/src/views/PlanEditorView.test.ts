@@ -12,6 +12,7 @@ vi.mock('../api/client', () => ({
     createPlan: vi.fn(),
     updatePlan: vi.fn(),
     previewDamageEstimates: vi.fn().mockResolvedValue([]),
+    generateAiCandidate: vi.fn(),
   },
   ApiError: class ApiError extends Error {},
 }))
@@ -136,6 +137,60 @@ describe('PlanEditorView', () => {
     expect(wrapper.get('.assignment-editor-modal').attributes('role')).toBe('dialog')
     expect(wrapper.findAll('.assignment-editor-controls input[type="range"]')).toHaveLength(4)
     expect(wrapper.get('.assignment-editor-cancel').text()).toBe('取消')
+  })
+
+  it('sends focused AI candidate requests with the selected track scope', async () => {
+    const planId = '11111111-1111-4111-8111-111111111111'
+    const createdSnapshot = dmuP1P2DefaultPlan()
+    createdSnapshot.planId = planId
+    const h2Track = createdSnapshot.tracks.find((track) => track.slot === 'H2')!
+    vi.mocked(api.createPlan).mockResolvedValue({
+      plan: { id: planId, name: 'test', latestVersion: 1, updatedAt: '2026-08-07T00:00:00Z' },
+      snapshot: createdSnapshot,
+    })
+    vi.mocked(api.updatePlan).mockImplementation(async (_id, planName, planSnapshot) => ({
+      plan: { id: planId, name: planName, latestVersion: 1, updatedAt: '2026-08-07T00:00:00Z' },
+      snapshot: planSnapshot,
+    }))
+    vi.mocked(api.generateAiCandidate).mockResolvedValue({
+      schemaVersion: '1.0',
+      candidateId: '22222222-2222-4222-8222-222222222222',
+      basePlanId: planId,
+      assignments: createdSnapshot.assignments,
+      reasons: [],
+      warnings: [],
+      confidence: 'RULE_VALIDATED',
+      provider: 'DeepSeek',
+      model: 'test',
+      generatedAt: '2026-08-07T00:00:00Z',
+      validation: { valid: true, issues: [] },
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/plans/new', component: PlanEditorView },
+        { path: '/plans/:planId', component: PlanEditorView },
+      ],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+    await wrapper.findAll('.editor-actions button').find((button) => button.text().includes('AI 候选'))!.trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.ai-mode-option')[1]!.trigger('click')
+    await wrapper.get('.ai-focus-track select').setValue(h2Track.trackId)
+    await wrapper.get('.ai-request-panel textarea').setValue('只优化 H2')
+    await wrapper.get('.ai-request-panel .primary-button').trigger('click')
+    await flushPromises()
+
+    expect(api.generateAiCandidate).toHaveBeenCalledWith(planId, {
+      instruction: '只优化 H2',
+      mode: 'FOCUSED',
+      focusTrackId: h2Track.trackId,
+    })
+    expect(wrapper.get('.inline-message').text()).toContain('指向 H2')
   })
 
   it('reverts timing changes when cancelling the editor', async () => {

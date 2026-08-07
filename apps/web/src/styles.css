@@ -220,6 +220,17 @@ a { color: inherit; text-decoration: none; }
 .ai-request-panel > header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 13px; }
 .ai-request-panel h2 { margin: 4px 0 0; font-size: 18px; }
 .ai-request-panel label { display: grid; gap: 7px; color: var(--muted); font-size: 10px; }
+.ai-mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.ai-mode-option { min-height: 76px; padding: 12px; text-align: left; color: var(--muted); background: rgba(5,17,26,.62); border: 1px solid var(--border); border-radius: 9px; cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.ai-mode-option:hover { border-color: rgba(242,174,93,.45); background: rgba(35,28,16,.72); transform: translateY(-1px); }
+.ai-mode-option.active { color: var(--text); border-color: rgba(242,174,93,.78); background: linear-gradient(145deg, rgba(72,48,19,.86), rgba(17,31,41,.86)); box-shadow: inset 0 0 0 1px rgba(242,174,93,.12); }
+.ai-mode-option b, .ai-mode-option span { display: block; }
+.ai-mode-option b { margin-bottom: 6px; color: var(--text); font-size: 13px; }
+.ai-mode-option span { line-height: 1.55; font-size: 10px; }
+.ai-focus-track { margin-bottom: 10px; }
+.ai-focus-track select { height: 36px; padding: 0 10px; color: var(--text); background: rgba(5,17,26,.75); border: 1px solid var(--border); border-radius: 7px; outline: none; }
+.ai-focus-track select:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(242,174,93,.08); }
+.ai-policy-copy { margin: 0 0 12px; padding: 9px 10px; color: #d6c19d; border: 1px solid rgba(242,174,93,.18); border-radius: 7px; background: rgba(242,174,93,.06); font-size: 10px; line-height: 1.6; }
 .ai-request-panel textarea { min-height: 82px; resize: vertical; padding: 10px 11px; color: var(--text); background: rgba(5,17,26,.75); border: 1px solid var(--border); border-radius: 7px; outline: none; }
 .ai-request-panel textarea:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(242,174,93,.08); }
 .ai-request-panel .candidate-actions { align-items: center; margin-top: 11px; }

@@ -24,9 +24,12 @@ public class AiCandidateController {
     AiCandidateService.AiCandidate generate(
             @PathVariable UUID planId,
             @Valid @RequestBody GenerateRequest request) {
-        return service.generate(CurrentUser.id(), planId, request.instruction());
+        return service.generate(CurrentUser.id(), planId, request.instruction(), request.mode(), request.focusTrackId());
     }
 
-    public record GenerateRequest(@Size(max = 2000) String instruction) {
+    public record GenerateRequest(
+            @Size(max = 2000) String instruction,
+            AiCandidateService.OptimizationMode mode,
+            UUID focusTrackId) {
     }
 }

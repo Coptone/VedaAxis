@@ -2,6 +2,7 @@ import type {
   AbilityDefinition,
   AuthorizedDevice,
   AiCandidate,
+  AiOptimizationMode,
   DamageEstimate,
   ExecutionStats,
   ExecutionSummary,
@@ -112,10 +113,13 @@ export const api = {
       { method: 'POST' },
     ),
   abilities: () => request<AbilityDefinition[]>('/abilities'),
-  generateAiCandidate: (planId: string, instruction = '') =>
+  generateAiCandidate: (
+    planId: string,
+    payload: { instruction?: string; mode?: AiOptimizationMode; focusTrackId?: string | null } | string = '',
+  ) =>
     request<AiCandidate>(`/plans/${planId}/ai-candidates`, {
       method: 'POST',
-      body: JSON.stringify({ instruction }),
+      body: JSON.stringify(typeof payload === 'string' ? { instruction: payload } : payload),
     }),
   importMSpecTimeline: (sourceUrl: string, includeRecommendations: boolean) =>
     request<TimelineImportCandidate>('/timeline-imports/m-spec', {

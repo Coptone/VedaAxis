@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.10.0",
+    "AssemblyVersion": "0.1.11.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "优化单体减伤目标识别：默认职业不匹配时按轨道角色组兜底，并显示无法自动识别的具体原因。",
+    "Changelog": "修复手动停止不生成个人复盘的问题，并在设置界面显示最近执行上传状态。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786025550,
+    "LastUpdate": 1786068274,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

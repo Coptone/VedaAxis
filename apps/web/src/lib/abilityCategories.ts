@@ -1,26 +1,26 @@
 import type { AbilityDefinition, MitigationEffectProfile } from '../types/domain'
 
 export type AbilityPlanningCategory =
-  | 'DIRECT_MITIGATION'
-  | 'BARRIER_OR_MAX_HP'
-  | 'HEALING_OR_HEALING_BUFF'
-  | 'INVULNERABILITY_OR_SPECIAL'
+  | 'SINGLE_MITIGATION'
+  | 'RAID_MITIGATION'
+  | 'RAID_HEALING'
+  | 'SPECIAL_SUPPORT'
   | 'UNMODELED'
 
 export const ABILITY_CATEGORY_ORDER: AbilityPlanningCategory[] = [
-  'DIRECT_MITIGATION',
-  'BARRIER_OR_MAX_HP',
-  'HEALING_OR_HEALING_BUFF',
-  'INVULNERABILITY_OR_SPECIAL',
+  'SINGLE_MITIGATION',
+  'RAID_MITIGATION',
+  'RAID_HEALING',
+  'SPECIAL_SUPPORT',
   'UNMODELED',
 ]
 
 export const ABILITY_CATEGORY_LABELS: Record<AbilityPlanningCategory, string> = {
-  DIRECT_MITIGATION: '直接减伤',
-  BARRIER_OR_MAX_HP: '护盾 / 最大生命',
-  HEALING_OR_HEALING_BUFF: '治疗 / 增疗 / 资源',
-  INVULNERABILITY_OR_SPECIAL: '无敌 / 特殊处理',
-  UNMODELED: '未建模 / 需复核',
+  SINGLE_MITIGATION: '单减',
+  RAID_MITIGATION: '团减',
+  RAID_HEALING: '团血',
+  SPECIAL_SUPPORT: '特殊',
+  UNMODELED: '待复核',
 }
 
 export function abilityPlanningCategory(
@@ -29,14 +29,15 @@ export function abilityPlanningCategory(
   const effect = ability?.effect
   if (!effect) return 'UNMODELED'
   if (effect.invulnerability || effect.calculationReadiness === 'INVULNERABILITY_SPECIAL_CASE') {
-    return 'INVULNERABILITY_OR_SPECIAL'
+    return effect.scope === 'PARTY' || effect.scope === 'GROUND_AREA' ? 'SPECIAL_SUPPORT' : 'SINGLE_MITIGATION'
   }
-  if (hasDirectReduction(effect)) return 'DIRECT_MITIGATION'
-  if (hasBarrierOrMaxHp(effect)) return 'BARRIER_OR_MAX_HP'
-  if (effect.calculationReadiness === 'NO_DIRECT_MITIGATION' || effect.calculationReadiness === 'REQUIRES_HEALING_STATS') {
-    return 'HEALING_OR_HEALING_BUFF'
+  if (hasDirectReduction(effect) || hasBarrierOrMaxHp(effect)) {
+    return isGroupOrEnemyScope(effect.scope) ? 'RAID_MITIGATION' : 'SINGLE_MITIGATION'
   }
-  return 'UNMODELED'
+  if (isHealingOrSupport(effect)) {
+    return isGroupOrEnemyScope(effect.scope) ? 'RAID_HEALING' : 'SINGLE_MITIGATION'
+  }
+  return effect.scope === 'PARTY' || effect.scope === 'GROUND_AREA' ? 'SPECIAL_SUPPORT' : 'UNMODELED'
 }
 
 export function abilityPlanningCategoryLabel(
@@ -59,4 +60,16 @@ function hasBarrierOrMaxHp(effect: MitigationEffectProfile): boolean {
     || effect.maximumHpBarrierPercent
     || effect.barrierCurePotency,
   )
+}
+
+function isHealingOrSupport(effect: MitigationEffectProfile): boolean {
+  return effect.calculationReadiness === 'NO_DIRECT_MITIGATION'
+    || effect.calculationReadiness === 'REQUIRES_HEALING_STATS'
+}
+
+function isGroupOrEnemyScope(effectScope: MitigationEffectProfile['scope']): boolean {
+  return effectScope === 'PARTY'
+    || effectScope === 'GROUND_AREA'
+    || effectScope === 'ENEMY_TARGET'
+    || effectScope === 'ENEMY_AREA'
 }

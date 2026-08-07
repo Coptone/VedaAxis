@@ -24,35 +24,37 @@ function ability(partial: Partial<AbilityDefinition['effect']>): Pick<AbilityDef
 }
 
 describe('ability planning categories', () => {
-  it('prioritizes direct mitigation even when a skill also has healing text', () => {
+  it('puts party mitigation in the raid mitigation column even when a skill also has healing text', () => {
     const holos = ability({
       allDamageReductionPercent: 10,
       barrierCurePotency: 300,
       calculationReadiness: 'REQUIRES_HEALING_STATS',
     })
 
-    expect(abilityPlanningCategory(holos)).toBe('DIRECT_MITIGATION')
-    expect(abilityPlanningCategoryLabel(holos)).toBe('直接减伤')
+    expect(abilityPlanningCategory(holos)).toBe('RAID_MITIGATION')
+    expect(abilityPlanningCategoryLabel(holos)).toBe('团减')
   })
 
-  it('classifies Ixochole-like pure healing as a healing planning action', () => {
+  it('classifies Ixochole-like pure party healing as raid healing', () => {
     const ixochole = ability({
       scope: 'PARTY',
       calculationReadiness: 'NO_DIRECT_MITIGATION',
     })
 
-    expect(abilityPlanningCategory(ixochole)).toBe('HEALING_OR_HEALING_BUFF')
-    expect(abilityPlanningCategoryLabel(ixochole)).toContain('治疗')
+    expect(abilityPlanningCategory(ixochole)).toBe('RAID_HEALING')
+    expect(abilityPlanningCategoryLabel(ixochole)).toContain('团血')
   })
 
-  it('separates shields and invulnerability from normal healing', () => {
+  it('puts target shields and invulnerability in the single mitigation column', () => {
     expect(abilityPlanningCategory(ability({
+      scope: 'TARGET',
       barrierCurePotency: 320,
       calculationReadiness: 'REQUIRES_HEALING_STATS',
-    }))).toBe('BARRIER_OR_MAX_HP')
+    }))).toBe('SINGLE_MITIGATION')
     expect(abilityPlanningCategory(ability({
+      scope: 'SELF',
       invulnerability: true,
       calculationReadiness: 'INVULNERABILITY_SPECIAL_CASE',
-    }))).toBe('INVULNERABILITY_OR_SPECIAL')
+    }))).toBe('SINGLE_MITIGATION')
   })
 })

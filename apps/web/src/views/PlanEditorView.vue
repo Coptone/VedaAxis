@@ -81,6 +81,10 @@ const selectedTrackId = ref('')
 const selectedTargetTrackId = ref('')
 const selectedAbilityId = ref<number | null>(null)
 const showAllAbilities = ref(false)
+const abilityPickerOpen = ref(false)
+const showTimelineMarkers = ref(false)
+const healerHpReference = ref(180_000)
+const tankHpReference = ref(250_000)
 const validation = ref<RuleValidationResult | null>(null)
 const aiCandidate = ref<AiCandidate | null>(null)
 const aiOpen = ref(false)
@@ -104,7 +108,10 @@ const DEFAULT_PHASES: TimelinePhase[] = cloneData(defaultPlan.phases)
 const DEFAULT_MECHANICS: TimelineMechanic[] = cloneData(defaultPlan.mechanics)
 const snapshot = ref<PlanSnapshot>(makeSnapshot('EIGHT'))
 
-const mechanics = computed(() => snapshot.value.mechanics)
+const allMechanics = computed(() => snapshot.value.mechanics)
+const mechanics = computed(() => showTimelineMarkers.value
+  ? allMechanics.value
+  : allMechanics.value.filter((mechanic) => hasDirectDamage(mechanic)))
 const assignmentCountByMechanic = computed(() => {
   const counts = new Map<string, number>()
   for (const assignment of snapshot.value.assignments) {
@@ -133,7 +140,11 @@ const timelineTitle = computed(() => {
   const phaseNames = snapshot.value.phases.map((phase) => phase.name.trim()).filter(Boolean).join('/')
   return phaseNames ? `${encounterName} · ${phaseNames}` : encounterName
 })
-const selectedMechanic = computed(() => mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value) ?? mechanics.value[0] ?? DEFAULT_MECHANICS[0]!)
+const selectedMechanic = computed(() =>
+  mechanics.value.find((item) => item.mechanicId === selectedMechanicId.value)
+  ?? allMechanics.value.find((item) => item.mechanicId === selectedMechanicId.value)
+  ?? mechanics.value[0]
+  ?? DEFAULT_MECHANICS[0]!)
 const assignmentsForMechanic = computed(() => snapshot.value.assignments.filter((item) => item.mechanicId === selectedMechanicId.value))
 const abilityMap = computed(() => new Map(abilities.value.map((ability) => [ability.actionId, ability])))
 const selectedTrack = computed(() => snapshot.value.tracks.find((track) => track.trackId === selectedTrackId.value) ?? null)
@@ -169,14 +180,18 @@ const selectedCoverage = computed(() => assignmentsCoveringMechanic(snapshot.val
 const carriedCoverage = computed(() => selectedCoverage.value.filter((coverage) => coverage.carriedFromAnotherMechanic))
 const cooldownConflicts = computed(() => localCooldownConflicts(snapshot.value, abilities.value))
 const cooldownIssueByAssignmentId = computed(() => new Set(cooldownConflicts.value.map((issue) => issue.assignmentId)))
-const directDamageMechanicCount = computed(() => mechanics.value.filter((mechanic) => hasDirectDamage(mechanic)).length)
-const unassignedDamageMechanicCount = computed(() => mechanics.value
+const directDamageMechanicCount = computed(() => allMechanics.value.filter((mechanic) => hasDirectDamage(mechanic)).length)
+const hiddenMarkerCount = computed(() => allMechanics.value.length - directDamageMechanicCount.value)
+const unassignedDamageMechanicCount = computed(() => allMechanics.value
   .filter((mechanic) => hasDirectDamage(mechanic) && !assignmentCountByMechanic.value.has(mechanic.mechanicId)).length)
 const timelineScopeSummary = computed(() => {
   const phases = snapshot.value.phases.map((phase) => phase.name).filter(Boolean).join('/')
-  return `${phases || '未分阶段'} · ${mechanics.value.length} 项机制 · ${directDamageMechanicCount.value} 项直接伤害`
+  const markerSummary = showTimelineMarkers.value
+    ? `${allMechanics.value.length} 项机制`
+    : `${directDamageMechanicCount.value} 项直接伤害（隐藏 ${hiddenMarkerCount.value} 项标记）`
+  return `${phases || '未分阶段'} · ${markerSummary}`
 })
-const selectedDamageRatio = computed(() => damageRatio(selectedDamageEstimate.value))
+const selectedDamageHpAnalysis = computed(() => damageHpAnalysis(selectedDamageEstimate.value, selectedMechanic.value))
 const aiDiff = computed(() => {
   if (!aiCandidate.value) return { added: 0, removed: 0, changed: 0 }
   const current = new Map(snapshot.value.assignments.map((item) => [item.assignmentId, item]))
@@ -207,6 +222,22 @@ function ensureSelectedAbilityVisible() {
     return
   }
   selectedAbilityId.value = filteredAbilities.value[0]?.actionId ?? null
+  abilityPickerOpen.value = false
+}
+
+function ensureSelectedMechanicVisible() {
+  if (!mechanics.value.length) {
+    selectedMechanicId.value = allMechanics.value[0]?.mechanicId ?? ''
+    return
+  }
+  if (!mechanics.value.some((mechanic) => mechanic.mechanicId === selectedMechanicId.value)) {
+    selectMechanic(mechanics.value[0]!.mechanicId)
+  }
+}
+
+function selectAbility(ability: AbilityDefinition) {
+  selectedAbilityId.value = ability.actionId
+  abilityPickerOpen.value = false
 }
 
 async function loadPlan() {
@@ -310,29 +341,70 @@ function displayInteger(value: number | null): string {
 function damageRiskLabel(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic = selectedMechanic.value): string {
   if (!hasDirectDamage(mechanic)) return '无直接伤害'
   if (!estimate || estimate.status === 'CALIBRATION_REQUIRED') return '伤害值待校准'
-  if (estimate.status === 'SPECIAL_CASE_REVIEW_REQUIRED') return '需要无敌特判'
+  const hpAnalysis = damageHpAnalysis(estimate, mechanic)
+  if (estimate.status === 'SPECIAL_CASE_REVIEW_REQUIRED') {
+    return hpAnalysis ? `${hpAnalysis.label} · 无敌需复核` : '需要无敌特判'
+  }
+  if (hpAnalysis) return hpAnalysis.label
   return ({ GREEN: '绿色区间', YELLOW: '黄色区间', RED: '红色区间', UNCLASSIFIED: '未设色带', CALIBRATION_REQUIRED: '伤害值待校准' } as const)[estimate.riskLevel]
 }
 
 function damageRiskClass(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic = selectedMechanic.value): string {
   if (!hasDirectDamage(mechanic)) return 'damage-risk-unclassified'
+  const hpAnalysis = damageHpAnalysis(estimate, mechanic)
+  if (hpAnalysis) return `damage-risk-${hpAnalysis.risk.toLowerCase()}`
   return estimate ? `damage-risk-${estimate.riskLevel.toLowerCase()}` : 'damage-risk-calibration_required'
 }
 
-function damageRatio(estimate: DamageEstimate | undefined) {
-  const baseline = estimate?.baselineDamage ?? 0
+function damageHpAnalysis(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic) {
   const after = estimate?.damageAfterMitigation
-  if (!baseline || after === null || after === undefined) return null
-  const remaining = Math.max(0, after / baseline)
+  if (!hasDirectDamage(mechanic) || after === null || after === undefined) return null
+  const referenceHp = hpReferenceForMechanic(mechanic)
+  if (referenceHp <= 0) return null
+  const damageRatio = Math.max(0, after / referenceHp)
+  const remainingHp = referenceHp - after
+  const remainingRatio = remainingHp / referenceHp
+  const risk = damageRatio > 1 ? 'RED' : remainingRatio < 0.25 ? 'YELLOW' : 'GREEN'
+  const label = risk === 'RED'
+    ? '超过血量上限'
+    : risk === 'YELLOW' ? '剩余HP不足25%' : '剩余HP安全'
   return {
-    mitigated: Math.max(0, 1 - Math.min(remaining, 1)),
-    remaining,
-    remainingBar: Math.min(remaining, 1),
+    referenceHp,
+    referenceRoleLabel: hpReferenceRoleLabel(mechanic),
+    damage: after,
+    damageRatio,
+    damageBarRatio: Math.min(damageRatio, 1),
+    overflowRatio: Math.max(0, damageRatio - 1),
+    remainingHp,
+    remainingRatio,
+    risk,
+    label,
   }
 }
 
 function percentLabel(value: number): string {
   return `${(value * 100).toFixed(1)}%`
+}
+
+function hpReferenceForMechanic(mechanic: TimelineMechanic): number {
+  const value = attackClass(mechanic) === 'TANK_BUSTER' || attackClass(mechanic) === 'AUTO_ATTACK'
+    ? tankHpReference.value
+    : healerHpReference.value
+  return Math.max(1, Number(value) || 1)
+}
+
+function hpReferenceRoleLabel(mechanic: TimelineMechanic): string {
+  return attackClass(mechanic) === 'TANK_BUSTER' || attackClass(mechanic) === 'AUTO_ATTACK'
+    ? '防护HP基准'
+    : '治疗HP基准'
+}
+
+function postMitigationDamageText(estimate: DamageEstimate | undefined, mechanic: TimelineMechanic): string {
+  if (estimate?.damageAfterMitigation === null || estimate?.damageAfterMitigation === undefined) return '减伤后 —'
+  const hpAnalysis = damageHpAnalysis(estimate, mechanic)
+  return hpAnalysis
+    ? `减伤后 ${displayInteger(estimate.damageAfterMitigation)} · ${percentLabel(hpAnalysis.damageRatio)}HP`
+    : `减伤后 ${displayInteger(estimate.damageAfterMitigation)}`
 }
 
 async function refreshDamageEstimates() {
@@ -365,6 +437,7 @@ watch(
   { deep: true },
 )
 watch([selectedTrackId, showAllAbilities, abilities], ensureSelectedAbilityVisible, { deep: true })
+watch([mechanics, showTimelineMarkers], ensureSelectedMechanicVisible, { deep: true, immediate: true })
 watch([selectedMechanicId, mechanics], syncTimelinePageToSelection, { deep: true, immediate: true })
 
 function addAssignment() {
@@ -482,6 +555,30 @@ async function generateAiCandidate() {
   } finally {
     busy.value = false
   }
+}
+
+function fillAiOptimizationInstruction() {
+  const riskyLines = allMechanics.value
+    .filter((mechanic) => hasDirectDamage(mechanic))
+    .map((mechanic) => {
+      const estimate = damageEstimates.value[mechanic.mechanicId]
+      const hp = damageHpAnalysis(estimate, mechanic)
+      const assigned = assignmentCountByMechanic.value.get(mechanic.mechanicId) ?? 0
+      if (hp?.risk === 'GREEN' && assigned > 0) return null
+      const damage = hp ? `${displayInteger(hp.damage)} / ${displayInteger(hp.referenceHp)} HP（${percentLabel(hp.damageRatio)}，${hp.label}）` : damageEstimateLabel(mechanic)
+      return `${formatTime(mechanic.plannedAtMs)} ${mechanic.name}：${attackClassLabel(mechanic)} / ${damageTypeLabel(mechanic.damageType)}，${damage}，本机制安排 ${assigned} 个`
+    })
+    .filter((line): line is string => line !== null)
+    .slice(0, 12)
+
+  aiInstruction.value = [
+    '目标：优化当前减伤与治疗利用率，但不要修改 locked=true 的任务，不要改变轨道/职业边界，不要输出计划外轨道。',
+    `HP 风险口径：AOE 按治疗 HP ${displayInteger(healerHpReference.value)} 为 100%；死刑和平A按防护 HP ${displayInteger(tankHpReference.value)} 为 100%。超过 HP 上限为红色，命中后剩余 HP 低于 25% 为黄色，其余为绿色。`,
+    '优先级：1）先补足红色/黄色承伤；2）优先利用可覆盖多个机制的长持续团减/团血，减少只覆盖一次的浪费；3）避免同一轨道冷却冲突；4）单减必须保留或补全 targetTrackId；5）治疗、增疗、护盾可作为复核提示，但不要当作百分比减伤直接扣伤害。',
+    '重点机制：',
+    riskyLines.length ? riskyLines.join('\n') : '当前没有明显红/黄承伤；请优先提高多机制覆盖率、减少冷却空转，并保留现有可用安排。',
+  ].join('\n')
+  aiOpen.value = true
 }
 
 function openFullTimelineImport() {
@@ -650,19 +747,24 @@ function fallbackAbilities(): AbilityDefinition[] {
         />
       </label>
       <div class="candidate-actions">
+        <button class="secondary-button" type="button" @click="fillAiOptimizationInstruction"><Sparkles :size="16" />填入优化指令</button>
         <button class="primary-button" type="button" :disabled="busy" @click="generateAiCandidate"><Sparkles :size="16" />生成候选</button>
-        <small>服务端需要配置 VEDAAXIS_AI_API_KEY。返回结果只会作为候选，经规则校验后由你手动应用。</small>
+        <small>服务端需要配置 VEDAAXIS_AI_API_KEY。返回结果只会作为候选，经规则校验后由你手动应用，不会自动发布。</small>
       </div>
     </section>
 
     <div class="editor-workspace">
       <aside class="mechanic-panel">
-        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ timelineTitle }}</h2></div><span>{{ mechanics.length }} 项 · {{ snapshot.assignments.length }} 个减伤安排</span></header>
+        <header><div><p class="eyebrow">TIMELINE</p><h2>{{ timelineTitle }}</h2></div><span>{{ mechanics.length }} / {{ allMechanics.length }} 项 · {{ snapshot.assignments.length }} 个减伤安排</span></header>
         <div class="timeline-pager">
           <button class="secondary-button compact" type="button" :disabled="timelinePage === 0" @click="setTimelinePage(timelinePage - 1)">上一页</button>
           <span>第 {{ timelinePage + 1 }} / {{ timelinePageCount }} 页</span>
           <button class="secondary-button compact" type="button" :disabled="timelinePage + 1 >= timelinePageCount" @click="setTimelinePage(timelinePage + 1)">下一页</button>
           <small>{{ timelinePageRangeLabel }} · 本页 {{ timelinePageAssignmentCount }} 个安排</small>
+          <label class="timeline-marker-toggle">
+            <input v-model="showTimelineMarkers" type="checkbox" />
+            显示无伤害标记<span v-if="!showTimelineMarkers">（隐藏 {{ hiddenMarkerCount }}）</span>
+          </label>
         </div>
         <button
           v-for="mechanic in pagedMechanics"
@@ -684,7 +786,7 @@ function fallbackAbilities(): AbilityDefinition[] {
               v-if="damageEstimates[mechanic.mechanicId]?.damageAfterMitigation != null"
               :class="['post-mitigation-damage', damageRiskClass(damageEstimates[mechanic.mechanicId], mechanic)]"
             >
-              减伤后 {{ displayInteger(damageEstimates[mechanic.mechanicId]!.damageAfterMitigation) }}
+              {{ postMitigationDamageText(damageEstimates[mechanic.mechanicId], mechanic) }}
               <template v-if="damageEstimates[mechanic.mechanicId]?.worstTrackSlot"> · 最危险 {{ damageEstimates[mechanic.mechanicId]!.worstTrackSlot }}</template>
             </small>
           </span>
@@ -714,28 +816,57 @@ function fallbackAbilities(): AbilityDefinition[] {
             </select>
           </label>
           <label class="ability-picker">减伤技能
-            <span class="ability-select">
-              <img
-                v-if="actionIconUrl(selectedAbility)"
-                class="action-icon action-icon-select"
-                :src="actionIconUrl(selectedAbility)!"
-                alt=""
-                decoding="async"
-                referrerpolicy="no-referrer"
-                @error="hideBrokenIcon"
-              />
-              <select v-model.number="selectedAbilityId">
-                <optgroup
-                  v-for="group in groupedFilteredAbilities"
-                  :key="group.category"
-                  :label="`${group.label}（${group.abilities.length}）`"
-                >
-                  <option v-for="ability in group.abilities" :key="ability.actionId" :value="ability.actionId">
-                    {{ abilityOptionLabel(ability) }}
-                  </option>
-                </optgroup>
-              </select>
-            </span>
+            <div class="ability-combobox">
+              <button
+                class="ability-picker-trigger"
+                type="button"
+                :title="selectedAbility ? abilityOptionLabel(selectedAbility) : '选择技能'"
+                @click="abilityPickerOpen = !abilityPickerOpen"
+              >
+                <img
+                  v-if="actionIconUrl(selectedAbility)"
+                  class="action-icon action-icon-select"
+                  :src="actionIconUrl(selectedAbility)!"
+                  alt=""
+                  decoding="async"
+                  referrerpolicy="no-referrer"
+                  @error="hideBrokenIcon"
+                />
+                <span>
+                  <b>{{ selectedAbility?.name ?? '选择技能' }}</b>
+                  <small>{{ selectedAbility ? `${abilityPlanningCategoryLabel(selectedAbility)} · CD ${seconds(selectedAbility.cooldownMs)}` : '当前轨道暂无可用技能' }}</small>
+                </span>
+                <em>▾</em>
+              </button>
+              <div v-if="abilityPickerOpen" class="ability-picker-popover">
+                <section v-for="group in groupedFilteredAbilities" :key="group.category" class="ability-picker-group">
+                  <header>{{ group.label }}<span>{{ group.abilities.length }}</span></header>
+                  <button
+                    v-for="ability in group.abilities"
+                    :key="ability.actionId"
+                    :class="['ability-picker-option', { selected: selectedAbilityId === ability.actionId }]"
+                    type="button"
+                    @click="selectAbility(ability)"
+                  >
+                    <img
+                      v-if="actionIconUrl(ability)"
+                      class="action-icon action-icon-picker"
+                      :src="actionIconUrl(ability)!"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      referrerpolicy="no-referrer"
+                      @error="hideBrokenIcon"
+                    />
+                    <span>
+                      <b>{{ ability.name }}</b>
+                      <small>{{ abilityEffectSummary(ability) }}</small>
+                      <small>持续 {{ seconds(ability.durationMs) }} · CD {{ seconds(ability.cooldownMs) }}</small>
+                    </span>
+                  </button>
+                </section>
+              </div>
+            </div>
             <small class="ability-filter-note">{{ abilityFilterSummary }}</small>
             <small v-if="selectedAbility" class="ability-category-note">{{ abilityPlanningCategoryLabel(selectedAbility) }} · {{ abilityEffectSummary(selectedAbility) }}</small>
           </label>
@@ -798,23 +929,30 @@ function fallbackAbilities(): AbilityDefinition[] {
             <span><b>{{ carriedCoverage.length }}</b>提前覆盖</span>
             <span><b>{{ cooldownConflicts.length }}</b>冷却冲突</span>
           </div>
-          <p class="damage-thresholds">
-            AOE：≤10万绿色，10万以上至19万黄色，&gt;19万红色；死刑：≤20万绿色，20万以上至29万前黄色，≥29万红色。
-          </p>
+          <div class="hp-reference-controls">
+            <label>治疗 HP 基准<input v-model.number="healerHpReference" type="number" min="1" step="1000" /></label>
+            <label>防护 HP 基准<input v-model.number="tankHpReference" type="number" min="1" step="1000" /></label>
+            <small>AOE 按治疗职业 HP 判定，死刑和平A按防护职业 HP 判定；超过 HP 上限红色，命中后剩余 HP &lt;25% 黄色。</small>
+          </div>
           <div v-if="selectedDamageEstimate?.damageAfterMitigation != null" class="damage-analysis-metrics">
             <span><small>机制原始总伤害</small><b>{{ displayInteger(selectedDamageEstimate.baselineDamage) }}</b></span>
             <span><small>已建模减伤</small><b>{{ selectedDamageEstimate.modeledReduction === null ? '—' : `${(selectedDamageEstimate.modeledReduction * 100).toFixed(1)}%` }}</b></span>
             <span><small>减伤后预计伤害</small><b :class="damageRiskClass(selectedDamageEstimate)">{{ displayInteger(selectedDamageEstimate.damageAfterMitigation) }}</b></span>
+            <span><small>{{ selectedDamageHpAnalysis?.referenceRoleLabel ?? 'HP 基准' }}</small><b>{{ displayInteger(selectedDamageHpAnalysis?.referenceHp ?? null) }}</b></span>
+            <span><small>预计剩余 HP</small><b :class="damageRiskClass(selectedDamageEstimate)">{{ selectedDamageHpAnalysis ? `${displayInteger(selectedDamageHpAnalysis.remainingHp)}（${percentLabel(selectedDamageHpAnalysis.remainingRatio)}）` : '—' }}</b></span>
             <span><small>最危险轨道</small><b>{{ selectedDamageEstimate.worstTrackSlot ?? '—' }}</b></span>
           </div>
-          <div v-if="selectedDamageRatio" class="damage-ratio-panel">
-            <div class="damage-ratio-bar" aria-label="减伤比例">
-              <span class="damage-ratio-mitigated" :style="{ width: percentLabel(selectedDamageRatio.mitigated) }"></span>
-              <span class="damage-ratio-remaining" :style="{ width: percentLabel(selectedDamageRatio.remainingBar) }"></span>
+          <div v-if="selectedDamageHpAnalysis" class="hp-damage-panel">
+            <div class="hp-damage-bar" aria-label="HP 承伤比例">
+              <span
+                :class="['hp-damage-fill', `damage-fill-${selectedDamageHpAnalysis.risk.toLowerCase()}`]"
+                :style="{ width: percentLabel(selectedDamageHpAnalysis.damageBarRatio) }"
+              ></span>
             </div>
-            <div class="damage-ratio-labels">
-              <span><i class="mitigated"></i>减掉 {{ percentLabel(selectedDamageRatio.mitigated) }}</span>
-              <span><i class="remaining"></i>承受 {{ percentLabel(selectedDamageRatio.remaining) }}</span>
+            <div class="hp-damage-labels">
+              <span><i class="incoming"></i>预计承伤 {{ percentLabel(selectedDamageHpAnalysis.damageRatio) }} HP</span>
+              <span><i class="remaining"></i>剩余 {{ percentLabel(selectedDamageHpAnalysis.remainingRatio) }}</span>
+              <span v-if="selectedDamageHpAnalysis.overflowRatio > 0" class="hp-overflow">溢出 {{ percentLabel(selectedDamageHpAnalysis.overflowRatio) }}</span>
             </div>
           </div>
           <p v-if="selectedDamageEstimate?.damageAfterMitigation == null" class="damage-analysis-empty">

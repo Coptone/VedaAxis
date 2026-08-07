@@ -55,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     private string deviceCode = string.Empty;
     private string deviceCodeExpiresAt = string.Empty;
     private string deviceAuthorizationUrl = string.Empty;
+    private string lastExecutionUploadStatus = "暂无执行上传";
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
     private readonly Dictionary<Guid, uint> manualPartyTargets = [];
 
@@ -241,11 +242,11 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.SameLine();
         if (ImGui.Button("停止"))
         {
-            combatLifecycle.Complete();
+            FinalizeFight("ABANDONED");
             runtime.Stop();
             runtime.Reset();
             activeCasts.Clear();
-            status = "时间轴已停止";
+            status = "时间轴已停止；如本轮已进入战斗生命周期，执行记录会加入个人复盘上传队列";
         }
 
         ImGui.TextWrapped($"计划文件：{planStore.Path}");
@@ -266,6 +267,7 @@ public sealed class Plugin : IDalamudPlugin
                 _ = SyncPublishedPlanAsync();
             }
             ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
+            ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
         }
         else if (ImGui.Button("连接 VedaAxis 账户"))
         {
@@ -1019,6 +1021,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         try
         {
+            var uploaded = 0;
             foreach (var pending in executionUploadQueue.ReadPending())
             {
                 try
@@ -1026,6 +1029,7 @@ public sealed class Plugin : IDalamudPlugin
                     await deviceAuthorizationClient.UploadExecutionAsync(
                         configuration.ApiBaseUrl, configuration.AccessToken, pending.Batch, CancellationToken.None);
                     executionUploadQueue.Complete(pending);
+                    uploaded++;
                 }
                 catch (HttpRequestException exception) when (exception.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
@@ -1037,11 +1041,17 @@ public sealed class Plugin : IDalamudPlugin
                     await deviceAuthorizationClient.UploadExecutionAsync(
                         configuration.ApiBaseUrl, tokens.AccessToken, pending.Batch, CancellationToken.None);
                     executionUploadQueue.Complete(pending);
+                    uploaded++;
                 }
+            }
+            if (uploaded > 0)
+            {
+                lastExecutionUploadStatus = $"已上传 {uploaded} 个执行批次（{DateTimeOffset.Now:HH:mm:ss}）";
             }
         }
         catch (Exception exception)
         {
+            lastExecutionUploadStatus = $"上传失败：{exception.Message}";
             status = $"执行记录将在稍后重试：{exception.Message}";
             Log.Warning(exception, "Unable to drain execution upload queue");
         }

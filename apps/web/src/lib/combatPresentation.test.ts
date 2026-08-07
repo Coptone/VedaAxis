@@ -34,6 +34,12 @@ describe('combat presentation', () => {
     expect(damageEstimateLabel(marker)).toBe('时间轴标记 · 无直接伤害')
   })
 
+  it('does not infer direct damage from a marker damage attribute alone', () => {
+    const marker = { type: 'MECHANIC' as const, name: '开场', damageType: 'SPECIAL' as const, damageProfile: null }
+    expect(hasDirectDamage(marker)).toBe(false)
+    expect(damageEstimateLabel(marker)).toBe('时间轴标记 · 无直接伤害')
+  })
+
   it('keeps real attacks without a profile visibly pending', () => {
     const attack = { type: 'MECHANIC' as const, name: '攻击', damageType: 'PHYSICAL' as const, damageProfile: null }
     expect(hasDirectDamage(attack)).toBe(true)

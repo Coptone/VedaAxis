@@ -38,7 +38,6 @@ export function hasDirectDamage(mechanic: Pick<TimelineMechanic, 'type' | 'name'
     || mechanic.type === 'RAIDWIDE'
     || mechanic.type === 'TANK_BUSTER'
     || attackClass(mechanic) === 'AUTO_ATTACK'
-    || mechanic.damageType !== 'UNKNOWN'
 }
 
 /**

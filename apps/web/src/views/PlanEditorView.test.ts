@@ -105,6 +105,7 @@ describe('PlanEditorView', () => {
     await wrapper.get('.ability-picker-trigger').trigger('click')
     await flushPromises()
 
+    expect(wrapper.get('.ability-picker-modal').attributes('role')).toBe('dialog')
     const labels = wrapper.findAll('.ability-picker-group header').map((group) => group.text())
     expect(labels).toContain('团减1')
     expect(labels).toContain('团血1')

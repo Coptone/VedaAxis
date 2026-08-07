@@ -832,39 +832,62 @@ function fallbackAbilities(): AbilityDefinition[] {
                   referrerpolicy="no-referrer"
                   @error="hideBrokenIcon"
                 />
+                <span v-else class="action-icon action-icon-select action-icon-placeholder" aria-hidden="true">
+                  {{ selectedAbility ? '技' : '—' }}
+                </span>
                 <span>
                   <b>{{ selectedAbility?.name ?? '选择技能' }}</b>
                   <small>{{ selectedAbility ? `${abilityPlanningCategoryLabel(selectedAbility)} · CD ${seconds(selectedAbility.cooldownMs)}` : '当前轨道暂无可用技能' }}</small>
                 </span>
                 <em>▾</em>
               </button>
-              <div v-if="abilityPickerOpen" class="ability-picker-popover">
-                <section v-for="group in groupedFilteredAbilities" :key="group.category" class="ability-picker-group">
-                  <header>{{ group.label }}<span>{{ group.abilities.length }}</span></header>
-                  <button
-                    v-for="ability in group.abilities"
-                    :key="ability.actionId"
-                    :class="['ability-picker-option', { selected: selectedAbilityId === ability.actionId }]"
-                    type="button"
-                    @click="selectAbility(ability)"
-                  >
-                    <img
-                      v-if="actionIconUrl(ability)"
-                      class="action-icon action-icon-picker"
-                      :src="actionIconUrl(ability)!"
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      referrerpolicy="no-referrer"
-                      @error="hideBrokenIcon"
-                    />
-                    <span>
-                      <b>{{ ability.name }}</b>
-                      <small>{{ abilityEffectSummary(ability) }}</small>
-                      <small>持续 {{ seconds(ability.durationMs) }} · CD {{ seconds(ability.cooldownMs) }}</small>
-                    </span>
-                  </button>
-                </section>
+              <div
+                v-if="abilityPickerOpen"
+                class="ability-picker-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="选择减伤技能"
+                @click.self="abilityPickerOpen = false"
+              >
+                <div class="ability-picker-popover">
+                  <header class="ability-picker-modal-header">
+                    <div>
+                      <strong>选择减伤技能</strong>
+                      <small>{{ abilityFilterSummary }}</small>
+                    </div>
+                    <button class="ability-picker-close" type="button" aria-label="关闭技能选择" @click="abilityPickerOpen = false">×</button>
+                  </header>
+                  <div class="ability-picker-groups">
+                    <section v-for="group in groupedFilteredAbilities" :key="group.category" class="ability-picker-group">
+                      <header>{{ group.label }}<span>{{ group.abilities.length }}</span></header>
+                      <button
+                        v-for="ability in group.abilities"
+                        :key="ability.actionId"
+                        :class="['ability-picker-option', { selected: selectedAbilityId === ability.actionId }]"
+                        type="button"
+                        @click="selectAbility(ability)"
+                      >
+                        <img
+                          v-if="actionIconUrl(ability)"
+                          class="action-icon action-icon-picker"
+                          :src="actionIconUrl(ability)!"
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          referrerpolicy="no-referrer"
+                          @error="hideBrokenIcon"
+                        />
+                        <span v-else class="action-icon action-icon-picker action-icon-placeholder" aria-hidden="true">技</span>
+                        <span>
+                          <b>{{ ability.name }}</b>
+                          <small>{{ abilityEffectSummary(ability) }}</small>
+                          <small>持续 {{ seconds(ability.durationMs) }} · CD {{ seconds(ability.cooldownMs) }}</small>
+                        </span>
+                      </button>
+                    </section>
+                  </div>
+                  <p v-if="!groupedFilteredAbilities.length" class="ability-picker-empty">当前轨道没有可安排技能；可以勾选“显示全部技能”临时查看完整目录。</p>
+                </div>
               </div>
             </div>
             <small class="ability-filter-note">{{ abilityFilterSummary }}</small>

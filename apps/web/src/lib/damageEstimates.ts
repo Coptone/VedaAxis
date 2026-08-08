@@ -1,4 +1,5 @@
 import { attackClass } from './combatPresentation'
+
 import type {
   AbilityDefinition,
   Assignment,
@@ -8,6 +9,8 @@ import type {
   PlanSnapshot,
   TimelineMechanic,
 } from '../types/domain'
+
+const CURRENT_ENMITY_TARGET_PREFIX = '当前一仇:'
 
 export interface AssignmentCoverage {
   assignment: Assignment
@@ -334,6 +337,8 @@ function targetTracks(snapshot: PlanSnapshot, mechanic: TimelineMechanic): Execu
   if (mechanic.type !== 'TANK_BUSTER' && attackClass(mechanic) !== 'AUTO_ATTACK') return snapshot.tracks
   const tanks = snapshot.tracks.filter((track) => ['MT', 'ST', 'T1'].includes(track.slot))
   if (!tanks.length) return snapshot.tracks
+  const explicitCurrentTank = currentEnmityTrack(snapshot, mechanic.target)
+  if (explicitCurrentTank) return [explicitCurrentTank]
   if (isDualTankTarget(mechanic.target)) return tanks
   if (isOffTankTarget(mechanic.target)) {
     const offTanks = tanks.filter((track) => track.slot === 'ST')
@@ -341,6 +346,13 @@ function targetTracks(snapshot: PlanSnapshot, mechanic: TimelineMechanic): Execu
   }
   const mainTanks = tanks.filter((track) => ['MT', 'T1'].includes(track.slot))
   return mainTanks.length ? mainTanks : tanks.slice(0, 1)
+}
+
+function currentEnmityTrack(snapshot: PlanSnapshot, target: string | null | undefined): ExecutionTrack | null {
+  const normalized = (target ?? '').trim()
+  if (!normalized.startsWith(CURRENT_ENMITY_TARGET_PREFIX)) return null
+  const slot = normalized.slice(CURRENT_ENMITY_TARGET_PREFIX.length).trim().toUpperCase()
+  return snapshot.tracks.find((track) => track.slot === slot) ?? null
 }
 
 function isDualTankTarget(target: string | null | undefined): boolean {

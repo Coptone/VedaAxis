@@ -226,6 +226,37 @@ describe('local damage estimates', () => {
     expect(estimates[0]!.worstTrackSlot).toBe('ST')
   })
 
+  it('uses a user-selected current-enmity tank track for auto attacks', () => {
+    const plan = basePlan()
+    const stTrackId = '20000000-0000-4000-8000-000000000003'
+    plan.tracks.push({ trackId: stTrackId, slot: 'ST', allowedJobIds: [32], displayName: 'ST' })
+    plan.mechanics = [{
+      ...plan.mechanics[0]!,
+      name: '攻击 x4',
+      plannedAtMs: 1_000,
+      type: 'MECHANIC',
+      damageType: 'PHYSICAL',
+      target: '当前一仇:ST',
+      damageProfile: {
+        ...plan.mechanics[0]!.damageProfile!,
+        amount: 100_000,
+      },
+    }]
+    plan.assignments = [{
+      ...plan.assignments[0]!,
+      actionId: 7531,
+      earliestUseAtMs: 4_000,
+      latestUseAtMs: 6_000,
+      impactAtMs: 6_000,
+    }]
+
+    const estimates = previewDamageEstimatesLocally(plan, [rampart])
+
+    expect(estimates[0]!.damageAfterMitigation).toBe(100_000)
+    expect(estimates[0]!.modeledReduction).toBe(0)
+    expect(estimates[0]!.worstTrackSlot).toBe('ST')
+  })
+
   it('filters abilities by the selected execution track job', () => {
     const plan = basePlan()
     const pictomancerBarrier = { ...reprisal, actionId: 34685, name: '坦培拉涂层 / Tempera Coat', jobIds: [42] }

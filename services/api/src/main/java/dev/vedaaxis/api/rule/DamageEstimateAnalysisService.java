@@ -24,6 +24,8 @@ import java.util.UUID;
  */
 @Service
 public class DamageEstimateAnalysisService {
+    private static final String CURRENT_ENMITY_TARGET_PREFIX = "当前一仇:";
+
     private final SurvivabilityAnalysisService survivabilityAnalysisService;
     private final AbilityCatalog abilityCatalog;
 
@@ -100,6 +102,10 @@ public class DamageEstimateAnalysisService {
         if (tanks.isEmpty()) {
             return snapshot.tracks();
         }
+        PlanSnapshot.ExecutionTrack explicitCurrentTank = currentEnmityTrack(snapshot, mechanic.target());
+        if (explicitCurrentTank != null) {
+            return List.of(explicitCurrentTank);
+        }
         if (isDualTankTarget(mechanic.target())) {
             return tanks;
         }
@@ -119,6 +125,18 @@ public class DamageEstimateAnalysisService {
         String normalized = name == null ? "" : name.trim().toLowerCase();
         return normalized.equals("攻击") || normalized.startsWith("攻击 ")
                 || normalized.equals("attack") || normalized.startsWith("attack ");
+    }
+
+    private static PlanSnapshot.ExecutionTrack currentEnmityTrack(PlanSnapshot snapshot, String target) {
+        String normalized = target == null ? "" : target.trim();
+        if (!normalized.startsWith(CURRENT_ENMITY_TARGET_PREFIX)) {
+            return null;
+        }
+        String slot = normalized.substring(CURRENT_ENMITY_TARGET_PREFIX.length()).trim().toUpperCase();
+        return snapshot.tracks().stream()
+                .filter(track -> track.slot().name().equals(slot))
+                .findFirst()
+                .orElse(null);
     }
 
     private static boolean isDualTankTarget(String target) {

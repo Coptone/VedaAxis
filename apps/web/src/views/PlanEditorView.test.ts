@@ -97,6 +97,25 @@ describe('PlanEditorView', () => {
     expect(wrapper.get('.hp-damage-labels').text()).toContain('剩余 20.0%')
   })
 
+  it('lets tank-target mechanics select the current enmity track', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/plans/new', component: PlanEditorView }],
+    })
+    await router.push('/plans/new')
+    await router.isReady()
+
+    const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
+    await flushPromises()
+
+    const stTrack = dmuP1P2DefaultPlan().tracks.find((track) => track.slot === 'ST')!
+    await wrapper.get('.mechanic-target-controls select').setValue(`当前一仇:${stTrack.slot}`)
+    await flushPromises()
+
+    expect(wrapper.get('.board-header p:not(.eyebrow)').text()).toContain('当前一仇：ST')
+    expect(wrapper.get('.mechanic-target-controls small').text()).toContain('换 T 后')
+  })
+
   it('groups selectable abilities by planning category while preserving job filtering', async () => {
     vi.mocked(api.abilities).mockResolvedValueOnce([
       testAbility(24298, '白牛清汁 / Kerachole', [40], { allDamageReductionPercent: 10, calculationReadiness: 'DIRECT_REDUCTION' }),
@@ -112,7 +131,7 @@ describe('PlanEditorView', () => {
 
     const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
     await flushPromises()
-    await wrapper.get('select').setValue(dmuP1P2DefaultPlan().tracks.find((track) => track.slot === 'H2')!.trackId)
+    await wrapper.get('.quick-assign select').setValue(dmuP1P2DefaultPlan().tracks.find((track) => track.slot === 'H2')!.trackId)
     await flushPromises()
 
     await wrapper.get('.ability-picker-trigger').trigger('click')

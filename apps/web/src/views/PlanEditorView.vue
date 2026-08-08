@@ -65,6 +65,7 @@ import type {
   TimelineMechanic,
   TimelinePhase,
   TrackMode,
+  TrackSlot,
 } from '../types/domain'
 
 const route = useRoute()
@@ -120,6 +121,9 @@ let damageEstimateRequest = 0
 let damageEstimateTimer: ReturnType<typeof setTimeout> | undefined
 const TIMELINE_PAGE_SIZE = 12
 const ASSIGNMENT_TIME_STEP_MS = 100
+const CURRENT_ENMITY_TARGET_PREFIX = '当前一仇:'
+const CURRENT_ENMITY_DEFAULT_TARGET = '当前一仇'
+const DUAL_TANK_TARGET = '一二仇/双坦'
 const READY_COOLDOWN: AbilityCooldownState = {
   blocked: false,
   remainingMs: 0,
@@ -517,6 +521,72 @@ function assignmentCoversMechanic(assignment: Assignment, ability: AbilityDefini
 
 function mechanicInlineLabel(mechanic: TimelineMechanic): string {
   return `${formatTime(mechanic.plannedAtMs)} ${mechanic.name}`
+}
+
+function isTankTargetMechanic(mechanic: TimelineMechanic): boolean {
+  const classification = attackClass(mechanic)
+  return classification === 'AUTO_ATTACK' || classification === 'TANK_BUSTER'
+}
+
+function tankTargetTracks() {
+  return snapshot.value.tracks.filter((track) => ['MT', 'ST', 'T1'].includes(track.slot))
+}
+
+function currentEnmityTargetSlot(target: string | null | undefined): TrackSlot | null {
+  const normalized = (target ?? '').trim()
+  if (!normalized.startsWith(CURRENT_ENMITY_TARGET_PREFIX)) return null
+  const slot = normalized.slice(CURRENT_ENMITY_TARGET_PREFIX.length).trim().toUpperCase()
+  return ['MT', 'ST', 'T1'].includes(slot) ? slot as TrackSlot : null
+}
+
+function isDualTankTargetText(target: string | null | undefined): boolean {
+  const normalized = (target ?? '').trim().toLowerCase()
+  return normalized.includes('一二仇')
+    || normalized.includes('双坦')
+    || normalized.includes('两名坦克')
+    || normalized.includes('2坦')
+    || normalized.includes('two tanks')
+    || normalized.includes('both tanks')
+    || normalized.includes('mt/st')
+}
+
+function isOffTankTargetText(target: string | null | undefined): boolean {
+  const normalized = (target ?? '').trim().toLowerCase()
+  return normalized === 'st'
+    || normalized.includes('副坦')
+    || normalized.includes('二仇')
+    || normalized.includes('off tank')
+    || normalized.includes('off-tank')
+    || normalized.includes('offtank')
+}
+
+function selectedTankTargetValue(mechanic: TimelineMechanic): string {
+  const explicitSlot = currentEnmityTargetSlot(mechanic.target)
+  if (explicitSlot) return `${CURRENT_ENMITY_TARGET_PREFIX}${explicitSlot}`
+  if (isDualTankTargetText(mechanic.target)) return DUAL_TANK_TARGET
+  if (isOffTankTargetText(mechanic.target)) return `${CURRENT_ENMITY_TARGET_PREFIX}ST`
+  return CURRENT_ENMITY_DEFAULT_TARGET
+}
+
+function mechanicTargetLabel(mechanic: TimelineMechanic): string {
+  const explicitSlot = currentEnmityTargetSlot(mechanic.target)
+  if (explicitSlot) {
+    const track = snapshot.value.tracks.find((item) => item.slot === explicitSlot) ?? null
+    return `当前一仇：${trackDisplayLabel(track)}`
+  }
+  if (isDualTankTargetText(mechanic.target)) return DUAL_TANK_TARGET
+  if (isOffTankTargetText(mechanic.target)) {
+    const track = snapshot.value.tracks.find((item) => item.slot === 'ST') ?? null
+    return `当前一仇：${trackDisplayLabel(track)}`
+  }
+  return mechanic.target
+}
+
+function setSelectedMechanicTankTarget(value: string) {
+  const mechanic = selectedMechanic.value
+  if (!mechanic || !isTankTargetMechanic(mechanic)) return
+  mechanic.target = value || CURRENT_ENMITY_DEFAULT_TARGET
+  validation.value = null
 }
 
 function describeRuleIssue(issue: RuleIssue): RuleIssueDisplay {
@@ -1433,7 +1503,7 @@ function fallbackAbilities(): AbilityDefinition[] {
             <small class="mechanic-classification">
               <strong :class="['attack-class-chip', `attack-class-${attackClass(mechanic).toLowerCase()}`]">{{ attackClassLabel(mechanic) }}</strong>
               <span>{{ damageTypeLabel(mechanic.damageType) }}</span>
-              <span>{{ mechanic.target }}</span>
+              <span>{{ mechanicTargetLabel(mechanic) }}</span>
             </small>
             <small class="damage-estimate-note">{{ damageEstimateLabel(mechanic) }}</small>
             <small
@@ -1457,11 +1527,29 @@ function fallbackAbilities(): AbilityDefinition[] {
             <h2>{{ selectedMechanic.name }}</h2>
             <p>
               <strong :class="['attack-class-chip', `attack-class-${attackClass(selectedMechanic).toLowerCase()}`]">{{ attackClassLabel(selectedMechanic) }}</strong>
-              {{ damageTypeLabel(selectedMechanic.damageType) }}伤害 · {{ selectedMechanic.target }} · 命中 {{ formatTime(selectedMechanic.plannedAtMs) }} · {{ damageEstimateLabel(selectedMechanic) }}
+              {{ damageTypeLabel(selectedMechanic.damageType) }}伤害 · {{ mechanicTargetLabel(selectedMechanic) }} · 命中 {{ formatTime(selectedMechanic.plannedAtMs) }} · {{ damageEstimateLabel(selectedMechanic) }}
             </p>
           </div>
           <span class="confidence-chip">{{ selectedMechanic.confidence }}</span>
         </header>
+
+        <div v-if="isTankTargetMechanic(selectedMechanic)" class="mechanic-target-controls">
+          <label>
+            <span>单体承伤目标</span>
+            <select :value="selectedTankTargetValue(selectedMechanic)" @change="setSelectedMechanicTankTarget(eventValue($event))">
+              <option :value="CURRENT_ENMITY_DEFAULT_TARGET">当前一仇（默认 MT / T1）</option>
+              <option
+                v-for="track in tankTargetTracks()"
+                :key="track.trackId"
+                :value="`${CURRENT_ENMITY_TARGET_PREFIX}${track.slot}`"
+              >
+                当前一仇：{{ trackDisplayLabel(track) }}
+              </option>
+              <option :value="DUAL_TANK_TARGET">双坦 / 一二仇</option>
+            </select>
+          </label>
+          <small>换 T 后，把后续平 A 或单体死刑切到新的当前一仇轨道；预计伤害和最危险轨道会按这里重算。</small>
+        </div>
 
         <div class="quick-assign">
           <label>
@@ -1663,7 +1751,7 @@ function fallbackAbilities(): AbilityDefinition[] {
               : '该行用于阶段或机制定位，不对应一次需要计算承伤的直接伤害事件。' }}
           </p>
           <p class="damage-analysis-boundary">
-            预览按当前安排计算：AOE 取全队中减伤后伤害最高的轨道，死刑取坦克轨道中的最高值。护盾、治疗和无敌不从这一个伤害数字中扣除，并会单独提示复核。
+            预览按当前安排计算：AOE 取全队中减伤后伤害最高的轨道，死刑和平 A 按上方单体承伤目标计算；未指定时默认当前一仇为 MT/T1。护盾、治疗和无敌不从这一个伤害数字中扣除，并会单独提示复核。
           </p>
           <div v-if="carriedCoverage.length" class="coverage-panel">
             <header><b>提前覆盖到本机制</b><small>这些技能不是本机制行创建的，但持续时间覆盖当前命中</small></header>

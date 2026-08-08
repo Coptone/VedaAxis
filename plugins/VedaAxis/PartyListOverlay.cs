@@ -49,7 +49,6 @@ internal sealed unsafe class PartyListOverlay
                     ? string.Empty
                     : nativeMember.Name->NodeText.ToString();
                 var target = unmatched.FirstOrDefault(item => NamesMatch(nativeName, item.Member.DisplayName));
-                target ??= unmatched.FirstOrDefault(item => item.Member.PartyIndex == index);
                 if (target is null || !TryGetNode(ref nativeMember, out var node))
                 {
                     continue;

@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.13.0",
+    "AssemblyVersion": "0.1.14.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "支持恢复类技能放在伤害判定后用于抬血；冷却中技能提示上一次释放机制与时间；技能槽提醒窗口支持拖动、坐标设置和锁定；控制台改为运行、计划同步、显示、诊断分栏。",
+    "Changelog": "计划同步改为直接刷新并选择当前账号的已发布计划列表，支持按计划 ID 精确同步；旧版方案标签匹配折叠为高级兜底。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786171418,
+    "LastUpdate": 1786198056,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

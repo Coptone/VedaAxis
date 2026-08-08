@@ -36,6 +36,17 @@ public interface PlanMapper {
             """)
     List<PlanRow> listByOwner(@Param("ownerId") String ownerId);
 
+    @Select("""
+            SELECT p.id AS plan_id, p.name, p.encounter_id, p.territory_id, p.strategy_tag, p.track_mode,
+                   v.version_number, v.created_at AS published_at
+            FROM plan_version v
+            JOIN mitigation_plan p ON p.id = v.plan_id
+            WHERE p.owner_id = #{ownerId}
+              AND v.status = 'ACTIVE'
+            ORDER BY v.created_at DESC
+            """)
+    List<RuntimePlanSummaryRow> listActiveRuntimePlans(@Param("ownerId") String ownerId);
+
     @Update("""
             UPDATE mitigation_plan
             SET name = #{name}, strategy_tag = #{strategyTag}, draft_json = #{draftJson}, updated_at = #{updatedAt}
@@ -123,6 +134,20 @@ public interface PlanMapper {
             @Param("encounterId") String encounterId,
             @Param("strategyTag") String strategyTag,
             @Param("trackMode") String trackMode);
+
+    @Select("""
+            SELECT v.id, v.plan_id, v.version_number, v.status, v.snapshot_json, v.share_code, v.created_at
+            FROM plan_version v
+            JOIN mitigation_plan p ON p.id = v.plan_id
+            WHERE p.owner_id = #{ownerId}
+              AND p.id = #{planId}
+              AND v.status = 'ACTIVE'
+            ORDER BY v.created_at DESC
+            LIMIT 1
+            """)
+    Optional<PlanVersionRow> findLatestActiveByPlan(
+            @Param("ownerId") String ownerId,
+            @Param("planId") String planId);
 
     @Update("UPDATE plan_version SET status = 'SUPERSEDED' WHERE plan_id = #{planId} AND status = 'ACTIVE'")
     int supersedeActive(@Param("planId") String planId);

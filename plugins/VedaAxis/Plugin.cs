@@ -57,6 +57,9 @@ public sealed class Plugin : IDalamudPlugin
     private string deviceAuthorizationUrl = string.Empty;
     private string customStrategyTagInput = string.Empty;
     private string lastExecutionUploadStatus = "暂无执行上传";
+    private string publishedPlanListStatus = "尚未刷新已发布计划列表";
+    private IReadOnlyList<RuntimePlanSummary> publishedPlans = Array.Empty<RuntimePlanSummary>();
+    private bool refreshingPublishedPlans;
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
     private readonly Dictionary<Guid, uint> manualPartyTargets = [];
     private bool forceMissingActionWindowPosition;
@@ -381,11 +384,16 @@ public sealed class Plugin : IDalamudPlugin
                 {
                     ImGui.TextColored(new Vector4(0.35f, 0.88f, 0.58f, 1f), $"已连接设备 {configuration.DeviceId}");
                     ImGui.TextDisabled("设备已完成一次性绑定；令牌过期时会在非战斗阶段自动续期。");
-                    DrawTrackModeSelector();
-                    DrawPlanSelector();
-                    if (ImGui.Button("同步已发布个人计划"))
+                    DrawPublishedPlanSelector();
+                    if (ImGui.CollapsingHeader("高级：按副本和方案标签匹配"))
                     {
-                        _ = SyncPublishedPlanAsync();
+                        ImGui.TextDisabled("仅用于排查旧计划；日常请从上方已发布计划列表选择。");
+                        DrawTrackModeSelector();
+                        DrawPlanSelector();
+                        if (ImGui.Button("按当前副本/标签同步"))
+                        {
+                            _ = SyncPublishedPlanAsync();
+                        }
                     }
                     ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
                     ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
@@ -610,6 +618,110 @@ public sealed class Plugin : IDalamudPlugin
             ApplyTrackMode("FOUR");
         }
         ImGui.EndCombo();
+    }
+
+    private void DrawPublishedPlanSelector()
+    {
+        var currentTerritory = ClientState.TerritoryType;
+        ImGui.Text($"当前 Territory：{(currentTerritory == 0 ? "未知" : currentTerritory.ToString())}");
+        ImGui.TextDisabled(publishedPlanListStatus);
+
+        if (ImGui.Button(refreshingPublishedPlans ? "正在刷新…" : "刷新已发布计划列表") && !refreshingPublishedPlans)
+        {
+            _ = RefreshPublishedPlanListAsync();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("同步选中计划"))
+        {
+            _ = SyncSelectedPublishedPlanAsync();
+        }
+
+        var selectedPlan = SelectedPublishedPlan();
+        var preview = selectedPlan is null
+            ? (publishedPlans.Count == 0 ? "请先刷新列表" : "请选择一个已发布计划")
+            : PublishedPlanLabel(selectedPlan, currentTerritory, includePublishedAt: false);
+
+        if (ImGui.BeginCombo("已发布计划", preview))
+        {
+            foreach (var plan in OrderedPublishedPlans(currentTerritory))
+            {
+                var selected = selectedPlan?.PlanId == plan.PlanId;
+                if (ImGui.Selectable(PublishedPlanLabel(plan, currentTerritory, includePublishedAt: true), selected))
+                {
+                    SelectPublishedPlan(plan);
+                }
+                if (selected)
+                {
+                    ImGui.SetItemDefaultFocus();
+                }
+            }
+            ImGui.EndCombo();
+        }
+
+        if (selectedPlan is not null)
+        {
+            var sameTerritory = currentTerritory == 0 || selectedPlan.TerritoryId == currentTerritory;
+            var color = sameTerritory
+                ? new Vector4(0.35f, 0.88f, 0.58f, 1f)
+                : new Vector4(1f, 0.72f, 0.25f, 1f);
+            ImGui.TextColored(color,
+                sameTerritory
+                    ? $"将同步：{selectedPlan.Name} · v{selectedPlan.Version}"
+                    : $"注意：当前副本 Territory {currentTerritory} 与计划 Territory {selectedPlan.TerritoryId} 不一致");
+            ImGui.TextDisabled($"轨道 {TrackModeLabel(selectedPlan.TrackMode)} · 方案 {selectedPlan.StrategyTag} · 发布时间 {selectedPlan.PublishedAt.ToLocalTime():yyyy-MM-dd HH:mm}");
+        }
+        else if (publishedPlans.Count == 0)
+        {
+            ImGui.TextDisabled("列表为空时，先确认网页端已经点过“发布版本”；只保存草稿不会出现在这里。");
+        }
+    }
+
+    private IEnumerable<RuntimePlanSummary> OrderedPublishedPlans(uint currentTerritory)
+    {
+        return publishedPlans
+            .OrderBy(plan => currentTerritory != 0 && plan.TerritoryId == currentTerritory ? 0 : 1)
+            .ThenByDescending(plan => plan.PublishedAt);
+    }
+
+    private RuntimePlanSummary? SelectedPublishedPlan()
+    {
+        return Guid.TryParse(configuration.SelectedPublishedPlanId, out var selectedPlanId)
+            ? publishedPlans.FirstOrDefault(plan => plan.PlanId == selectedPlanId)
+            : null;
+    }
+
+    private void SelectPublishedPlan(RuntimePlanSummary plan)
+    {
+        configuration.SelectedPublishedPlanId = plan.PlanId.ToString();
+        configuration.StrategyTag = plan.StrategyTag;
+        configuration.TrackMode = plan.TrackMode;
+        customStrategyTagInput = plan.StrategyTag;
+        NormalizeLocalSlot();
+        SaveConfiguration();
+        status = $"已选择 {plan.Name} v{plan.Version}";
+    }
+
+    private string PublishedPlanLabel(RuntimePlanSummary plan, uint currentTerritory, bool includePublishedAt)
+    {
+        var territoryMarker = currentTerritory != 0 && plan.TerritoryId == currentTerritory ? "当前副本" : $"T{plan.TerritoryId}";
+        var label = $"{plan.Name} · {territoryMarker} · {TrackModeLabel(plan.TrackMode)} · v{plan.Version}";
+        if (includePublishedAt)
+        {
+            label += $" · {plan.PublishedAt.ToLocalTime():MM-dd HH:mm}";
+        }
+        return label;
+    }
+
+    private static string TrackModeLabel(string trackMode)
+    {
+        return string.Equals(trackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
+            ? "4 轨"
+            : "8 轨";
+    }
+
+    private static string PersistedTrackMode(TrackMode trackMode)
+    {
+        return trackMode == TrackMode.Four ? "FOUR" : "EIGHT";
     }
 
     private void DrawPlanSelector()
@@ -1214,6 +1326,135 @@ public sealed class Plugin : IDalamudPlugin
         {
             status = $"计划同步失败：{exception.Message}";
             Log.Error(exception, "Plan synchronization failed");
+        }
+    }
+
+    private async Task RefreshPublishedPlanListAsync()
+    {
+        if (configuration.AccessToken is null || configuration.RefreshToken is null)
+        {
+            status = "请先连接 VedaAxis 账户";
+            return;
+        }
+        if (Condition[ConditionFlag.InCombat])
+        {
+            status = "战斗中不执行网络刷新，请脱战后重试";
+            return;
+        }
+
+        refreshingPublishedPlans = true;
+        publishedPlanListStatus = "正在读取当前账号的已发布计划…";
+        status = "正在刷新已发布计划列表…";
+        try
+        {
+            var plans = await AuthorizedRequestAsync(
+                (accessToken, cancellationToken) => deviceAuthorizationClient.ListPublishedPlansAsync(
+                    configuration.ApiBaseUrl, accessToken, cancellationToken),
+                CancellationToken.None);
+            ApplyPublishedPlans(plans);
+            status = plans.Count == 0 ? "当前账号没有已发布计划" : $"已读取 {plans.Count} 个已发布计划";
+        }
+        catch (Exception exception)
+        {
+            publishedPlanListStatus = $"刷新失败：{exception.Message}";
+            status = $"刷新已发布计划失败：{exception.Message}";
+            Log.Error(exception, "Published plan list refresh failed");
+        }
+        finally
+        {
+            refreshingPublishedPlans = false;
+        }
+    }
+
+    private void ApplyPublishedPlans(IReadOnlyList<RuntimePlanSummary> plans)
+    {
+        publishedPlans = plans;
+        if (plans.Count == 0)
+        {
+            configuration.SelectedPublishedPlanId = null;
+            publishedPlanListStatus = "当前账号没有已发布计划；网页端需要发布版本后才会出现";
+            SaveConfiguration();
+            return;
+        }
+
+        var selected = SelectedPublishedPlan();
+        if (selected is null)
+        {
+            var currentTerritory = ClientState.TerritoryType;
+            selected = OrderedPublishedPlans(currentTerritory).First();
+            SelectPublishedPlan(selected);
+        }
+        else
+        {
+            SelectPublishedPlan(selected);
+        }
+
+        publishedPlanListStatus = $"已刷新 {plans.Count} 个已发布计划";
+    }
+
+    private async Task SyncSelectedPublishedPlanAsync()
+    {
+        if (configuration.AccessToken is null || configuration.RefreshToken is null)
+        {
+            status = "请先连接 VedaAxis 账户";
+            return;
+        }
+        if (Condition[ConditionFlag.InCombat])
+        {
+            status = "战斗中不执行网络同步，请脱战后重试";
+            return;
+        }
+
+        var selectedPlan = SelectedPublishedPlan();
+        if (selectedPlan is null)
+        {
+            status = publishedPlans.Count == 0 ? "请先刷新已发布计划列表" : "请先选择一个已发布计划";
+            return;
+        }
+
+        status = $"正在同步 {selectedPlan.Name} v{selectedPlan.Version}…";
+        try
+        {
+            var plan = await AuthorizedRequestAsync(
+                (accessToken, cancellationToken) => deviceAuthorizationClient.GetPublishedPlanAsync(
+                    configuration.ApiBaseUrl, accessToken, selectedPlan.PlanId, cancellationToken),
+                CancellationToken.None);
+            planStore.Save(plan);
+            configuration.StrategyTag = plan.StrategyTag;
+            configuration.TrackMode = PersistedTrackMode(plan.TrackMode);
+            NormalizeLocalSlot();
+            SaveConfiguration();
+            ReloadPlan();
+            status = $"已同步 {selectedPlan.Name} · {plan.StrategyTag} v{plan.PlanVersion}";
+        }
+        catch (Exception exception)
+        {
+            status = $"同步选中计划失败：{exception.Message}";
+            Log.Error(exception, "Selected published plan synchronization failed");
+        }
+    }
+
+    private async Task<T> AuthorizedRequestAsync<T>(
+        Func<string, CancellationToken, Task<T>> request,
+        CancellationToken cancellationToken)
+    {
+        if (configuration.AccessToken is null || configuration.RefreshToken is null)
+        {
+            throw new InvalidOperationException("请先连接 VedaAxis 账户");
+        }
+
+        try
+        {
+            return await request(configuration.AccessToken, cancellationToken);
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var tokens = await deviceAuthorizationClient.RefreshAsync(
+                configuration.ApiBaseUrl, configuration.RefreshToken, cancellationToken);
+            configuration.AccessToken = tokens.AccessToken;
+            configuration.RefreshToken = tokens.RefreshToken;
+            SaveConfiguration();
+            return await request(tokens.AccessToken, cancellationToken);
         }
     }
 

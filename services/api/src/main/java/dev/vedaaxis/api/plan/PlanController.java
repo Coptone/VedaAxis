@@ -144,6 +144,16 @@ public class PlanController {
                 HttpStatus.BAD_REQUEST, "PLAN_MATCH_TARGET_REQUIRED", "territoryId 或 encounterId 至少需要提供一个");
     }
 
+    @GetMapping("/runtime/plans")
+    List<PlanService.RuntimePlanSummary> runtimePlans() {
+        return planService.listRuntimePlans(CurrentUser.id());
+    }
+
+    @GetMapping("/runtime/plans/{planId}/published")
+    PlanService.RuntimePlan runtimePlan(@PathVariable UUID planId) {
+        return planService.runtimePlanById(CurrentUser.id(), planId);
+    }
+
     public record CreateRequest(
             @NotBlank @Size(max = 160) String name,
             @NotNull UUID encounterId,

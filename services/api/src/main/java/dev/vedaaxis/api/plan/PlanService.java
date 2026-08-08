@@ -52,6 +52,12 @@ public class PlanService {
         return mapper.listByOwner(ownerId.toString()).stream().map(PlanSummary::from).toList();
     }
 
+    public List<RuntimePlanSummary> listRuntimePlans(UUID ownerId) {
+        return mapper.listActiveRuntimePlans(ownerId.toString()).stream()
+                .map(RuntimePlanSummary::from)
+                .toList();
+    }
+
     @Transactional
     public PlanDetails copy(UUID ownerId, UUID sourcePlanId) {
         PlanRow sourcePlan = ownedPlan(ownerId, sourcePlanId);
@@ -201,6 +207,13 @@ public class PlanService {
             UUID ownerId, UUID encounterId, String strategyTag, TrackMode trackMode) {
         PlanVersionRow version = mapper.findLatestActiveMatchByEncounter(
                         ownerId.toString(), encounterId.toString(), strategyTag.trim(), trackMode.name())
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划"));
+        return new RuntimePlan(read(version.snapshotJson()), version.createdAt());
+    }
+
+    public RuntimePlan runtimePlanById(UUID ownerId, UUID planId) {
+        PlanVersionRow version = mapper.findLatestActiveByPlan(ownerId.toString(), planId.toString())
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND, "RUNTIME_PLAN_NOT_FOUND", "没有匹配的已发布个人计划"));
         return new RuntimePlan(read(version.snapshotJson()), version.createdAt());
@@ -377,6 +390,22 @@ public class PlanService {
             return new PlanSummary(
                     UUID.fromString(row.id()), row.name(), UUID.fromString(row.encounterId()), row.territoryId(), row.strategyTag(),
                     TrackMode.valueOf(row.trackMode()), row.latestVersion(), row.updatedAt());
+        }
+    }
+
+    public record RuntimePlanSummary(
+            UUID planId,
+            String name,
+            UUID encounterId,
+            long territoryId,
+            String strategyTag,
+            TrackMode trackMode,
+            int version,
+            Instant publishedAt) {
+        static RuntimePlanSummary from(RuntimePlanSummaryRow row) {
+            return new RuntimePlanSummary(
+                    UUID.fromString(row.planId()), row.name(), UUID.fromString(row.encounterId()), row.territoryId(),
+                    row.strategyTag(), TrackMode.valueOf(row.trackMode()), row.versionNumber(), row.publishedAt());
         }
     }
 

@@ -4,7 +4,7 @@ namespace VedaAxis;
 
 public sealed class PluginConfiguration : IPluginConfiguration
 {
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
     public const string ProductionApiBaseUrl = "https://coptone.link/VedaAxis";
     public const string LegacyLocalApiBaseUrl = "http://localhost:8080";
 
@@ -19,6 +19,8 @@ public sealed class PluginConfiguration : IPluginConfiguration
     public string StrategyTag { get; set; } = "DMU-P1P2";
 
     public string TrackMode { get; set; } = "EIGHT";
+
+    public string? SelectedPublishedPlanId { get; set; }
 
     public float OverlayOpacity { get; set; } = 0.72f;
 

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -113,6 +114,41 @@ class PlanServiceTest {
         verify(mapper, never()).deletePlan(planId.toString(), ownerId.toString());
     }
 
+    @Test
+    void listsOnlyRuntimePublishedPlansFromMapperRows() {
+        UUID ownerId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        UUID encounterId = UUID.randomUUID();
+        Instant publishedAt = Instant.parse("2026-08-08T09:00:00Z");
+        when(mapper.listActiveRuntimePlans(ownerId.toString())).thenReturn(List.of(new RuntimePlanSummaryRow(
+                planId.toString(), "固定队 DMU", encounterId.toString(), 1363,
+                "DMU-P1P2", "EIGHT", 3, publishedAt)));
+
+        List<PlanService.RuntimePlanSummary> plans = service.listRuntimePlans(ownerId);
+
+        assertThat(plans).hasSize(1);
+        assertThat(plans.getFirst().planId()).isEqualTo(planId);
+        assertThat(plans.getFirst().name()).isEqualTo("固定队 DMU");
+        assertThat(plans.getFirst().trackMode()).isEqualTo(TrackMode.EIGHT);
+        assertThat(plans.getFirst().version()).isEqualTo(3);
+    }
+
+    @Test
+    void loadsPublishedRuntimePlanByExactPlanId() {
+        UUID ownerId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        PlanSnapshot snapshot = snapshot(planId);
+        PlanVersionRow version = new PlanVersionRow(
+                UUID.randomUUID().toString(), planId.toString(), 2, "ACTIVE",
+                new ObjectMapper().writeValueAsString(snapshot), "share", Instant.parse("2026-08-08T09:10:00Z"));
+        when(mapper.findLatestActiveByPlan(ownerId.toString(), planId.toString())).thenReturn(Optional.of(version));
+
+        PlanService.RuntimePlan runtimePlan = service.runtimePlanById(ownerId, planId);
+
+        assertThat(runtimePlan.snapshot().planId()).isEqualTo(planId);
+        assertThat(runtimePlan.publishedAt()).isEqualTo(Instant.parse("2026-08-08T09:10:00Z"));
+    }
+
     private PlanRow row(UUID ownerId, UUID planId) {
         Instant now = Instant.parse("2026-08-07T12:00:00Z");
         return new PlanRow(
@@ -127,5 +163,13 @@ class PlanServiceTest {
                 1,
                 now,
                 now);
+    }
+
+    private PlanSnapshot snapshot(UUID planId) {
+        return new PlanSnapshot(
+                "1.3", "0.1.7", planId, 2, UUID.randomUUID(), 1, UUID.randomUUID(), 1363,
+                "DMU-P1P2", TrackMode.EIGHT,
+                new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
+                List.of(), List.of(), List.of(), List.of(), List.of());
     }
 }

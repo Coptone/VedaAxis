@@ -1,0 +1,46 @@
+phase,actionId,englishName,notes
+P3,47858,Bowels of Agony,raidwide from FFLogs sample
+P3,47859,Stray Flames,spread/marker damage from FFLogs sample
+P3,47861,Tsunami,tank/split damage from FFLogs sample
+P3,47843,Ultima Blaster,raidwide from FFLogs sample
+P3,47872,Umbra Smash,minor magical hit from FFLogs sample
+P3,47864,Cyclone,large special raidwide from FFLogs sample
+P3,47844,Ultima Blaster,raidwide from FFLogs sample
+P3,49746,Attack,auto attack physical blunt from FFLogs sample
+P3,49744,Attack,auto attack physical slash from FFLogs sample
+P3,47884,Thunder III,tank/split damage from FFLogs sample
+P3,47850,Shocking Impact,raidwide from FFLogs sample
+P3,47851,Shockwave,raidwide from FFLogs sample
+P3,47868,Nothingness,lethal/failure damage from FFLogs sample
+P3,47866,Earthquake,raidwide from FFLogs sample
+P3,48486,White Hole,special HP/check action from FFLogs sample
+P3,47856,Stomp-a-Mole,raidwide from FFLogs sample
+P3,47875,Knock Down,split/marker damage from FFLogs sample
+P4,47905,Tsunami,raidwide from FFLogs sample
+P4,47904,Inferno,raidwide from FFLogs sample
+P4,47892,Grand Cross,raidwide from FFLogs sample
+P4,50068,White Antilight,special high damage from FFLogs sample
+P4,50069,Black Antilight,special high damage from FFLogs sample
+P4,47900,Death Surge,raidwide from FFLogs sample
+P4,47901,Death Surge,raidwide from FFLogs sample
+P4,47897,Death Bolt,multi-hit magical damage from FFLogs sample
+P4,47899,Death Wave,tank/split damage from FFLogs sample
+P4,49738,Ultima Upsurge,raidwide from FFLogs sample
+P5,47951,Chaotic Flood,raidwide from FFLogs sample
+P5,47958,Chaotic Holy,lethal/failure damage from FFLogs sample
+P5,47937,Ultima Repeater,multi-hit raidwide from FFLogs sample
+P5,50771,Fell Forces,tank/split damage from FFLogs sample
+P5,50772,Fell Forces,split damage from FFLogs sample
+P5,50773,Fell Forces,split damage from FFLogs sample
+P5,47939,Fire III,marker damage from FFLogs sample
+P5,47940,Blizzard III,marker damage from FFLogs sample
+P5,47941,Thunder III,marker damage from FFLogs sample
+P5,47954,Flare,tank/split damage from FFLogs sample
+P5,47956,Holy,raidwide from FFLogs sample
+P5,47955,Chaotic Flare,tank/split damage from FFLogs sample
+P5,47957,Flare Diffusion,tank/split/special damage from FFLogs sample
+P5,47935,Stray Entropy,raidwide from FFLogs sample
+P5,47925,Forsaken,raidwide from FFLogs sample
+P5,47926,Forsaken,raidwide from FFLogs sample
+P5,47929,Forsaken Bonds,raidwide from FFLogs sample
+P5,47930,Forsaken Null,lethal/failure damage from FFLogs sample

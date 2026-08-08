@@ -101,6 +101,42 @@ internal sealed class DeviceAuthorizationClient : IDisposable
         return result.Snapshot;
     }
 
+    public async Task<IReadOnlyList<RuntimePlanSummary>> ListPublishedPlansAsync(
+        string apiBaseUrl,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{apiBaseUrl.TrimEnd('/')}/api/v1/runtime/plans");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<List<RuntimePlanSummary>>(jsonOptions, cancellationToken)
+               ?? throw new InvalidDataException("已发布计划列表响应为空");
+    }
+
+    public async Task<PlanSnapshot> GetPublishedPlanAsync(
+        string apiBaseUrl,
+        string accessToken,
+        Guid planId,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{apiBaseUrl.TrimEnd('/')}/api/v1/runtime/plans/{planId}/published");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            throw new InvalidOperationException("选中的计划没有已发布版本，可能已被删除或被其它账号隔离");
+        }
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<RuntimePlanResponse>(jsonOptions, cancellationToken)
+                     ?? throw new InvalidDataException("运行时计划响应为空");
+        return result.Snapshot;
+    }
+
     public async Task UploadExecutionAsync(
         string apiBaseUrl,
         string accessToken,
@@ -134,3 +170,13 @@ internal sealed record TokenPair(
     string RefreshToken,
     string TokenType,
     DateTimeOffset AccessTokenExpiresAt);
+
+internal sealed record RuntimePlanSummary(
+    Guid PlanId,
+    string Name,
+    Guid EncounterId,
+    long TerritoryId,
+    string StrategyTag,
+    string TrackMode,
+    int Version,
+    DateTimeOffset PublishedAt);

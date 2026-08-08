@@ -16,13 +16,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class PlanRuleEngineTest {
     private static final long KERACHOLE = 24298L;
+    private static final long PHYSIS = 24302L;
     private final PlanRuleEngine engine = new PlanRuleEngine(null);
     private final Map<Long, AbilityDefinition> catalog = Map.of(
             KERACHOLE,
             new AbilityDefinition(
                     KERACHOLE, "Kerachole", "ui/icon/003000/003666.tex", Set.of(40), 30_000, 1, 15_000,
                     ConfirmationStrategy.STATUS_APPLY, "test", "VERIFIED",
-                    MitigationEffectProfile.unknown(KERACHOLE)));
+                    directReduction()),
+            PHYSIS,
+            new AbilityDefinition(
+                    PHYSIS, "Physis II", "ui/icon/003000/003670.tex", Set.of(40), 60_000, 1, 15_000,
+                    ConfirmationStrategy.STATUS_APPLY, "test", "VERIFIED",
+                    healingSupport()));
 
     @Test
     void acceptsAValidEightTrackPlan() {
@@ -54,6 +60,26 @@ class PlanRuleEngineTest {
 
         assertThat(result.valid()).isFalse();
         assertThat(result.issues()).extracting(RuleIssue::code).contains("COVERAGE_GAP");
+    }
+
+    @Test
+    void acceptsPostImpactHealingSupportWithWarning() {
+        PlanSnapshot snapshot = snapshot(List.of(assignment(PHYSIS, 28_000, 30_500, 36_000, 30_000)));
+
+        RuleValidationResult result = engine.validate(snapshot, catalog);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.issues()).extracting(RuleIssue::code).contains("POST_IMPACT_SUPPORT");
+    }
+
+    @Test
+    void rejectsPostImpactDirectMitigation() {
+        PlanSnapshot snapshot = snapshot(List.of(assignment(KERACHOLE, 28_000, 30_500, 36_000, 30_000)));
+
+        RuleValidationResult result = engine.validate(snapshot, catalog);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).extracting(RuleIssue::code).contains("WINDOW_AFTER_IMPACT");
     }
 
     @Test
@@ -91,12 +117,32 @@ class PlanRuleEngineTest {
     }
 
     private PlanSnapshot.Assignment assignment(long highlight, long earliest, long latest, long impact) {
+        return assignment(KERACHOLE, highlight, earliest, latest, impact);
+    }
+
+    private PlanSnapshot.Assignment assignment(long actionId, long highlight, long earliest, long latest, long impact) {
         return new PlanSnapshot.Assignment(
-                UUID.randomUUID(), UUID.randomUUID(), h2TrackId(), KERACHOLE, null,
+                UUID.randomUUID(), UUID.randomUUID(), h2TrackId(), actionId, null,
                 highlight, earliest, latest, impact, false, ConfirmationStrategy.STATUS_APPLY, List.of());
     }
 
     private UUID h2TrackId() {
         return UUID.nameUUIDFromBytes("H2".getBytes());
+    }
+
+    private static MitigationEffectProfile directReduction() {
+        return new MitigationEffectProfile(
+                MitigationEffectProfile.Scope.PARTY,
+                10, 0, 0, 0, 0, 0, false, "",
+                MitigationEffectProfile.CalculationReadiness.DIRECT_REDUCTION,
+                List.of(), "test", "VERIFIED");
+    }
+
+    private static MitigationEffectProfile healingSupport() {
+        return new MitigationEffectProfile(
+                MitigationEffectProfile.Scope.PARTY,
+                0, 0, 0, 0, 0, 0, false, "",
+                MitigationEffectProfile.CalculationReadiness.NO_DIRECT_MITIGATION,
+                List.of(), "test", "VERIFIED");
     }
 }

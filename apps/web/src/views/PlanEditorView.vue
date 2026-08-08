@@ -36,13 +36,16 @@ import {
   type AbilityPlanningCategory,
 } from '../lib/abilityCategories'
 import {
+  abilityRequiresImpactCoverage,
   abilityFitsTrack,
   assignmentsCoveringMechanic,
+  isPostImpactSupportAssignment,
   localCooldownConflicts,
   previewDamageEstimatesLocally,
   type AssignmentCoverage,
 } from '../lib/damageEstimates'
 import { applyTimelineImport } from '../lib/timelineImports'
+import { currentUiLocale } from '../lib/i18n'
 import {
   DMU_ENCOUNTER_ID,
   DMU_P1_P2_STRATEGY,
@@ -131,6 +134,11 @@ interface AbilityCooldownState {
   remainingMs: number
   availableAtMs: number | null
   label: string
+  previousAssignmentId?: string | null
+  previousAbilityName?: string | null
+  previousMechanicName?: string | null
+  previousMechanicTimeMs?: number | null
+  previousUseAtMs?: number | null
 }
 
 interface AssignmentCoverageStatus {
@@ -285,32 +293,13 @@ const selectedAssignmentCoverageStatus = computed(() => selectedAssignment.value
   : null)
 const selectedAssignmentTimelineStartMs = computed(() => {
   const assignment = selectedAssignment.value
-  const ability = selectedAssignmentAbility.value
   if (!assignment) return 0
-  const values = [
-    assignment.highlightAtMs,
-    assignment.earliestUseAtMs,
-    assignment.latestUseAtMs,
-    assignment.impactAtMs,
-    ability && ability.durationMs > 0 ? assignment.earliestUseAtMs + ability.durationMs : assignment.impactAtMs,
-  ].filter((value): value is number => Number.isFinite(value))
-  return Math.max(0, Math.min(...values) - 10_000)
+  return Math.max(0, assignment.impactAtMs - 20_000)
 })
 const selectedAssignmentTimelineEndMs = computed(() => {
   const assignment = selectedAssignment.value
-  const ability = selectedAssignmentAbility.value
   if (!assignment) return 60_000
-  const currentMechanic = selectedAssignmentMechanic.value
-  const nextDamage = currentMechanic
-    ? nextDirectDamageMechanics(currentMechanic).find((mechanic) => mechanic.plannedAtMs > currentMechanic.plannedAtMs)
-    : null
-  return Math.max(
-    assignment.impactAtMs + 10_000,
-    assignment.latestUseAtMs + 10_000,
-    ability && ability.durationMs > 0 ? assignment.earliestUseAtMs + ability.durationMs + 6_000 : 0,
-    nextDamage ? nextDamage.plannedAtMs + 6_000 : 0,
-    selectedAssignmentTimelineStartMs.value + 20_000,
-  )
+  return assignment.impactAtMs + 20_000
 })
 const selectedAssignmentTimelineInputMaxMs = computed(() =>
   Math.max(
@@ -375,8 +364,16 @@ function selectAbility(ability: AbilityDefinition) {
   abilityPickerOpen.value = false
 }
 
-function defaultAssignmentWindow(mechanic: TimelineMechanic) {
+function defaultAssignmentWindow(mechanic: TimelineMechanic, ability?: AbilityDefinition | null) {
   const impactAtMs = mechanic.plannedAtMs
+  if (ability && !abilityRequiresImpactCoverage(ability)) {
+    return {
+      highlightAtMs: Math.max(0, impactAtMs - 3_000),
+      earliestUseAtMs: impactAtMs + 500,
+      latestUseAtMs: impactAtMs + 6_000,
+      impactAtMs,
+    }
+  }
   return {
     highlightAtMs: Math.max(0, impactAtMs - 12_000),
     earliestUseAtMs: Math.max(0, impactAtMs - 8_000),
@@ -391,9 +388,10 @@ function abilityCooldownState(ability: AbilityDefinition): AbilityCooldownState 
 
 function candidateCooldownState(ability: AbilityDefinition): AbilityCooldownState {
   if (!selectedTrackId.value) return READY_COOLDOWN
-  const window = defaultAssignmentWindow(selectedMechanic.value)
+  const window = defaultAssignmentWindow(selectedMechanic.value, ability)
   const recoveryMs = abilityRecoveryMs(ability)
   let nextAvailableAtMs = Number.NEGATIVE_INFINITY
+  let previousAssignment: Assignment | null = null
   const previousAssignments = snapshot.value.assignments
     .filter((assignment) => assignment.trackId === selectedTrackId.value
       && assignment.actionId === ability.actionId
@@ -403,6 +401,7 @@ function candidateCooldownState(ability: AbilityDefinition): AbilityCooldownStat
   for (const assignment of previousAssignments) {
     const scheduledAtMs = Math.max(assignment.earliestUseAtMs, nextAvailableAtMs)
     nextAvailableAtMs = scheduledAtMs + recoveryMs
+    previousAssignment = assignment
   }
 
   const candidateAvailableAtMs = Math.max(window.earliestUseAtMs, nextAvailableAtMs)
@@ -413,6 +412,11 @@ function candidateCooldownState(ability: AbilityDefinition): AbilityCooldownStat
     remainingMs,
     availableAtMs: candidateAvailableAtMs,
     label: compactDuration(remainingMs),
+    previousAssignmentId: previousAssignment?.assignmentId ?? null,
+    previousAbilityName: ability.name,
+    previousMechanicName: previousAssignment ? allMechanics.value.find((mechanic) => mechanic.mechanicId === previousAssignment.mechanicId)?.name ?? null : null,
+    previousMechanicTimeMs: previousAssignment ? allMechanics.value.find((mechanic) => mechanic.mechanicId === previousAssignment.mechanicId)?.plannedAtMs ?? null : null,
+    previousUseAtMs: previousAssignment?.earliestUseAtMs ?? null,
   }
 }
 
@@ -425,6 +429,14 @@ function abilityRecoveryMs(ability: AbilityDefinition): number {
 function coverageStatusForAssignment(assignment: Assignment): AssignmentCoverageStatus {
   const ability = abilityMap.value.get(assignment.actionId)
   const currentMechanic = allMechanics.value.find((mechanic) => mechanic.mechanicId === assignment.mechanicId)
+  if (ability && currentMechanic && isPostImpactSupportAssignment(ability, assignment, currentMechanic)) {
+    return {
+      tone: 'green',
+      title: '判定后抬血',
+      message: '该技能安排在伤害判定后，用于抬血/恢复；它不会计入本次命中前减伤数字。',
+      farthestMechanic: currentMechanic,
+    }
+  }
   if (!ability || !currentMechanic || ability.durationMs <= 0) {
     return {
       tone: 'gray',
@@ -553,6 +565,7 @@ function ruleIssueTitle(issue: RuleIssue): string {
     INVALID_USE_WINDOW: '释放窗口无效',
     JOB_NOT_COMPATIBLE: '技能与轨道职业不兼容',
     PHASE_TIMING_MODE_REQUIRED: '阶段时间模式缺失',
+    POST_IMPACT_SUPPORT: '判定后抬血',
     TRACK_MODE_MISMATCH: '轨道数量与模式不匹配',
     UNKNOWN_ANCHOR: '引用了不存在的锚点',
     UNKNOWN_MECHANIC: '引用了不存在的机制',
@@ -801,7 +814,8 @@ onBeforeUnmount(() => {
 function addAssignment() {
   if (!selectedAbilityId.value || !selectedTrackId.value || selectedAbilityCooldownState.value.blocked) return
   const mechanic = selectedMechanic.value
-  const window = defaultAssignmentWindow(mechanic)
+  const ability = abilityMap.value.get(selectedAbilityId.value)
+  const window = defaultAssignmentWindow(mechanic, ability)
   const assignment: Assignment = {
     assignmentId: newId(),
     mechanicId: mechanic.mechanicId,
@@ -814,7 +828,7 @@ function addAssignment() {
     latestUseAtMs: window.latestUseAtMs,
     impactAtMs: window.impactAtMs,
     locked: false,
-    confirmationStrategy: abilityMap.value.get(selectedAbilityId.value)?.confirmationStrategy ?? 'ACTION_EFFECT',
+    confirmationStrategy: ability?.confirmationStrategy ?? 'ACTION_EFFECT',
     fallbacks: [],
   }
   snapshot.value.assignments.push(assignment)
@@ -923,11 +937,12 @@ async function generateAiCandidate() {
       focusTrackId,
       preserveExistingAssignments: aiPreserveExistingAssignments.value,
       allowGcdActions: aiAllowGcdActions.value,
+      locale: currentUiLocale(),
     })
     const modeLabel = aiOptimizationMode.value === 'FOCUSED' ? `指向 ${trackDisplayLabel(aiFocusTrack.value)} ` : '全局 '
-    message.value = `已生成 ${modeLabel}${aiCandidate.value.confidence} 候选，尚未应用`
+    message.value = `已生成 ${modeLabel}${aiCandidate.value.confidence} AI优化方案，尚未应用`
   } catch (reason) {
-    error.value = reason instanceof ApiError ? reason.message : 'AI 候选生成失败'
+    error.value = reason instanceof ApiError ? reason.message : 'AI优化生成失败'
   } finally {
     busy.value = false
   }
@@ -995,7 +1010,7 @@ function applyAiCandidate() {
   }
   validation.value = aiCandidate.value.validation
   aiCandidate.value = null
-  message.value = 'AI 候选已应用到本地草稿，需再次保存或发布'
+  message.value = 'AI优化已应用到本地草稿，需再次保存或发布'
 }
 
 async function previewMSpecImport() {
@@ -1045,6 +1060,21 @@ function compactDuration(milliseconds: number | undefined): string {
 
 function abilityOptionLabel(ability: AbilityDefinition): string {
   return `${ability.name} · 持续 ${seconds(ability.durationMs)} · CD ${seconds(ability.cooldownMs)}`
+}
+
+function cooldownPreviousUseLabel(state: AbilityCooldownState): string {
+  if (state.previousUseAtMs === null || state.previousUseAtMs === undefined) return '上一次释放位置未知'
+  const mechanic = state.previousMechanicName && state.previousMechanicTimeMs !== null && state.previousMechanicTimeMs !== undefined
+    ? `${formatTime(state.previousMechanicTimeMs)} ${state.previousMechanicName}`
+    : '未知机制'
+  return `上一次：${state.previousAbilityName ?? '该技能'} · ${formatTime(state.previousUseAtMs)} · ${mechanic}`
+}
+
+function cooldownTooltip(state: AbilityCooldownState, ability: AbilityDefinition | undefined): string {
+  if (!ability) return '当前轨道暂无可用技能'
+  if (!state.blocked) return abilityOptionLabel(ability)
+  const available = state.availableAtMs === null ? '未知时间' : formatTime(state.availableAtMs)
+  return `${ability.name} 冷却中，预计 ${available} 可用；${cooldownPreviousUseLabel(state)}。`
 }
 
 function abilityInlineSummary(ability: AbilityDefinition | undefined): string {
@@ -1152,14 +1182,11 @@ function setSelectedAssignmentTime(field: AssignmentTimeField, rawValue: unknown
 function normalizeSelectedAssignmentTimes(changedField: AssignmentTimeField) {
   const assignment = selectedAssignment.value
   if (!assignment) return
-  if (changedField === 'impactAtMs') {
-    assignment.latestUseAtMs = Math.min(assignment.latestUseAtMs, assignment.impactAtMs)
-    assignment.earliestUseAtMs = Math.min(assignment.earliestUseAtMs, assignment.latestUseAtMs)
-    assignment.highlightAtMs = Math.min(assignment.highlightAtMs, assignment.earliestUseAtMs)
-    return
-  }
+  const canSitAfterImpact = isPostImpactSupportAssignment(selectedAssignmentAbility.value, assignment, { plannedAtMs: assignment.impactAtMs })
   if (changedField === 'latestUseAtMs') {
-    assignment.latestUseAtMs = Math.min(assignment.latestUseAtMs, assignment.impactAtMs)
+    if (!canSitAfterImpact) {
+      assignment.latestUseAtMs = Math.min(assignment.latestUseAtMs, assignment.impactAtMs)
+    }
     assignment.earliestUseAtMs = Math.min(assignment.earliestUseAtMs, assignment.latestUseAtMs)
     assignment.highlightAtMs = Math.min(assignment.highlightAtMs, assignment.earliestUseAtMs)
     return
@@ -1168,6 +1195,10 @@ function normalizeSelectedAssignmentTimes(changedField: AssignmentTimeField) {
     assignment.earliestUseAtMs = Math.min(assignment.earliestUseAtMs, assignment.latestUseAtMs)
     assignment.highlightAtMs = Math.min(assignment.highlightAtMs, assignment.earliestUseAtMs)
     return
+  }
+  if (changedField === 'impactAtMs' && !canSitAfterImpact) {
+    assignment.latestUseAtMs = Math.min(assignment.latestUseAtMs, assignment.impactAtMs)
+    assignment.earliestUseAtMs = Math.min(assignment.earliestUseAtMs, assignment.latestUseAtMs)
   }
   assignment.highlightAtMs = Math.min(assignment.highlightAtMs, assignment.earliestUseAtMs)
 }
@@ -1221,7 +1252,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         <button class="secondary-button" type="button" :disabled="busy" @click="save"><Save :size="16" />保存草稿</button>
         <button class="secondary-button" type="button" :disabled="busy" @click="validate"><Shield :size="16" />规则校验</button>
         <button class="secondary-button" type="button" :disabled="busy" @click="importOpen = !importOpen"><FileDown :size="16" />导入时间轴</button>
-        <button class="secondary-button" type="button" :disabled="busy" @click="aiOpen = !aiOpen"><Sparkles :size="16" />AI 候选</button>
+        <button class="secondary-button" type="button" :disabled="busy" @click="aiOpen = !aiOpen"><Sparkles :size="16" />AI优化</button>
         <button class="primary-button" type="button" :disabled="busy" @click="publish"><Send :size="16" />发布版本</button>
       </div>
     </div>
@@ -1316,10 +1347,10 @@ function fallbackAbilities(): AbilityDefinition[] {
 
     <section v-if="aiOpen" class="ai-request-panel">
       <header>
-        <div><p class="eyebrow">AI CANDIDATE</p><h2>生成可审阅的减伤候选</h2></div>
+        <div><p class="eyebrow">AI OPTIMIZATION</p><h2>生成可审阅的 AI优化方案</h2></div>
         <span class="status-badge warning">不会自动保存或发布</span>
       </header>
-      <div class="ai-mode-grid" role="radiogroup" aria-label="AI 优化模式">
+      <div class="ai-mode-grid" role="radiogroup" aria-label="AI优化模式">
         <button
           :class="['ai-mode-option', { active: aiOptimizationMode === 'GLOBAL' }]"
           type="button"
@@ -1376,8 +1407,8 @@ function fallbackAbilities(): AbilityDefinition[] {
       </label>
       <div class="candidate-actions">
         <button class="secondary-button" type="button" @click="fillAiOptimizationInstruction"><Sparkles :size="16" />填入优化指令</button>
-        <button class="primary-button" type="button" :disabled="busy" @click="generateAiCandidate"><Sparkles :size="16" />生成候选</button>
-        <small>服务端需要配置 VEDAAXIS_AI_API_KEY。返回结果只会作为候选，经规则校验后由你手动应用，不会自动发布。</small>
+        <button class="primary-button" type="button" :disabled="busy" @click="generateAiCandidate"><Sparkles :size="16" />生成优化方案</button>
+        <small>服务端需要配置 VEDAAXIS_AI_API_KEY。返回结果只会作为可审阅的优化方案，经规则校验后由你手动应用，不会自动发布。</small>
       </div>
     </section>
 
@@ -1453,10 +1484,10 @@ function fallbackAbilities(): AbilityDefinition[] {
               <button
                 class="ability-picker-trigger"
                 type="button"
-                :title="selectedAbility ? abilityOptionLabel(selectedAbility) : '选择技能'"
+                :title="cooldownTooltip(selectedAbilityCooldownState, selectedAbility)"
                 @click="abilityPickerOpen = !abilityPickerOpen"
               >
-                <span class="action-icon-shell action-icon-shell-select">
+                <span class="action-icon-shell action-icon-shell-select" :title="cooldownTooltip(selectedAbilityCooldownState, selectedAbility)">
                   <img
                     v-if="actionIconUrl(selectedAbility)"
                     class="action-icon action-icon-select"
@@ -1502,10 +1533,10 @@ function fallbackAbilities(): AbilityDefinition[] {
                         :class="['ability-picker-option', { selected: selectedAbilityId === ability.actionId, blocked: abilityCooldownState(ability).blocked }]"
                         type="button"
                         :disabled="abilityCooldownState(ability).blocked"
-                        :title="abilityCooldownState(ability).blocked ? `冷却中，预计 ${formatTime(abilityCooldownState(ability).availableAtMs ?? 0)} 可用` : abilityOptionLabel(ability)"
+                        :title="cooldownTooltip(abilityCooldownState(ability), ability)"
                         @click="selectAbility(ability)"
                       >
-                        <span class="action-icon-shell">
+                        <span class="action-icon-shell" :title="cooldownTooltip(abilityCooldownState(ability), ability)">
                           <img
                             v-if="actionIconUrl(ability)"
                             class="action-icon action-icon-picker"
@@ -1526,6 +1557,7 @@ function fallbackAbilities(): AbilityDefinition[] {
                             持续 {{ seconds(ability.durationMs) }} · CD {{ seconds(ability.cooldownMs) }}
                             <template v-if="abilityCooldownState(ability).blocked"> · {{ formatTime(abilityCooldownState(ability).availableAtMs ?? 0) }} 可用</template>
                           </small>
+                          <small v-if="abilityCooldownState(ability).blocked" class="cooldown-previous-use">{{ cooldownPreviousUseLabel(abilityCooldownState(ability)) }}</small>
                         </span>
                       </button>
                     </section>
@@ -1548,7 +1580,7 @@ function fallbackAbilities(): AbilityDefinition[] {
               class="primary-button"
               type="button"
               :disabled="!selectedAbilityId || selectedAbilityCooldownState.blocked"
-              :title="selectedAbilityCooldownState.blocked ? `技能冷却中，${formatTime(selectedAbilityCooldownState.availableAtMs ?? 0)} 可用` : '安排技能'"
+              :title="cooldownTooltip(selectedAbilityCooldownState, selectedAbility)"
               @click="addAssignment"
             ><Plus :size="16" />安排技能</button>
           </div>
@@ -1683,6 +1715,7 @@ function fallbackAbilities(): AbilityDefinition[] {
                 <span>
                   <b>{{ issue.abilityName }}</b>
                   <small>{{ issue.trackSlot }} · 最早要到 {{ formatTime(issue.availableAtMs) }}，当前窗口最晚 {{ formatTime(issue.latestUseAtMs) }}</small>
+                  <small v-if="issue.previousUseAtMs">上一次：{{ formatTime(issue.previousUseAtMs) }} · {{ issue.previousMechanicTimeMs !== null ? `${formatTime(issue.previousMechanicTimeMs)} ${issue.previousMechanicName ?? '未知机制'}` : '未知机制' }}</small>
                   <em>还差 {{ compactDuration(issue.availableAtMs - issue.latestUseAtMs) }}</em>
                 </span>
               </article>
@@ -1720,12 +1753,12 @@ function fallbackAbilities(): AbilityDefinition[] {
         </div>
 
         <div v-if="aiCandidate" class="validation-panel ai-candidate-panel">
-          <header><Sparkles :size="18" /><b>AI 候选 · {{ aiCandidate.confidence }} · +{{ aiDiff.added }} / -{{ aiDiff.removed }} / ~{{ aiDiff.changed }}</b></header>
+          <header><Sparkles :size="18" /><b>AI优化 · {{ aiCandidate.confidence }} · +{{ aiDiff.added }} / -{{ aiDiff.removed }} / ~{{ aiDiff.changed }}</b></header>
           <p v-for="reason in aiCandidate.reasons" :key="reason"><span>原因</span>{{ reason }}</p>
           <p v-for="warning in aiCandidate.warnings" :key="warning"><span>提醒</span>{{ warning }}</p>
           <div class="candidate-actions">
             <button class="primary-button" type="button" @click="applyAiCandidate">应用到草稿</button>
-            <button class="secondary-button" type="button" @click="aiCandidate = null">拒绝候选</button>
+            <button class="secondary-button" type="button" @click="aiCandidate = null">放弃优化方案</button>
           </div>
         </div>
       </section>

@@ -97,7 +97,7 @@ public sealed class AssignmentRuntime
             AssignmentState.Highlighting => true,
             AssignmentState.Success or AssignmentState.Early or AssignmentState.Late =>
                 ObservedAtMs is { } observedAt && elapsedMs - observedAt <= 1_500,
-            AssignmentState.Missed or AssignmentState.Invalid => elapsedMs <= Assignment.ImpactAtMs + 3_000,
+            AssignmentState.Missed or AssignmentState.Invalid => elapsedMs <= Math.Max(Assignment.ImpactAtMs, Assignment.LatestUseAtMs) + 3_000,
             _ => false,
         };
     }

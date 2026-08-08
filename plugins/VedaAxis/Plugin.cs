@@ -59,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
     private string lastExecutionUploadStatus = "暂无执行上传";
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
     private readonly Dictionary<Guid, uint> manualPartyTargets = [];
+    private bool forceMissingActionWindowPosition;
 
     public Plugin()
     {
@@ -104,6 +105,8 @@ public sealed class Plugin : IDalamudPlugin
             current.ApiBaseUrl = PluginConfiguration.ProductionApiBaseUrl;
         }
         current.OverlayStyle = OverlayPresentation.PersistedValue(OverlayPresentation.Parse(current.OverlayStyle));
+        current.MissingActionWindowX = Math.Max(0, current.MissingActionWindowX <= 0 ? 760f : current.MissingActionWindowX);
+        current.MissingActionWindowY = Math.Max(0, current.MissingActionWindowY <= 0 ? 180f : current.MissingActionWindowY);
 
         current.Version = PluginConfiguration.CurrentVersion;
         PluginInterface.SavePluginConfig(current);
@@ -193,6 +196,11 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawConfig()
     {
+        if (DrawConfigTabbed())
+        {
+            return;
+        }
+
         ImGui.SetNextWindowSize(new Vector2(620, 680), ImGuiCond.FirstUseEver);
         if (!ImGui.Begin("VedaAxis 控制台###VedaAxisConfig", ref showConfig))
         {
@@ -299,6 +307,205 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         ImGui.End();
+    }
+
+    private bool DrawConfigTabbed()
+    {
+        ImGui.SetNextWindowSize(new Vector2(720, 620), ImGuiCond.FirstUseEver);
+        if (!ImGui.Begin("VedaAxis 控制台###VedaAxisConfig", ref showConfig))
+        {
+            ImGui.End();
+            return true;
+        }
+
+        ImGui.TextColored(new Vector4(0.33f, 0.86f, 0.91f, 1f), "VedaAxis");
+        ImGui.SameLine();
+        ImGui.TextDisabled(configuration.Enabled ? "已启用" : "已暂停");
+        ImGui.TextWrapped(status);
+        ImGui.Separator();
+
+        if (ImGui.BeginTabBar("VedaAxisConfigTabs"))
+        {
+            if (ImGui.BeginTabItem("运行"))
+            {
+                var enabled = configuration.Enabled;
+                if (ImGui.Checkbox("启用热键栏对齐高亮", ref enabled))
+                {
+                    configuration.Enabled = enabled;
+                    SaveConfiguration();
+                }
+                ImGui.TextDisabled("插件只读取战斗状态并绘制只读覆盖层，不会接管鼠标、键盘或热键栏。");
+                DrawLocalSlotSelector();
+
+                if (ImGui.Button("重载计划"))
+                {
+                    ReloadPlan();
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("载入 DMU P1/P2 默认计划"))
+                {
+                    var plan = ExamplePlan.Create();
+                    planStore.Save(plan);
+                    configuration.StrategyTag = plan.StrategyTag;
+                    configuration.TrackMode = "EIGHT";
+                    configuration.LocalSlot = "H2";
+                    SaveConfiguration();
+                    ReloadPlan();
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("开始 / 重新开始"))
+                {
+                    runtime.Start(DateTimeOffset.UtcNow);
+                    status = "时间轴已从 0:00 开始";
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("停止"))
+                {
+                    FinalizeFight("ABANDONED");
+                    runtime.Stop();
+                    runtime.Reset();
+                    activeCasts.Clear();
+                    status = "时间轴已停止；如果本轮已进入战斗生命周期，执行记录会加入个人复盘上传队列";
+                }
+
+                ImGui.Spacing();
+                DrawCombatDiagnostic();
+                DrawPartyTargetMapping();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("计划同步"))
+            {
+                DrawApiEndpointSelector();
+                if (HasStoredDeviceSession())
+                {
+                    ImGui.TextColored(new Vector4(0.35f, 0.88f, 0.58f, 1f), $"已连接设备 {configuration.DeviceId}");
+                    ImGui.TextDisabled("设备已完成一次性绑定；令牌过期时会在非战斗阶段自动续期。");
+                    DrawTrackModeSelector();
+                    DrawPlanSelector();
+                    if (ImGui.Button("同步已发布个人计划"))
+                    {
+                        _ = SyncPublishedPlanAsync();
+                    }
+                    ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
+                    ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
+                }
+                else if (ImGui.Button("连接 VedaAxis 账户"))
+                {
+                    BeginDeviceAuthorization();
+                }
+
+                if (!string.IsNullOrEmpty(deviceCode))
+                {
+                    ImGui.Separator();
+                    ImGui.TextColored(new Vector4(0.33f, 0.86f, 0.91f, 1f), $"绑定码 {deviceCode}（{deviceCodeExpiresAt} 前有效）");
+                    if (ImGui.Button("打开绑定页面"))
+                    {
+                        Util.OpenLink(deviceAuthorizationUrl);
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("复制绑定码"))
+                    {
+                        ImGui.SetClipboardText(deviceCode);
+                    }
+                    ImGui.TextDisabled("首次在网页“插件绑定”确认即可；成功后无需每次重复输入绑定码。");
+                }
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("显示"))
+            {
+                var opacity = configuration.OverlayOpacity;
+                if (ImGui.SliderFloat("覆盖层透明度", ref opacity, 0.1f, 1f, "%.2f"))
+                {
+                    configuration.OverlayOpacity = opacity;
+                    SaveConfiguration();
+                }
+                DrawOverlayStyleSelector();
+                ImGui.Separator();
+                DrawMissingActionWindowSettings();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem("诊断"))
+            {
+                ImGui.TextWrapped($"计划文件：{planStore.Path}");
+                ImGui.TextWrapped($"状态：{status}");
+                ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
+                ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
+                DrawCombatDiagnostic();
+                ImGui.Separator();
+                ImGui.Text("当前轨道任务");
+                foreach (var item in runtime.Assignments)
+                {
+                    ImGui.BulletText($"Action {item.Assignment.ActionId} · {item.State} · "
+                                     + $"{item.Assignment.EarliestUseAtMs / 1000f:0.0}s–{item.Assignment.LatestUseAtMs / 1000f:0.0}s");
+                }
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
+        }
+
+        ImGui.End();
+        return true;
+    }
+
+    private void DrawMissingActionWindowSettings()
+    {
+        ImGui.Text("未找到技能槽提醒");
+        var enabled = configuration.MissingActionWindowEnabled;
+        if (ImGui.Checkbox("显示提醒窗口", ref enabled))
+        {
+            configuration.MissingActionWindowEnabled = enabled;
+            SaveConfiguration();
+        }
+        var locked = configuration.MissingActionWindowLocked;
+        if (ImGui.Checkbox("锁定提醒窗口位置", ref locked))
+        {
+            configuration.MissingActionWindowLocked = locked;
+            SaveConfiguration();
+        }
+
+        var x = configuration.MissingActionWindowX;
+        var y = configuration.MissingActionWindowY;
+        ImGui.SetNextItemWidth(140);
+        if (ImGui.InputFloat("窗口 X", ref x, 5f, 50f, "%.0f"))
+        {
+            SetMissingActionWindowPosition(x, configuration.MissingActionWindowY);
+        }
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(140);
+        if (ImGui.InputFloat("窗口 Y", ref y, 5f, 50f, "%.0f"))
+        {
+            SetMissingActionWindowPosition(configuration.MissingActionWindowX, y);
+        }
+
+        if (ImGui.Button("左上"))
+        {
+            SetMissingActionWindowPosition(30f, 120f);
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("右上"))
+        {
+            var displaySize = ImGui.GetIO().DisplaySize;
+            SetMissingActionWindowPosition(displaySize.X - 420f, 120f);
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("右侧中部"))
+        {
+            var displaySize = ImGui.GetIO().DisplaySize;
+            SetMissingActionWindowPosition(displaySize.X - 420f, displaySize.Y * 0.42f);
+        }
+        ImGui.TextDisabled("未锁定时可直接拖动提醒窗口；松开鼠标后会记住位置。");
+    }
+
+    private void SetMissingActionWindowPosition(float x, float y)
+    {
+        configuration.MissingActionWindowX = Math.Max(0, x);
+        configuration.MissingActionWindowY = Math.Max(0, y);
+        forceMissingActionWindowPosition = true;
+        SaveConfiguration();
     }
 
     private void DrawLocalSlotSelector()
@@ -508,6 +715,11 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawMissingActionDiagnostic()
     {
+        if (!configuration.MissingActionWindowEnabled)
+        {
+            return;
+        }
+
         var elapsed = runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow);
         var missing = runtime.Assignments
             .Where(item => item.ShouldDrawOverlay(elapsed) && !overlay.HasVisibleSlot(item.Assignment.ActionId))
@@ -517,11 +729,23 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        ImGui.SetNextWindowPos(new Vector2(30, 220), ImGuiCond.FirstUseEver);
+        var configuredPosition = new Vector2(
+            Math.Max(0, configuration.MissingActionWindowX),
+            Math.Max(0, configuration.MissingActionWindowY));
+        ImGui.SetNextWindowPos(
+            configuredPosition,
+            configuration.MissingActionWindowLocked || forceMissingActionWindowPosition ? ImGuiCond.Always : ImGuiCond.FirstUseEver);
+        forceMissingActionWindowPosition = false;
         ImGui.SetNextWindowBgAlpha(0.92f);
-        var flags = ImGuiWindowFlags.NoInputs | ImGuiWindowFlags.AlwaysAutoResize
-                    | ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoSavedSettings;
-        if (ImGui.Begin("未找到技能槽###VedaAxisMissingActions", flags))
+        var flags = ImGuiWindowFlags.AlwaysAutoResize
+                    | ImGuiWindowFlags.NoCollapse
+                    | ImGuiWindowFlags.NoResize
+                    | ImGuiWindowFlags.NoSavedSettings;
+        if (configuration.MissingActionWindowLocked)
+        {
+            flags |= ImGuiWindowFlags.NoMove;
+        }
+        if (ImGui.Begin("VedaAxis 技能槽提醒###VedaAxisMissingActions", flags))
         {
             ImGui.TextColored(new Vector4(1f, 0.48f, 0.35f, 1f), "未找到技能槽");
             foreach (var item in missing)
@@ -546,6 +770,18 @@ public sealed class Plugin : IDalamudPlugin
                     }
                 }
                 ImGui.Text($"{name} · {item.State}");
+            }
+
+            if (!configuration.MissingActionWindowLocked && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+            {
+                var currentPosition = ImGui.GetWindowPos();
+                if (Math.Abs(currentPosition.X - configuration.MissingActionWindowX) > 1f
+                    || Math.Abs(currentPosition.Y - configuration.MissingActionWindowY) > 1f)
+                {
+                    configuration.MissingActionWindowX = Math.Max(0, currentPosition.X);
+                    configuration.MissingActionWindowY = Math.Max(0, currentPosition.Y);
+                    SaveConfiguration();
+                }
             }
         }
         ImGui.End();

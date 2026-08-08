@@ -98,7 +98,8 @@ class AiCandidateServiceTest {
                 AiCandidateService.OptimizationMode.GLOBAL,
                 null,
                 false,
-                false))
+                false,
+                null))
                 .isInstanceOfSatisfying(ApiException.class,
                         exception -> assertThat(exception.code()).isEqualTo("AI_NOT_ENABLED_FOR_ACCOUNT"));
     }
@@ -179,6 +180,35 @@ class AiCandidateServiceTest {
     }
 
     @Test
+    void addDeltaOperationsGenerateMissingAssignmentIds() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of());
+        PlanSnapshot.Assignment first = assignment(null, mechanicId, trackId, 100);
+        PlanSnapshot.Assignment second = assignment(null, mechanicId, trackId, 100);
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        List<PlanSnapshot.Assignment> result = service.resolveCandidateAssignments(
+                snapshot,
+                new AiCandidateService.AiPayload(
+                        null,
+                        List.of(
+                                new AiCandidateService.AiOperation("ADD", null, first),
+                                new AiCandidateService.AiOperation("ADD", null, second)),
+                        List.of("added unused resources"),
+                        List.of()));
+
+        assertThat(result)
+                .hasSize(2)
+                .extracting(PlanSnapshot.Assignment::assignmentId)
+                .doesNotContainNull()
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
     void rejectsAiDeltaOperationForUnknownAssignment() {
         UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
         UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
@@ -200,6 +230,85 @@ class AiCandidateServiceTest {
                         List.of())))
                 .isInstanceOfSatisfying(ApiException.class,
                         exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
+    }
+
+    @Test
+    void extractsAssistantContentFromStringContent() {
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        String content = service.extractAssistantContent(Map.of(
+                "choices", List.of(Map.of(
+                        "message", Map.of("content", "{\"operations\":[]}"),
+                        "finish_reason", "stop"))));
+
+        assertThat(content).isEqualTo("{\"operations\":[]}");
+    }
+
+    @Test
+    void extractsAssistantContentFromStructuredContentParts() {
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        String content = service.extractAssistantContent(Map.of(
+                "choices", List.of(Map.of(
+                        "message", Map.of(
+                                "content", List.of(
+                                        Map.of("type", "text", "text", "{\"operations\":"),
+                                        Map.of("type", "text", "text", "[]}"))),
+                        "finish_reason", "stop"))));
+
+        assertThat(content).isEqualTo("{\"operations\":\n[]}");
+    }
+
+    @Test
+    void localizesEmptyFocusedCandidateFallbackToChinese() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot snapshot = snapshot(
+                List.of(new PlanSnapshot.ExecutionTrack(trackId, TrackSlot.H2, Set.of(), "贤者")),
+                List.of(mechanic(mechanicId)),
+                List.of());
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        AiCandidateService.AiPayload localized = service.localizeEmptyCandidateText(
+                new AiCandidateService.AiPayload(
+                        null,
+                        List.of(),
+                        List.of("This is a FOCUSED optimization with no additions."),
+                        List.of("No unlocked assignments could be added.")),
+                AiCandidateService.AiResponseLanguage.ZH_CN,
+                AiCandidateService.OptimizationMode.FOCUSED,
+                trackId,
+                new AiCandidateService.AiSafetyOptions(true, false),
+                snapshot);
+
+        assertThat(localized.reasons()).containsExactly("当前是指向优化（H2 · 贤者），在当前限制下 AI 没有找到值得新增的安排。");
+        assertThat(localized.warnings().getFirst()).contains("只新增");
+    }
+
+    @Test
+    void keepsEmptyCandidateTextWhenLanguageAlreadyMatches() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of());
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+        AiCandidateService.AiPayload payload = new AiCandidateService.AiPayload(
+                null,
+                List.of(),
+                List.of("当前没有需要新增的安排。"),
+                List.of("可以调整优化目标后重试。"));
+
+        AiCandidateService.AiPayload localized = service.localizeEmptyCandidateText(
+                payload,
+                AiCandidateService.AiResponseLanguage.ZH_CN,
+                AiCandidateService.OptimizationMode.FOCUSED,
+                trackId,
+                new AiCandidateService.AiSafetyOptions(true, false),
+                snapshot);
+
+        assertThat(localized).isSameAs(payload);
     }
 
     private AiCandidateService serviceWithCatalog(

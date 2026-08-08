@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import {
   ArrowUpRight,
   CalendarClock,
+  ChevronDown,
   Cloud,
   Copy,
   Grid2X2,
@@ -16,10 +17,11 @@ import {
   X,
 } from 'lucide-vue-next'
 import { api, ApiError } from '../api/client'
-import type { PlanSummary, TrackMode } from '../types/domain'
+import { TRACK_SLOTS, type PlanSummary, type TrackMode, type TrackSlot } from '../types/domain'
 import { DMU_ENCOUNTER_ID, DMU_P1_P2_STRATEGY, DMU_TERRITORY_ID } from '../data/dmuP1P2Default'
 import { O8S_ENCOUNTER_ID, O8S_POC_STRATEGY, O8S_TERRITORY_ID } from '../data/o8sPocDefault'
 import { useAuthStore } from '../stores/auth'
+import { jobIconUrl } from '../lib/jobIcons'
 
 type EncounterOptionId = 'DMU_P1P2' | 'O8S_POC'
 
@@ -38,6 +40,8 @@ interface JobOption {
   name: string
   role: '防护' | '治疗' | '近战' | '远敏' | '法系'
 }
+
+type PartyJobSelection = Partial<Record<TrackSlot, number>>
 
 const ENCOUNTERS: EncounterOption[] = [
   {
@@ -84,6 +88,48 @@ const JOBS: JobOption[] = [
   { id: 42, name: '绘灵法师', role: '法系' },
 ]
 
+const JOB_BY_ID = new Map(JOBS.map((job) => [job.id, job]))
+const SLOT_LABELS: Record<TrackSlot, string> = {
+  T1: '防护轨',
+  MT: '主坦',
+  ST: '副坦',
+  H1: '治疗 1',
+  H2: '治疗 2',
+  D1: '输出 1',
+  D2: '输出 2',
+  D3: '输出 3',
+  D4: '输出 4',
+}
+const SLOT_ROLES: Record<TrackSlot, JobOption['role'][]> = {
+  T1: ['防护'],
+  MT: ['防护'],
+  ST: ['防护'],
+  H1: ['治疗'],
+  H2: ['治疗'],
+  D1: ['近战', '远敏', '法系'],
+  D2: ['近战', '远敏', '法系'],
+  D3: ['近战', '远敏', '法系'],
+  D4: ['近战', '远敏', '法系'],
+}
+const DEFAULT_PARTY_JOBS: Record<TrackMode, PartyJobSelection> = {
+  FOUR: {
+    T1: 21,
+    H1: 40,
+    D1: 34,
+    D2: 38,
+  },
+  EIGHT: {
+    MT: 21,
+    ST: 37,
+    H1: 24,
+    H2: 40,
+    D1: 34,
+    D2: 41,
+    D3: 38,
+    D4: 42,
+  },
+}
+
 const router = useRouter()
 const auth = useAuthStore()
 const plans = ref<PlanSummary[]>([])
@@ -95,7 +141,10 @@ const pendingDeleteId = ref('')
 const createWizardOpen = ref(false)
 const selectedEncounterId = ref<EncounterOptionId>('DMU_P1P2')
 const selectedTrackMode = ref<TrackMode>('EIGHT')
-const selectedJobId = ref(40)
+const partyJobIds = ref<PartyJobSelection>({ ...DEFAULT_PARTY_JOBS.EIGHT })
+const activeJobSlot = ref<TrackSlot | null>(null)
+const planName = ref('')
+const planNameTouched = ref(false)
 const useDefaultTemplate = ref(true)
 const error = ref('')
 const lastSyncedAt = ref<Date | null>(null)
@@ -103,14 +152,19 @@ let refreshTimer: ReturnType<typeof window.setInterval> | undefined
 
 const selectedEncounter = computed(() =>
   ENCOUNTERS.find((encounter) => encounter.id === selectedEncounterId.value) ?? ENCOUNTERS[0]!)
-const selectedJob = computed(() =>
-  JOBS.find((job) => job.id === selectedJobId.value) ?? JOBS[0]!)
 const canUseDefaultTemplate = computed(() =>
   selectedEncounter.value.defaultTemplateModes.includes(selectedTrackMode.value))
 const effectiveUseDefaultTemplate = computed(() =>
   useDefaultTemplate.value && canUseDefaultTemplate.value)
 const pendingDeletePlan = computed(() =>
   plans.value.find((plan) => plan.id === pendingDeleteId.value) ?? null)
+const selectedSlots = computed(() => TRACK_SLOTS[selectedTrackMode.value])
+const canCreatePlan = computed(() =>
+  planName.value.trim().length > 0 && selectedSlots.value.every((slot) => Boolean(partyJobIds.value[slot])))
+const partySummary = computed(() =>
+  selectedSlots.value
+    .map((slot) => `${slot} ${jobForSlot(slot)?.name ?? '未选'}`)
+    .join(' / '))
 
 onMounted(() => {
   void load(true)
@@ -135,14 +189,19 @@ function selectEncounter(encounterId: EncounterOptionId) {
   selectedEncounterId.value = encounterId
   if (!selectedEncounter.value.supportedModes.includes(selectedTrackMode.value)) {
     selectedTrackMode.value = selectedEncounter.value.supportedModes[0]!
+    resetPartyJobsForMode()
   }
   if (!canUseDefaultTemplate.value) {
     useDefaultTemplate.value = false
   }
+  syncPlanName()
 }
 
 function openCreateWizard() {
   error.value = ''
+  planNameTouched.value = false
+  syncPlanName(true)
+  resetPartyJobsForMode()
   createWizardOpen.value = true
 }
 
@@ -159,6 +218,66 @@ function createPlanName(encounter: EncounterOption, mode: TrackMode, templated: 
   if (encounter.id === 'O8S_POC') return 'O8S 游戏与网页联调计划'
   if (mode === 'FOUR') return templated ? '妖星乱舞 P1/P2 四轨时间轴草稿' : '妖星乱舞四轨空白草稿'
   return templated ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞八轨空白草稿'
+}
+
+function syncPlanName(force = false) {
+  if (force || !planNameTouched.value) {
+    planName.value = createPlanName(selectedEncounter.value, selectedTrackMode.value, effectiveUseDefaultTemplate.value)
+  }
+}
+
+function onPlanNameInput() {
+  planNameTouched.value = true
+}
+
+function changeTrackMode(event: Event) {
+  const nextMode = (event.target as HTMLSelectElement).value as TrackMode
+  selectedTrackMode.value = nextMode
+  resetPartyJobsForMode()
+  if (!canUseDefaultTemplate.value) useDefaultTemplate.value = false
+  syncPlanName()
+}
+
+function toggleDefaultTemplate() {
+  syncPlanName()
+}
+
+function resetPartyJobsForMode() {
+  partyJobIds.value = { ...DEFAULT_PARTY_JOBS[selectedTrackMode.value] }
+  activeJobSlot.value = null
+}
+
+function jobForSlot(slot: TrackSlot): JobOption | null {
+  const jobId = partyJobIds.value[slot]
+  return jobId ? JOB_BY_ID.get(jobId) ?? null : null
+}
+
+function jobIconForSlot(slot: TrackSlot): string | null {
+  return jobIconUrl(jobForSlot(slot)?.id)
+}
+
+function jobsForSlot(slot: TrackSlot): JobOption[] {
+  const roles = SLOT_ROLES[slot]
+  return JOBS.filter((job) => roles.includes(job.role))
+}
+
+function toggleJobPicker(slot: TrackSlot) {
+  activeJobSlot.value = activeJobSlot.value === slot ? null : slot
+}
+
+function selectPartyJob(slot: TrackSlot, jobId: number) {
+  partyJobIds.value = { ...partyJobIds.value, [slot]: jobId }
+  activeJobSlot.value = null
+}
+
+function selectedPartyPayload(): Partial<Record<TrackSlot, number>> {
+  return Object.fromEntries(
+    selectedSlots.value.map((slot) => [slot, partyJobIds.value[slot]]),
+  ) as Partial<Record<TrackSlot, number>>
+}
+
+function preferredEditorJobId(): number {
+  return partyJobIds.value.H2 ?? partyJobIds.value.H1 ?? partyJobIds.value.MT ?? partyJobIds.value.T1 ?? partyJobIds.value[selectedSlots.value[0]!] ?? 0
 }
 
 async function load(showLoading: boolean) {
@@ -189,20 +308,25 @@ async function copyPlan(planId: string) {
 async function createFromWizard() {
   const encounter = selectedEncounter.value
   const templated = effectiveUseDefaultTemplate.value
+  if (!canCreatePlan.value) {
+    error.value = '请填写计划名称，并为每个轨道选择职业'
+    return
+  }
   creating.value = true
   try {
     const created = await api.createPlan({
-      name: createPlanName(encounter, selectedTrackMode.value, templated),
+      name: planName.value.trim(),
       encounterId: encounter.encounterId,
       territoryId: encounter.territoryId,
       strategyTag: strategyTagFor(encounter, selectedTrackMode.value),
       trackMode: selectedTrackMode.value,
       useDefaultTemplate: templated,
+      partyJobIds: selectedPartyPayload(),
     })
     createWizardOpen.value = false
     await router.push({
       path: `/plans/${created.plan.id}`,
-      query: { jobId: String(selectedJobId.value) },
+      query: { jobId: String(preferredEditorJobId()) },
     })
   } catch (reason) {
     error.value = reason instanceof ApiError ? reason.message : '计划创建失败'
@@ -275,7 +399,7 @@ async function deletePendingPlan() {
     <div v-else-if="plans.length === 0" class="empty-plans">
       <span><Grid3X3 :size="31" /></span>
       <h2>从第一条可验证的轴开始</h2>
-      <p>先选副本与职业，再决定是否套用默认时间轴和减伤模板。</p>
+      <p>先选副本、整队职业与计划名称，再决定是否套用默认时间轴和减伤模板。</p>
       <button class="primary-button" type="button" @click="openCreateWizard"><Plus :size="17" />新建计划</button>
     </div>
     <div v-else class="plan-grid">
@@ -331,7 +455,7 @@ async function deletePendingPlan() {
           <div>
             <p class="eyebrow">CREATE PLAN</p>
             <h2>新建减伤计划</h2>
-            <small>按副本、职业和模板创建，进入编辑器后仍可继续调整。</small>
+            <small>先确定整队阵容，系统会按每个轨道的职业过滤可用减伤。</small>
           </div>
           <button class="icon-button" type="button" :disabled="creating" @click="closeCreateWizard"><X :size="16" /></button>
         </header>
@@ -354,34 +478,57 @@ async function deletePendingPlan() {
         </section>
 
         <section class="create-plan-grid">
+          <label class="wide-field">
+            <span>2 · 减伤计划名称</span>
+            <input v-model="planName" maxlength="80" placeholder="例如：妖星乱舞 P1/P2 固定队减伤" @input="onPlanNameInput" />
+          </label>
           <label>
-            <span>2 · 轨道模式</span>
-            <select v-model="selectedTrackMode">
+            <span>3 · 轨道模式</span>
+            <select :value="selectedTrackMode" @change="changeTrackMode">
               <option v-for="mode in selectedEncounter.supportedModes" :key="mode" :value="mode">
                 {{ mode === 'EIGHT' ? '8 轨 · 完整队伍' : '4 轨 · 扩展预留' }}
               </option>
             </select>
           </label>
-          <label>
-            <span>2 · 我的职业</span>
-            <select v-model.number="selectedJobId">
-              <optgroup label="防护">
-                <option v-for="job in JOBS.filter((item) => item.role === '防护')" :key="job.id" :value="job.id">{{ job.name }}</option>
-              </optgroup>
-              <optgroup label="治疗">
-                <option v-for="job in JOBS.filter((item) => item.role === '治疗')" :key="job.id" :value="job.id">{{ job.name }}</option>
-              </optgroup>
-              <optgroup label="输出">
-                <option v-for="job in JOBS.filter((item) => !['防护', '治疗'].includes(item.role))" :key="job.id" :value="job.id">{{ job.name }} · {{ job.role }}</option>
-              </optgroup>
-            </select>
-          </label>
         </section>
 
         <section>
-          <p class="wizard-step">3 · 是否套用默认模板</p>
+          <p class="wizard-step">4 · 选择整队职业</p>
+          <div class="party-track-grid">
+            <article v-for="slot in selectedSlots" :key="slot" class="party-track-card">
+              <header>
+                <b>{{ slot }}</b>
+                <small>{{ SLOT_LABELS[slot] }}</small>
+              </header>
+              <button class="job-select-card" type="button" @click="toggleJobPicker(slot)">
+                <img v-if="jobForSlot(slot)" :src="jobIconForSlot(slot) ?? ''" alt="" loading="lazy" />
+                <span v-else class="job-icon-placeholder">?</span>
+                <span>
+                  <b>{{ jobForSlot(slot)?.name ?? '选择职业' }}</b>
+                  <small>{{ jobForSlot(slot)?.role ?? SLOT_ROLES[slot].join('/') }}</small>
+                </span>
+                <ChevronDown :size="15" />
+              </button>
+              <div v-if="activeJobSlot === slot" class="job-option-popover">
+                <button
+                  v-for="job in jobsForSlot(slot)"
+                  :key="job.id"
+                  type="button"
+                  :class="{ active: partyJobIds[slot] === job.id }"
+                  @click="selectPartyJob(slot, job.id)"
+                >
+                  <img :src="jobIconUrl(job.id) ?? ''" alt="" loading="lazy" />
+                  <span>{{ job.name }}</span>
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section>
+          <p class="wizard-step">5 · 是否套用默认模板</p>
           <label class="template-toggle-card">
-            <input v-model="useDefaultTemplate" type="checkbox" :disabled="!canUseDefaultTemplate" />
+            <input v-model="useDefaultTemplate" type="checkbox" :disabled="!canUseDefaultTemplate" @change="toggleDefaultTemplate" />
             <span>
               <b>加载对应副本的时间轴和减伤模板</b>
               <small v-if="canUseDefaultTemplate">
@@ -396,12 +543,13 @@ async function deletePendingPlan() {
           <div>
             <Sparkles :size="16" />
             <span>
-              将创建：{{ createPlanName(selectedEncounter, selectedTrackMode, effectiveUseDefaultTemplate) }}
-              · {{ selectedJob.name }}
+              将创建：{{ planName || createPlanName(selectedEncounter, selectedTrackMode, effectiveUseDefaultTemplate) }}
+              · {{ selectedTrackMode === 'EIGHT' ? '8人阵容' : '4轨阵容' }}
+              · {{ partySummary }}
             </span>
           </div>
           <button class="secondary-button" type="button" :disabled="creating" @click="closeCreateWizard">取消</button>
-          <button class="primary-button" type="button" :disabled="creating" @click="createFromWizard">
+          <button class="primary-button" type="button" :disabled="creating || !canCreatePlan" @click="createFromWizard">
             <Plus :size="17" />{{ creating ? '创建中…' : '创建并打开' }}
           </button>
         </footer>

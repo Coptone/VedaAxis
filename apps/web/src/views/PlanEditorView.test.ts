@@ -188,7 +188,7 @@ describe('PlanEditorView', () => {
 
     const wrapper = mount(PlanEditorView, { global: { plugins: [router] } })
     await flushPromises()
-    await wrapper.findAll('.editor-actions button').find((button) => button.text().includes('AI 候选'))!.trigger('click')
+    await wrapper.findAll('.editor-actions button').find((button) => button.text().includes('AI优化'))!.trigger('click')
     await flushPromises()
     await wrapper.findAll('.ai-mode-option')[1]!.trigger('click')
     await wrapper.get('.ai-focus-track select').setValue(h2Track.trackId)
@@ -202,6 +202,7 @@ describe('PlanEditorView', () => {
       focusTrackId: h2Track.trackId,
       preserveExistingAssignments: true,
       allowGcdActions: false,
+      locale: 'zh-CN',
     })
     expect(wrapper.get('.inline-message').text()).toContain('指向 H2')
   })

@@ -30,7 +30,7 @@ function createTestRouter() {
 describe('PlansView', () => {
   afterEach(() => vi.clearAllMocks())
 
-  it('creates a plan through the encounter job and template wizard', async () => {
+  it('creates a plan through the encounter party and template wizard', async () => {
     vi.mocked(api.createPlan).mockResolvedValue({
       plan: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -48,17 +48,28 @@ describe('PlansView', () => {
 
     await wrapper.get('.create-actions .primary-button').trigger('click')
     await wrapper.findAll('.encounter-choice')[1]!.trigger('click')
-    await wrapper.findAll('.create-plan-grid select')[1]!.setValue('40')
+    await wrapper.get('.create-plan-grid input').setValue('我的 O8S 联调计划')
+    expect(wrapper.findAll('.job-select-card img')).toHaveLength(8)
     await wrapper.get('.create-plan-dialog footer .primary-button').trigger('click')
     await flushPromises()
 
     expect(api.createPlan).toHaveBeenCalledWith({
-      name: 'O8S 游戏与网页联调计划',
+      name: '我的 O8S 联调计划',
       encounterId: '9789ba9a-b761-4c44-b179-2e3e86ee0d3b',
       territoryId: 755,
       strategyTag: 'O8S-POC',
       trackMode: 'EIGHT',
       useDefaultTemplate: true,
+      partyJobIds: {
+        MT: 21,
+        ST: 37,
+        H1: 24,
+        H2: 40,
+        D1: 34,
+        D2: 41,
+        D3: 38,
+        D4: 42,
+      },
     })
     expect(router.currentRoute.value.path).toBe('/plans/11111111-1111-4111-8111-111111111111')
     expect(router.currentRoute.value.query.jobId).toBe('40')

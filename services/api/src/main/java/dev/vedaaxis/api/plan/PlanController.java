@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -51,7 +52,7 @@ public class PlanController {
     PlanService.PlanDetails create(@Valid @RequestBody CreateRequest request) {
         return planService.create(CurrentUser.id(), new PlanService.CreatePlanRequest(
                 request.name(), request.encounterId(), request.territoryId(), request.strategyTag(), request.trackMode(),
-                request.useDefaultTemplate()));
+                request.useDefaultTemplate(), request.partyJobIds()));
     }
 
     @GetMapping("/plans")
@@ -149,7 +150,8 @@ public class PlanController {
             @Min(1) long territoryId,
             @NotBlank @Size(max = 80) String strategyTag,
             @NotNull TrackMode trackMode,
-            Boolean useDefaultTemplate) {
+            Boolean useDefaultTemplate,
+            Map<TrackSlot, Integer> partyJobIds) {
     }
 
     public record UpdateRequest(

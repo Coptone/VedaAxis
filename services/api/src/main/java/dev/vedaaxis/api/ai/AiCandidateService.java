@@ -8,6 +8,8 @@ import dev.vedaaxis.api.rule.AbilityDefinition;
 import dev.vedaaxis.api.rule.DamageEstimateAnalysisService;
 import dev.vedaaxis.api.rule.PlanRuleEngine;
 import dev.vedaaxis.api.rule.RuleValidationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -20,6 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -35,6 +38,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class AiCandidateService {
+    private static final Logger log = LoggerFactory.getLogger(AiCandidateService.class);
+    private static final Pattern CJK_PATTERN = Pattern.compile("\\p{IsHan}");
+
     private final PlanService planService;
     private final PlanRuleEngine ruleEngine;
     private final AbilityCatalog abilityCatalog;
@@ -80,13 +86,14 @@ public class AiCandidateService {
             OptimizationMode mode,
             UUID focusTrackId,
             Boolean preserveExistingAssignments,
-            Boolean allowGcdActions) {
+            Boolean allowGcdActions,
+            String locale) {
         if (apiKey.isBlank()) {
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE, "AI_NOT_CONFIGURED", "尚未配置 VEDAAXIS_AI_API_KEY");
         }
         if (!allowedUserIds.isEmpty() && !allowedUserIds.contains(ownerId)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "AI_NOT_ENABLED_FOR_ACCOUNT", "当前账号未开通 AI 候选功能");
+            throw new ApiException(HttpStatus.FORBIDDEN, "AI_NOT_ENABLED_FOR_ACCOUNT", "当前账号未开通 AI优化功能");
         }
 
         PlanSnapshot base = planService.get(ownerId, planId).snapshot();
@@ -97,8 +104,11 @@ public class AiCandidateService {
         AiSafetyOptions safetyOptions = new AiSafetyOptions(
                 preserveExistingAssignments == null || preserveExistingAssignments,
                 Boolean.TRUE.equals(allowGcdActions));
+        AiResponseLanguage responseLanguage = AiResponseLanguage.from(locale);
         AiPayload payload = requestCandidate(
-                base, instruction == null ? "" : instruction.trim(), requestedMode, normalizedFocusTrackId, safetyOptions);
+                base, instruction == null ? "" : instruction.trim(), requestedMode, normalizedFocusTrackId,
+                safetyOptions, responseLanguage);
+        payload = localizeEmptyCandidateText(payload, responseLanguage, requestedMode, normalizedFocusTrackId, safetyOptions, base);
         List<PlanSnapshot.Assignment> candidateAssignments = resolveCandidateAssignments(base, payload);
         enforceSafety(base, candidateAssignments, requestedMode, normalizedFocusTrackId, safetyOptions);
 
@@ -123,12 +133,14 @@ public class AiCandidateService {
             String instruction,
             OptimizationMode mode,
             UUID focusTrackId,
-            AiSafetyOptions safetyOptions) {
+            AiSafetyOptions safetyOptions,
+            AiResponseLanguage responseLanguage) {
         try {
             String planJson = objectMapper.writeValueAsString(compactPlanContext(base));
             String abilityJson = objectMapper.writeValueAsString(relevantAbilitySummaries(base));
             String damagePreviewJson = objectMapper.writeValueAsString(mechanicRiskSummary(base));
-            String optimizationContextJson = objectMapper.writeValueAsString(optimizationContext(base, mode, focusTrackId, safetyOptions));
+            String optimizationContextJson = objectMapper.writeValueAsString(optimizationContext(
+                    base, mode, focusTrackId, safetyOptions, responseLanguage));
             String systemPrompt = """
                     You are a Final Fantasy XIV mitigation-planning candidate generator.
                     Output JSON only. Do not output Markdown.
@@ -150,7 +162,9 @@ public class AiCandidateService {
                     When optimizationMode=FOCUSED, only ADD, UPDATE, or DELETE unlocked assignments on focusTrackId. Other tracks are read-only context.
                     When preserveExistingAssignments=true, return only ADD operations and never UPDATE or DELETE an existing assignment.
                     When allowGcdActions=false, do not ADD or UPDATE any assignment to use an ability whose castCategory is GCD.
-                    """;
+                    Keep JSON field names, enum values, IDs, and action IDs unchanged, but write every user-facing string in reasons and warnings in %s.
+                    For no useful change, return concise user-facing reasons and warnings in %s; do not expose internal flag names unless they are explained naturally.
+                    """.formatted(responseLanguage.promptName(), responseLanguage.promptName());
             String userPrompt = "Current compact plan JSON:\n" + planJson
                     + "\nAvailable ability catalog JSON:\n" + abilityJson
                     + "\nCurrent damage/risk preview JSON:\n" + damagePreviewJson
@@ -158,41 +172,49 @@ public class AiCandidateService {
                     + "\nUser instruction:\n" + (instruction.isBlank()
                     ? "Optimize coverage and conflicts without changing locked assignments."
                     : instruction);
-            Map<String, Object> request = Map.of(
-                    "model", model,
-                    "messages", List.of(
-                            Map.of("role", "system", "content", systemPrompt),
-                            Map.of("role", "user", "content", userPrompt)),
-                    "response_format", Map.of("type", "json_object"),
-                    "max_tokens", 4096,
-                    "stream", false);
+            for (int attempt = 0; attempt < 2; attempt++) {
+                List<Map<String, String>> messages = new ArrayList<>();
+                messages.add(Map.of("role", "system", "content", systemPrompt));
+                messages.add(Map.of("role", "user", "content", userPrompt));
+                if (attempt > 0) {
+                    messages.add(Map.of(
+                            "role", "user",
+                            "content", "Your previous response had empty message.content. Return only the required compact JSON object in message.content now."));
+                }
+                Map<String, Object> request = new LinkedHashMap<>();
+                request.put("model", model);
+                request.put("messages", messages);
+                request.put("response_format", Map.of("type", "json_object"));
+                request.put("max_tokens", 8192);
+                request.put("stream", false);
+                request.put("thinking", Map.of("type", "disabled"));
 
-            Map<String, Object> response = restClient.post()
-                    .uri("/chat/completions")
-                    .headers(headers -> headers.setBearerAuth(apiKey))
-                    .body(request)
-                    .retrieve()
-                    .body(Map.class);
-            if (response == null) {
-                throw invalidResponse("响应为空");
+                Map<String, Object> response = restClient.post()
+                        .uri("/chat/completions")
+                        .headers(headers -> headers.setBearerAuth(apiKey))
+                        .body(request)
+                        .retrieve()
+                        .body(Map.class);
+                if (response == null) {
+                    throw invalidResponse("响应为空");
+                }
+                String content = extractAssistantContent(response);
+                if (content == null || content.isBlank()) {
+                    logBlankAiContent(response, attempt);
+                    if (attempt == 0) {
+                        continue;
+                    }
+                    throw invalidResponse(emptyContentDetail(response));
+                }
+                AiPayload payload = objectMapper.readValue(stripJsonFence(content), AiPayload.class);
+                if ((payload.assignments() == null && payload.operations() == null)
+                        || payload.reasons() == null
+                        || payload.warnings() == null) {
+                    throw invalidResponse("候选字段不完整");
+                }
+                return payload;
             }
-            List<Object> choices = (List<Object>) response.get("choices");
-            if (choices == null || choices.isEmpty()) {
-                throw invalidResponse("缺少 choices");
-            }
-            Map<String, Object> choice = (Map<String, Object>) choices.getFirst();
-            Map<String, Object> message = (Map<String, Object>) choice.get("message");
-            String content = message == null ? null : (String) message.get("content");
-            if (content == null || content.isBlank()) {
-                throw invalidResponse("content 为空");
-            }
-            AiPayload payload = objectMapper.readValue(content, AiPayload.class);
-            if ((payload.assignments() == null && payload.operations() == null)
-                    || payload.reasons() == null
-                    || payload.warnings() == null) {
-                throw invalidResponse("候选字段不完整");
-            }
-            return payload;
+            throw invalidResponse("content 为空");
         } catch (ApiException exception) {
             throw exception;
         } catch (RestClientException exception) {
@@ -200,6 +222,125 @@ public class AiCandidateService {
         } catch (JacksonException | ClassCastException exception) {
             throw invalidResponse("JSON 无法解析");
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    String extractAssistantContent(Map<String, Object> response) {
+        List<Object> choices = (List<Object>) response.get("choices");
+        if (choices == null || choices.isEmpty()) {
+            throw invalidResponse("缺少 choices");
+        }
+        Map<String, Object> choice = (Map<String, Object>) choices.getFirst();
+        Map<String, Object> message = (Map<String, Object>) choice.get("message");
+        if (message == null) {
+            throw invalidResponse("缺少 message");
+        }
+        return textContent(message.get("content"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private String textContent(Object value) {
+        if (value == null) return null;
+        if (value instanceof String string) return string;
+        if (value instanceof List<?> list) {
+            return list.stream()
+                    .map(item -> {
+                        if (item instanceof Map<?, ?> map) {
+                            Object text = map.get("text");
+                            if (text == null) text = map.get("content");
+                            return textContent(text);
+                        }
+                        return textContent(item);
+                    })
+                    .filter(Objects::nonNull)
+                    .filter(text -> !text.isBlank())
+                    .collect(Collectors.joining("\n"));
+        }
+        return null;
+    }
+
+    private String stripJsonFence(String content) {
+        String trimmed = content.trim();
+        if (!trimmed.startsWith("```")) {
+            return trimmed;
+        }
+        String withoutOpening = trimmed.replaceFirst("^```(?:json)?\\s*", "");
+        return withoutOpening.replaceFirst("\\s*```$", "").trim();
+    }
+
+    private void logBlankAiContent(Map<String, Object> response, int attempt) {
+        log.warn(
+                "AI optimization response content empty; attempt={}, finishReason={}, messageKeys={}, contentLength={}, reasoningContentLength={}, completionTokens={}",
+                attempt + 1,
+                firstChoiceValue(response, "finish_reason"),
+                firstMessageKeys(response),
+                textLength(firstMessageValue(response, "content")),
+                textLength(firstMessageValue(response, "reasoning_content")),
+                completionTokens(response));
+    }
+
+    private String emptyContentDetail(Map<String, Object> response) {
+        Object finishReason = firstChoiceValue(response, "finish_reason");
+        int reasoningLength = textLength(firstMessageValue(response, "reasoning_content"));
+        if (Objects.equals(finishReason, "length")) {
+            return "content 为空（模型输出被截断，finish_reason=length）";
+        }
+        if (Objects.equals(finishReason, "content_filter")) {
+            return "content 为空（模型输出被内容过滤）";
+        }
+        if (reasoningLength > 0) {
+            return "content 为空（仅返回推理内容，未返回 JSON 正文）";
+        }
+        return "content 为空（finish_reason=" + Objects.toString(finishReason, "unknown") + "）";
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object firstChoiceValue(Map<String, Object> response, String key) {
+        Object choices = response.get("choices");
+        if (!(choices instanceof List<?> list) || list.isEmpty() || !(list.getFirst() instanceof Map<?, ?> choice)) {
+            return null;
+        }
+        return ((Map<String, Object>) choice).get(key);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object firstMessageValue(Map<String, Object> response, String key) {
+        Object choices = response.get("choices");
+        if (!(choices instanceof List<?> list) || list.isEmpty() || !(list.getFirst() instanceof Map<?, ?> rawChoice)) {
+            return null;
+        }
+        Object message = ((Map<String, Object>) rawChoice).get("message");
+        if (!(message instanceof Map<?, ?> rawMessage)) {
+            return null;
+        }
+        return ((Map<String, Object>) rawMessage).get(key);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<String> firstMessageKeys(Map<String, Object> response) {
+        Object choices = response.get("choices");
+        if (!(choices instanceof List<?> list) || list.isEmpty() || !(list.getFirst() instanceof Map<?, ?> rawChoice)) {
+            return Set.of();
+        }
+        Object message = ((Map<String, Object>) rawChoice).get("message");
+        if (!(message instanceof Map<?, ?> rawMessage)) {
+            return Set.of();
+        }
+        return Set.copyOf(((Map<String, Object>) rawMessage).keySet());
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object completionTokens(Map<String, Object> response) {
+        Object usage = response.get("usage");
+        if (!(usage instanceof Map<?, ?> rawUsage)) {
+            return null;
+        }
+        return ((Map<String, Object>) rawUsage).get("completion_tokens");
+    }
+
+    private int textLength(Object value) {
+        String text = textContent(value);
+        return text == null ? 0 : text.length();
     }
 
     List<PlanSnapshot.Assignment> resolveCandidateAssignments(PlanSnapshot base, AiPayload payload) {
@@ -223,6 +364,8 @@ public class AiCandidateService {
             switch (op) {
                 case "ADD" -> {
                     PlanSnapshot.Assignment assignment = requireOperationAssignment(operation, op);
+                    UUID assignmentId = resolveAddAssignmentId(operation, assignment);
+                    assignment = withAssignmentId(assignment, assignmentId);
                     if (assignmentsById.containsKey(assignment.assignmentId())) {
                         throw invalidResponse("ADD 使用了已存在的 assignmentId " + assignment.assignmentId());
                     }
@@ -261,6 +404,41 @@ public class AiCandidateService {
         return List.copyOf(assignmentsById.values());
     }
 
+    private UUID resolveAddAssignmentId(AiOperation operation, PlanSnapshot.Assignment assignment) {
+        UUID operationAssignmentId = operation.assignmentId();
+        UUID assignmentId = assignment.assignmentId();
+        if (operationAssignmentId != null && assignmentId != null && !operationAssignmentId.equals(assignmentId)) {
+            throw invalidResponse("ADD 的 assignmentId 与 assignment.assignmentId 不一致");
+        }
+        if (operationAssignmentId != null) {
+            return operationAssignmentId;
+        }
+        if (assignmentId != null) {
+            return assignmentId;
+        }
+        return UUID.randomUUID();
+    }
+
+    private PlanSnapshot.Assignment withAssignmentId(PlanSnapshot.Assignment assignment, UUID assignmentId) {
+        if (assignmentId.equals(assignment.assignmentId())) {
+            return assignment;
+        }
+        return new PlanSnapshot.Assignment(
+                assignmentId,
+                assignment.mechanicId(),
+                assignment.trackId(),
+                assignment.actionId(),
+                assignment.anchorId(),
+                assignment.highlightAtMs(),
+                assignment.earliestUseAtMs(),
+                assignment.latestUseAtMs(),
+                assignment.impactAtMs(),
+                assignment.locked(),
+                assignment.confirmationStrategy(),
+                assignment.fallbacks(),
+                assignment.targetTrackId());
+    }
+
     private PlanSnapshot.Assignment requireOperationAssignment(AiOperation operation, String op) {
         if (operation.assignment() == null) {
             throw invalidResponse(op + " 缺少 assignment");
@@ -297,7 +475,8 @@ public class AiCandidateService {
             PlanSnapshot base,
             OptimizationMode mode,
             UUID focusTrackId,
-            AiSafetyOptions safetyOptions) {
+            AiSafetyOptions safetyOptions,
+            AiResponseLanguage responseLanguage) {
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("optimizationMode", mode.name());
         if (mode == OptimizationMode.FOCUSED && focusTrackId != null) {
@@ -314,6 +493,8 @@ public class AiCandidateService {
         }
         context.put("preserveExistingAssignments", safetyOptions.preserveExistingAssignments());
         context.put("allowGcdActions", safetyOptions.allowGcdActions());
+        context.put("responseLocale", responseLanguage.localeTag());
+        context.put("responseLanguage", responseLanguage.promptName());
         context.put("existingAssignmentPolicy", safetyOptions.preserveExistingAssignments()
                 ? "Only ADD new assignments. Existing assignments are immutable even when locked=false."
                 : "Unlocked assignments may be updated or deleted within the write scope.");
@@ -323,6 +504,44 @@ public class AiCandidateService {
         context.put("lowRiskSupportPolicy", "Do not add or modify support-only healing/resource/unmodeled-shield assignments on GREEN mechanics.");
         context.put("tankbusterPolicy", "Do not over-optimize tankbusters by raw damage; prefer tank/self/target/enemy mitigation and preserve raid resources unless party risk also exists.");
         return context;
+    }
+
+    AiPayload localizeEmptyCandidateText(
+            AiPayload payload,
+            AiResponseLanguage responseLanguage,
+            OptimizationMode mode,
+            UUID focusTrackId,
+            AiSafetyOptions safetyOptions,
+            PlanSnapshot base) {
+        if (payload.operations() == null || !payload.operations().isEmpty()) {
+            return payload;
+        }
+        String combined = String.join("\n", List.of(
+                String.join("\n", payload.reasons() == null ? List.of() : payload.reasons()),
+                String.join("\n", payload.warnings() == null ? List.of() : payload.warnings())));
+        if (responseLanguage.matches(combined)) {
+            return payload;
+        }
+        String trackLabel = mode == OptimizationMode.FOCUSED ? focusTrackLabel(base, focusTrackId) : "";
+        return new AiPayload(
+                payload.assignments(),
+                payload.operations(),
+                List.of(responseLanguage.noChangeReason(mode, trackLabel, safetyOptions)),
+                List.of(responseLanguage.noChangeWarning(mode, safetyOptions)));
+    }
+
+    private String focusTrackLabel(PlanSnapshot base, UUID focusTrackId) {
+        if (focusTrackId == null) return "";
+        return base.tracks().stream()
+                .filter(track -> track.trackId().equals(focusTrackId))
+                .findFirst()
+                .map(track -> {
+                    String displayName = track.displayName();
+                    return displayName == null || displayName.isBlank()
+                            ? track.slot().name()
+                            : track.slot().name() + " · " + displayName;
+                })
+                .orElse("selected track");
     }
 
     private List<AbilityDefinition> relevantAbilities(PlanSnapshot snapshot) {
@@ -561,12 +780,83 @@ public class AiCandidateService {
     }
 
     private ApiException invalidResponse(String detail) {
-        return new ApiException(HttpStatus.BAD_GATEWAY, "AI_RESPONSE_INVALID", "AI 候选响应无效：" + detail);
+        return new ApiException(HttpStatus.BAD_GATEWAY, "AI_RESPONSE_INVALID", "AI优化响应无效：" + detail);
     }
 
     public enum OptimizationMode {
         GLOBAL,
         FOCUSED
+    }
+
+    enum AiResponseLanguage {
+        ZH_CN("zh-CN", "Simplified Chinese"),
+        EN_US("en-US", "English");
+
+        private final String localeTag;
+        private final String promptName;
+
+        AiResponseLanguage(String localeTag, String promptName) {
+            this.localeTag = localeTag;
+            this.promptName = promptName;
+        }
+
+        static AiResponseLanguage from(String locale) {
+            if (locale != null && locale.trim().toLowerCase(Locale.ROOT).startsWith("en")) {
+                return EN_US;
+            }
+            return ZH_CN;
+        }
+
+        String localeTag() {
+            return localeTag;
+        }
+
+        String promptName() {
+            return promptName;
+        }
+
+        boolean matches(String text) {
+            if (text == null || text.isBlank()) {
+                return false;
+            }
+            boolean hasCjk = CJK_PATTERN.matcher(text).find();
+            return this == ZH_CN ? hasCjk : !hasCjk;
+        }
+
+        String noChangeReason(OptimizationMode mode, String trackLabel, AiSafetyOptions safetyOptions) {
+            if (this == ZH_CN) {
+                if (mode == OptimizationMode.FOCUSED) {
+                    return "当前是指向优化（" + trackLabel + "），在当前限制下 AI 没有找到值得新增的安排。";
+                }
+                return safetyOptions.preserveExistingAssignments()
+                        ? "当前是全局优化，且限制为只新增；AI 没有找到值得新增的减伤安排。"
+                        : "当前是全局优化；AI 没有找到值得新增、移动或替换的减伤安排。";
+            }
+            if (mode == OptimizationMode.FOCUSED) {
+                return "This is a focused optimization for " + trackLabel
+                        + ", and no useful new assignment was found under the current constraints.";
+            }
+            return safetyOptions.preserveExistingAssignments()
+                    ? "This is a global optimization limited to additions, and no useful new mitigation assignment was found."
+                    : "This is a global optimization, and no useful add, move, or replacement was found.";
+        }
+
+        String noChangeWarning(OptimizationMode mode, AiSafetyOptions safetyOptions) {
+            if (this == ZH_CN) {
+                if (safetyOptions.preserveExistingAssignments()) {
+                    return mode == OptimizationMode.FOCUSED
+                            ? "如需让 AI 移动或替换该职业已有减伤，请关闭“只新增，不改现有安排”，或改用全局优化。"
+                            : "如需让 AI 移动或替换已有减伤，请关闭“只新增，不改现有安排”。";
+                }
+                return "可以尝试补充更具体的优化目标，或检查当前计划是否已经覆盖主要高风险机制。";
+            }
+            if (safetyOptions.preserveExistingAssignments()) {
+                return mode == OptimizationMode.FOCUSED
+                        ? "To let AI move or replace existing assignments on this job, disable the add-only option or use global optimization."
+                        : "To let AI move or replace existing assignments, disable the add-only option.";
+            }
+            return "Try adding a more specific optimization goal, or check whether the current plan already covers the main high-risk mechanics.";
+        }
     }
 
     public record AiPayload(

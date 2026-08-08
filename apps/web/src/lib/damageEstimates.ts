@@ -26,6 +26,10 @@ export interface CooldownConflict {
   abilityName: string
   availableAtMs: number
   latestUseAtMs: number
+  previousUseAtMs: number | null
+  previousMechanicId: string | null
+  previousMechanicName: string | null
+  previousMechanicTimeMs: number | null
 }
 
 export function abilityFitsTrack(
@@ -102,6 +106,7 @@ export function assignmentsCoveringMechanic(
 export function localCooldownConflicts(snapshot: PlanSnapshot, abilities: AbilityDefinition[]): CooldownConflict[] {
   const abilityById = new Map(abilities.map((ability) => [ability.actionId, ability]))
   const trackById = new Map(snapshot.tracks.map((track) => [track.trackId, track]))
+  const mechanicById = new Map(snapshot.mechanics.map((mechanic) => [mechanic.mechanicId, mechanic]))
   const groups = new Map<string, Assignment[]>()
   for (const assignment of snapshot.assignments) {
     const key = `${assignment.trackId}:${assignment.actionId}`
@@ -112,7 +117,7 @@ export function localCooldownConflicts(snapshot: PlanSnapshot, abilities: Abilit
   for (const group of groups.values()) {
     group.sort((left, right) => left.earliestUseAtMs - right.earliestUseAtMs)
     let nextAvailableAtMs = Number.NEGATIVE_INFINITY
-    let previousAssignmentId: string | null = null
+    let previousAssignment: Assignment | null = null
     for (const assignment of group) {
       const ability = abilityById.get(assignment.actionId)
       if (!ability) continue
@@ -121,19 +126,24 @@ export function localCooldownConflicts(snapshot: PlanSnapshot, abilities: Abilit
         : ability.cooldownMs / Math.max(1, ability.maxCharges)
       const scheduledAtMs = Math.max(assignment.earliestUseAtMs, nextAvailableAtMs)
       if (scheduledAtMs > assignment.latestUseAtMs) {
+        const previousMechanic = previousAssignment ? mechanicById.get(previousAssignment.mechanicId) : undefined
         conflicts.push({
           assignmentId: assignment.assignmentId,
-          previousAssignmentId,
+          previousAssignmentId: previousAssignment?.assignmentId ?? null,
           actionId: assignment.actionId,
           trackSlot: trackById.get(assignment.trackId)?.slot ?? assignment.trackId.slice(0, 8),
           abilityName: ability.name,
           availableAtMs: scheduledAtMs,
           latestUseAtMs: assignment.latestUseAtMs,
+          previousUseAtMs: previousAssignment?.earliestUseAtMs ?? null,
+          previousMechanicId: previousMechanic?.mechanicId ?? null,
+          previousMechanicName: previousMechanic?.name ?? null,
+          previousMechanicTimeMs: previousMechanic?.plannedAtMs ?? null,
         })
         continue
       }
       nextAvailableAtMs = scheduledAtMs + recovery
-      previousAssignmentId = assignment.assignmentId
+      previousAssignment = assignment
     }
   }
   return conflicts
@@ -166,7 +176,11 @@ function analyzeTarget(
       continue
     }
     if (!coversImpact(ability, assignment, mechanic)) {
-      notices.push(`${ability.name} 的持续时间无法覆盖本次命中，未计入。`)
+      if (isPostImpactSupportAssignment(ability, assignment, mechanic)) {
+        notices.push(`${ability.name} 安排在伤害判定后，用于抬血/恢复，未计入本次命中减伤。`)
+      } else {
+        notices.push(`${ability.name} 的持续时间无法覆盖本次命中，未计入。`)
+      }
       continue
     }
 
@@ -237,6 +251,35 @@ function isRelevantToImpact(
 function coversImpact(ability: AbilityDefinition, assignment: Assignment, mechanic: TimelineMechanic): boolean {
   if (assignment.earliestUseAtMs > mechanic.plannedAtMs || assignment.latestUseAtMs > mechanic.plannedAtMs) return false
   return ability.durationMs > 0 && assignment.earliestUseAtMs + ability.durationMs >= mechanic.plannedAtMs
+}
+
+export function abilityRequiresImpactCoverage(
+  ability: Pick<AbilityDefinition, 'effect'> | null | undefined,
+): boolean {
+  const effect = ability?.effect
+  if (!effect) return true
+  if (effect.allDamageReductionPercent
+    || effect.physicalDamageReductionPercent
+    || effect.magicalDamageReductionPercent
+    || effect.maximumHpIncreasePercent
+    || effect.maximumHpBarrierPercent
+    || effect.barrierCurePotency
+    || effect.invulnerability) {
+    return true
+  }
+  const readiness = effect.calculationReadiness
+  return readiness === 'DIRECT_REDUCTION'
+    || readiness === 'MAX_HP_BARRIER'
+    || readiness === 'INVULNERABILITY_SPECIAL_CASE'
+}
+
+export function isPostImpactSupportAssignment(
+  ability: Pick<AbilityDefinition, 'effect'> | null | undefined,
+  assignment: Pick<Assignment, 'earliestUseAtMs' | 'latestUseAtMs'>,
+  mechanic: Pick<TimelineMechanic, 'plannedAtMs'>,
+): boolean {
+  return !abilityRequiresImpactCoverage(ability)
+    && (assignment.earliestUseAtMs > mechanic.plannedAtMs || assignment.latestUseAtMs > mechanic.plannedAtMs)
 }
 
 function addEffectOnce(

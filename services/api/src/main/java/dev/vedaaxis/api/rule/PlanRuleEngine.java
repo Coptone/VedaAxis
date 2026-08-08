@@ -60,18 +60,23 @@ public class PlanRuleEngine {
             if (assignment.earliestUseAtMs() > assignment.latestUseAtMs()) {
                 error(issues, "INVALID_USE_WINDOW", "允许窗口起点不得晚于终点", reference);
             }
-            if (assignment.latestUseAtMs() > assignment.impactAtMs()) {
-                error(issues, "WINDOW_AFTER_IMPACT", "允许窗口终点不得晚于机制命中时间", reference);
-            }
             AbilityDefinition ability = abilities.get(assignment.actionId());
             if (ability == null) {
                 error(issues, "ABILITY_NOT_FOUND", "技能目录中不存在 Action ID " + assignment.actionId(), reference);
                 continue;
             }
+            boolean mustCoverImpact = requiresImpactCoverage(ability);
+            if (assignment.latestUseAtMs() > assignment.impactAtMs()) {
+                if (mustCoverImpact) {
+                    error(issues, "WINDOW_AFTER_IMPACT", "减伤技能的允许窗口终点不得晚于机制命中时间", reference);
+                } else {
+                    warning(issues, "POST_IMPACT_SUPPORT", ability.name() + " 安排在机制判定后，仅用于抬血/恢复，不计入本次命中前减伤", reference);
+                }
+            }
             if (!track.allowedJobIds().isEmpty() && track.allowedJobIds().stream().noneMatch(ability.jobIds()::contains)) {
                 error(issues, "JOB_NOT_COMPATIBLE", ability.name() + " 与轨道职业不兼容", reference);
             }
-            if (ability.durationMs() > 0 && assignment.earliestUseAtMs() + ability.durationMs() < assignment.impactAtMs()) {
+            if (mustCoverImpact && ability.durationMs() > 0 && assignment.earliestUseAtMs() + ability.durationMs() < assignment.impactAtMs()) {
                 error(issues, "COVERAGE_GAP", ability.name() + " 在允许窗口最早使用时无法覆盖机制", reference);
             }
             if (assignment.confirmationStrategy() != null
@@ -171,6 +176,26 @@ public class PlanRuleEngine {
                 nextAvailableAtMs = scheduledAtMs + recovery;
             }
         }
+    }
+
+    private boolean requiresImpactCoverage(AbilityDefinition ability) {
+        if (ability.effect() == null || ability.effect().calculationReadiness() == null) {
+            return true;
+        }
+        MitigationEffectProfile effect = ability.effect();
+        if (effect.allDamageReductionPercent() > 0
+                || effect.physicalDamageReductionPercent() > 0
+                || effect.magicalDamageReductionPercent() > 0
+                || effect.maximumHpIncreasePercent() > 0
+                || effect.maximumHpBarrierPercent() > 0
+                || effect.barrierCurePotency() > 0
+                || effect.invulnerability()) {
+            return true;
+        }
+        return switch (ability.effect().calculationReadiness()) {
+            case DIRECT_REDUCTION, MAX_HP_BARRIER, INVULNERABILITY_SPECIAL_CASE -> true;
+            case REQUIRES_HEALING_STATS, NO_DIRECT_MITIGATION, UNMODELED -> false;
+        };
     }
 
     private void error(List<RuleIssue> issues, String code, String message, String reference) {

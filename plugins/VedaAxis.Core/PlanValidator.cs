@@ -64,8 +64,7 @@ public static class PlanValidator
                 issues.Add($"任务 {assignment.AssignmentId} 引用了不存在的锚点");
             }
             if (assignment.HighlightAtMs > assignment.EarliestUseAtMs
-                || assignment.EarliestUseAtMs > assignment.LatestUseAtMs
-                || assignment.LatestUseAtMs > assignment.ImpactAtMs)
+                || assignment.EarliestUseAtMs > assignment.LatestUseAtMs)
             {
                 issues.Add($"任务 {assignment.AssignmentId} 的时间窗口顺序无效");
             }

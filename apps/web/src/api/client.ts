@@ -14,7 +14,9 @@ import type {
   SurvivabilityRequest,
   TimelineImportCandidate,
   TrackMode,
+  TrackSlot,
 } from '../types/domain'
+import type { UiLocale } from '../lib/i18n'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
@@ -88,7 +90,15 @@ export const api = {
   plans: () => request<PlanSummary[]>('/plans'),
   plan: (planId: string) => request<PlanDetails>(`/plans/${planId}`),
   copyPlan: (planId: string) => request<PlanDetails>(`/plans/${planId}/copy`, { method: 'POST' }),
-  createPlan: (payload: { name: string; encounterId: string; territoryId: number; strategyTag: string; trackMode: TrackMode; useDefaultTemplate?: boolean }) =>
+  createPlan: (payload: {
+    name: string
+    encounterId: string
+    territoryId: number
+    strategyTag: string
+    trackMode: TrackMode
+    useDefaultTemplate?: boolean
+    partyJobIds?: Partial<Record<TrackSlot, number>>
+  }) =>
     request<PlanDetails>('/plans', { method: 'POST', body: JSON.stringify(payload) }),
   deletePlan: (planId: string) => request<void>(`/plans/${planId}`, { method: 'DELETE' }),
   updatePlan: (planId: string, name: string, snapshot: PlanSnapshot) =>
@@ -122,6 +132,7 @@ export const api = {
       focusTrackId?: string | null
       preserveExistingAssignments?: boolean
       allowGcdActions?: boolean
+      locale?: UiLocale
     } | string = '',
   ) =>
     request<AiCandidate>(`/plans/${planId}/ai-candidates`, {

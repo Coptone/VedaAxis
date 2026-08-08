@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -207,18 +208,110 @@ public class PlanService {
 
     private PlanSnapshot emptySnapshot(UUID planId, CreatePlanRequest request) {
         boolean useDefaultTemplate = request.useDefaultTemplate() == null || request.useDefaultTemplate();
+        PlanSnapshot snapshot;
         if (useDefaultTemplate && defaultPlanProvider.supports(request.territoryId(), request.strategyTag(), request.trackMode())) {
-            return defaultPlanProvider.create(
+            snapshot = defaultPlanProvider.create(
                     planId, request.territoryId(), request.strategyTag(), request.trackMode());
+        } else {
+            List<PlanSnapshot.ExecutionTrack> tracks = request.trackMode().orderedSlots().stream()
+                    .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, Set.of(), slot.name()))
+                    .toList();
+            snapshot = new PlanSnapshot(
+                    "1.3", "0.1.7", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
+                    request.strategyTag().trim(), request.trackMode(),
+                    new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
+                    List.of(), List.of(), List.of(), tracks, List.of());
         }
-        List<PlanSnapshot.ExecutionTrack> tracks = request.trackMode().orderedSlots().stream()
-                .map(slot -> new PlanSnapshot.ExecutionTrack(UUID.randomUUID(), slot, java.util.Set.of(), slot.name()))
+        return applyPartyJobs(snapshot, request);
+    }
+
+    private PlanSnapshot applyPartyJobs(PlanSnapshot snapshot, CreatePlanRequest request) {
+        Map<TrackSlot, Integer> partyJobIds = request.partyJobIds() == null ? Map.of() : request.partyJobIds();
+        if (partyJobIds.isEmpty()) {
+            return snapshot;
+        }
+        validatePartyJobs(request.trackMode(), partyJobIds);
+        List<PlanSnapshot.ExecutionTrack> tracks = snapshot.tracks().stream()
+                .map(track -> {
+                    Integer jobId = partyJobIds.get(track.slot());
+                    if (jobId == null) {
+                        return track;
+                    }
+                    return new PlanSnapshot.ExecutionTrack(
+                            track.trackId(), track.slot(), Set.of(jobId), track.slot().name() + " · " + jobName(jobId));
+                })
                 .toList();
         return new PlanSnapshot(
-                "1.3", "0.1.7", planId, 1, UUID.randomUUID(), 1, request.encounterId(), request.territoryId(),
-                request.strategyTag().trim(), request.trackMode(),
-                new PlanSnapshot.Source(PlanSnapshot.SourceKind.PERSONAL, null, PlanSnapshot.Confidence.UNVERIFIED),
-                List.of(), List.of(), List.of(), tracks, List.of());
+                snapshot.schemaVersion(), snapshot.minimumPluginVersion(), snapshot.planId(), snapshot.planVersion(),
+                snapshot.timelineId(), snapshot.timelineVersion(), snapshot.encounterId(), snapshot.territoryId(),
+                snapshot.strategyTag(), snapshot.trackMode(), snapshot.source(), snapshot.phases(), snapshot.mechanics(),
+                snapshot.anchors(), tracks, snapshot.assignments());
+    }
+
+    private void validatePartyJobs(TrackMode trackMode, Map<TrackSlot, Integer> partyJobIds) {
+        Set<TrackSlot> expectedSlots = trackMode.slots();
+        if (!partyJobIds.keySet().equals(expectedSlots)) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "PARTY_JOBS_INCOMPLETE", "需要为当前轨道模式的每个轨道选择职业");
+        }
+        for (Map.Entry<TrackSlot, Integer> entry : partyJobIds.entrySet()) {
+            TrackSlot slot = entry.getKey();
+            Integer jobId = entry.getValue();
+            if (!jobNames().containsKey(jobId)) {
+                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "PARTY_JOB_UNKNOWN", "存在未知职业");
+            }
+            if (!jobFitsSlot(slot, jobId)) {
+                throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "PARTY_JOB_SLOT_MISMATCH", "职业与轨道角色不匹配");
+            }
+        }
+    }
+
+    private boolean jobFitsSlot(TrackSlot slot, int jobId) {
+        return switch (slot) {
+            case T1, MT, ST -> tankJobs().contains(jobId);
+            case H1, H2 -> healerJobs().contains(jobId);
+            case D1, D2, D3, D4 -> dpsJobs().contains(jobId);
+        };
+    }
+
+    private String jobName(int jobId) {
+        return jobNames().get(jobId);
+    }
+
+    private Set<Integer> tankJobs() {
+        return Set.of(19, 21, 32, 37);
+    }
+
+    private Set<Integer> healerJobs() {
+        return Set.of(24, 28, 33, 40);
+    }
+
+    private Set<Integer> dpsJobs() {
+        return Set.of(20, 22, 23, 25, 27, 30, 31, 34, 35, 38, 39, 41, 42);
+    }
+
+    private Map<Integer, String> jobNames() {
+        return Map.ofEntries(
+                Map.entry(19, "骑士"),
+                Map.entry(21, "战士"),
+                Map.entry(32, "暗黑骑士"),
+                Map.entry(37, "绝枪战士"),
+                Map.entry(24, "白魔法师"),
+                Map.entry(28, "学者"),
+                Map.entry(33, "占星术士"),
+                Map.entry(40, "贤者"),
+                Map.entry(20, "武僧"),
+                Map.entry(22, "龙骑士"),
+                Map.entry(30, "忍者"),
+                Map.entry(34, "武士"),
+                Map.entry(39, "钐镰客"),
+                Map.entry(41, "蝰蛇剑士"),
+                Map.entry(23, "吟游诗人"),
+                Map.entry(31, "机工士"),
+                Map.entry(38, "舞者"),
+                Map.entry(25, "黑魔法师"),
+                Map.entry(27, "召唤师"),
+                Map.entry(35, "赤魔法师"),
+                Map.entry(42, "绘灵法师"));
     }
 
     private PlanSnapshot authoritativeSnapshot(PlanRow plan, PlanSnapshot submitted, int version) {
@@ -268,7 +361,7 @@ public class PlanService {
 
     public record CreatePlanRequest(
             String name, UUID encounterId, long territoryId, String strategyTag, TrackMode trackMode,
-            Boolean useDefaultTemplate) {
+            Boolean useDefaultTemplate, Map<TrackSlot, Integer> partyJobIds) {
     }
 
     public record UpdatePlanRequest(String name, PlanSnapshot snapshot) {

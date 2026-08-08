@@ -53,6 +53,21 @@ public sealed class AssignmentRuntimeTests
         Assert.False(runtime.ShouldDrawOverlay(4_001));
     }
 
+    [Fact]
+    public void MissedPostImpactSupportWindowStaysVisibleUntilLatestUseGrace()
+    {
+        var runtime = new AssignmentRuntime(new Assignment(
+            Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 24302, null,
+            1_000, 4_500, 10_000, 4_000, false,
+            ConfirmationStrategy.StatusApply, []));
+
+        runtime.Advance(10_001, false);
+
+        Assert.Equal(AssignmentState.Missed, runtime.State);
+        Assert.True(runtime.ShouldDrawOverlay(13_000));
+        Assert.False(runtime.ShouldDrawOverlay(13_001));
+    }
+
     private static Assignment TestAssignment() => new(
         Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 7535, null,
         1_000, 2_000, 3_000, 4_000, false,

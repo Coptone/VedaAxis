@@ -31,7 +31,8 @@ public class AiCandidateController {
                 request.mode(),
                 request.focusTrackId(),
                 request.preserveExistingAssignments(),
-                request.allowGcdActions());
+                request.allowGcdActions(),
+                request.locale());
     }
 
     public record GenerateRequest(
@@ -39,6 +40,7 @@ public class AiCandidateController {
             AiCandidateService.OptimizationMode mode,
             UUID focusTrackId,
             Boolean preserveExistingAssignments,
-            Boolean allowGcdActions) {
+            Boolean allowGcdActions,
+            @Size(max = 12) String locale) {
     }
 }

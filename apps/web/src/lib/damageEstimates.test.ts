@@ -36,6 +36,20 @@ const reprisal: AbilityDefinition = {
   },
 }
 
+const physis: AbilityDefinition = {
+  ...reprisal,
+  actionId: 24302,
+  name: '魂灵风息 / Physis II',
+  cooldownMs: 60_000,
+  durationMs: 15_000,
+  effect: {
+    ...reprisal.effect,
+    scope: 'PARTY',
+    allDamageReductionPercent: 0,
+    calculationReadiness: 'NO_DIRECT_MITIGATION',
+  },
+}
+
 function basePlan(): PlanSnapshot {
   const firstMechanicId = '10000000-0000-4000-8000-000000000001'
   const secondMechanicId = '10000000-0000-4000-8000-000000000002'
@@ -165,5 +179,22 @@ describe('local damage estimates', () => {
         availableAtMs: 85_000,
       }),
     ])
+  })
+
+  it('allows post-impact healing support without reducing the current hit', () => {
+    const plan = basePlan()
+    plan.assignments = [{
+      ...plan.assignments[0]!,
+      actionId: 24302,
+      highlightAtMs: 27_000,
+      earliestUseAtMs: 30_500,
+      latestUseAtMs: 36_000,
+      impactAtMs: 30_000,
+    }]
+
+    const estimates = previewDamageEstimatesLocally(plan, [physis])
+
+    expect(estimates[0]!.damageAfterMitigation).toBe(100_000)
+    expect(estimates[0]!.notices.join('\n')).toContain('安排在伤害判定后')
   })
 })

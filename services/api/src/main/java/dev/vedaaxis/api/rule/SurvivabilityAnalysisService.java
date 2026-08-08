@@ -124,7 +124,7 @@ public class SurvivabilityAnalysisService {
         if (ability == null || ability.durationMs() <= 0) {
             return false;
         }
-        long impactAtMs = mechanic.plannedAtMs();
+        long impactAtMs = assignmentImpactAtMs(assignment, mechanic);
         return assignment.earliestUseAtMs() <= impactAtMs
                 && assignment.latestUseAtMs() <= impactAtMs
                 && assignment.earliestUseAtMs() + ability.durationMs() >= impactAtMs;
@@ -169,7 +169,7 @@ public class SurvivabilityAnalysisService {
             PlanSnapshot.Assignment assignment,
             PlanSnapshot.TimelineMechanic mechanic,
             List<String> notices) {
-        long impactAtMs = mechanic.plannedAtMs();
+        long impactAtMs = assignmentImpactAtMs(assignment, mechanic);
         if (assignment.earliestUseAtMs() > impactAtMs || assignment.latestUseAtMs() > impactAtMs) {
             notices.add(ability.name() + " 的允许施放窗口晚于机制命中，未计入。");
             return false;
@@ -183,6 +183,14 @@ public class SurvivabilityAnalysisService {
             return false;
         }
         return true;
+    }
+
+    private static long assignmentImpactAtMs(
+            PlanSnapshot.Assignment assignment,
+            PlanSnapshot.TimelineMechanic mechanic) {
+        return assignment.mechanicId().equals(mechanic.mechanicId())
+                ? assignment.impactAtMs()
+                : mechanic.plannedAtMs();
     }
 
     public record Request(

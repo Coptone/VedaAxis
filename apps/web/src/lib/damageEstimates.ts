@@ -175,8 +175,9 @@ function analyzeTarget(
       notices.push(`${ability.name} 与执行轨道职业不匹配，未计入。`)
       continue
     }
+    const impactAtMs = assignmentImpactAtMs(assignment, mechanic)
     if (!coversImpact(ability, assignment, mechanic)) {
-      if (isPostImpactSupportAssignment(ability, assignment, mechanic)) {
+      if (isPostImpactSupportAssignment(ability, assignment, { plannedAtMs: impactAtMs })) {
         notices.push(`${ability.name} 安排在伤害判定后，用于抬血/恢复，未计入本次命中减伤。`)
       } else {
         notices.push(`${ability.name} 的持续时间无法覆盖本次命中，未计入。`)
@@ -243,14 +244,20 @@ function isRelevantToImpact(
 ): boolean {
   if (assignment.mechanicId === mechanic.mechanicId || assignment.impactAtMs === mechanic.plannedAtMs) return true
   if (!ability || ability.durationMs <= 0) return false
-  return assignment.earliestUseAtMs <= mechanic.plannedAtMs
-    && assignment.latestUseAtMs <= mechanic.plannedAtMs
-    && assignment.earliestUseAtMs + ability.durationMs >= mechanic.plannedAtMs
+  const impactAtMs = assignmentImpactAtMs(assignment, mechanic)
+  return assignment.earliestUseAtMs <= impactAtMs
+    && assignment.latestUseAtMs <= impactAtMs
+    && assignment.earliestUseAtMs + ability.durationMs >= impactAtMs
 }
 
 function coversImpact(ability: AbilityDefinition, assignment: Assignment, mechanic: TimelineMechanic): boolean {
-  if (assignment.earliestUseAtMs > mechanic.plannedAtMs || assignment.latestUseAtMs > mechanic.plannedAtMs) return false
-  return ability.durationMs > 0 && assignment.earliestUseAtMs + ability.durationMs >= mechanic.plannedAtMs
+  const impactAtMs = assignmentImpactAtMs(assignment, mechanic)
+  if (assignment.earliestUseAtMs > impactAtMs || assignment.latestUseAtMs > impactAtMs) return false
+  return ability.durationMs > 0 && assignment.earliestUseAtMs + ability.durationMs >= impactAtMs
+}
+
+function assignmentImpactAtMs(assignment: Assignment, mechanic: TimelineMechanic): number {
+  return assignment.mechanicId === mechanic.mechanicId ? assignment.impactAtMs : mechanic.plannedAtMs
 }
 
 export function abilityRequiresImpactCoverage(
@@ -326,7 +333,35 @@ function reductionFor(effect: MitigationEffectProfile, damageType: TimelineMecha
 function targetTracks(snapshot: PlanSnapshot, mechanic: TimelineMechanic): ExecutionTrack[] {
   if (mechanic.type !== 'TANK_BUSTER' && attackClass(mechanic) !== 'AUTO_ATTACK') return snapshot.tracks
   const tanks = snapshot.tracks.filter((track) => ['MT', 'ST', 'T1'].includes(track.slot))
-  return tanks.length ? tanks : snapshot.tracks
+  if (!tanks.length) return snapshot.tracks
+  if (isDualTankTarget(mechanic.target)) return tanks
+  if (isOffTankTarget(mechanic.target)) {
+    const offTanks = tanks.filter((track) => track.slot === 'ST')
+    return offTanks.length ? offTanks : tanks.slice(0, 1)
+  }
+  const mainTanks = tanks.filter((track) => ['MT', 'T1'].includes(track.slot))
+  return mainTanks.length ? mainTanks : tanks.slice(0, 1)
+}
+
+function isDualTankTarget(target: string | null | undefined): boolean {
+  const normalized = (target ?? '').trim().toLowerCase()
+  return normalized.includes('一二仇')
+    || normalized.includes('双坦')
+    || normalized.includes('两名坦克')
+    || normalized.includes('2坦')
+    || normalized.includes('two tanks')
+    || normalized.includes('both tanks')
+    || normalized.includes('mt/st')
+}
+
+function isOffTankTarget(target: string | null | undefined): boolean {
+  const normalized = (target ?? '').trim().toLowerCase()
+  return normalized === 'st'
+    || normalized.includes('副坦')
+    || normalized.includes('二仇')
+    || normalized.includes('off tank')
+    || normalized.includes('off-tank')
+    || normalized.includes('offtank')
 }
 
 function riskLevel(mechanic: TimelineMechanic, damageAfterMitigation: number): DamageEstimate['riskLevel'] {

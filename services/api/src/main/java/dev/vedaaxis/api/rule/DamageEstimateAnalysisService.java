@@ -97,13 +97,49 @@ public class DamageEstimateAnalysisService {
                         || track.slot() == TrackSlot.ST
                         || track.slot() == TrackSlot.T1)
                 .toList();
-        return tanks.isEmpty() ? snapshot.tracks() : tanks;
+        if (tanks.isEmpty()) {
+            return snapshot.tracks();
+        }
+        if (isDualTankTarget(mechanic.target())) {
+            return tanks;
+        }
+        if (isOffTankTarget(mechanic.target())) {
+            List<PlanSnapshot.ExecutionTrack> offTanks = tanks.stream()
+                    .filter(track -> track.slot() == TrackSlot.ST)
+                    .toList();
+            return offTanks.isEmpty() ? List.of(tanks.getFirst()) : offTanks;
+        }
+        List<PlanSnapshot.ExecutionTrack> mainTanks = tanks.stream()
+                .filter(track -> track.slot() == TrackSlot.MT || track.slot() == TrackSlot.T1)
+                .toList();
+        return mainTanks.isEmpty() ? List.of(tanks.getFirst()) : mainTanks;
     }
 
     private static boolean isAutoAttack(String name) {
         String normalized = name == null ? "" : name.trim().toLowerCase();
         return normalized.equals("攻击") || normalized.startsWith("攻击 ")
                 || normalized.equals("attack") || normalized.startsWith("attack ");
+    }
+
+    private static boolean isDualTankTarget(String target) {
+        String normalized = target == null ? "" : target.trim().toLowerCase();
+        return normalized.contains("一二仇")
+                || normalized.contains("双坦")
+                || normalized.contains("两名坦克")
+                || normalized.contains("2坦")
+                || normalized.contains("two tanks")
+                || normalized.contains("both tanks")
+                || normalized.contains("mt/st");
+    }
+
+    private static boolean isOffTankTarget(String target) {
+        String normalized = target == null ? "" : target.trim().toLowerCase();
+        return normalized.equals("st")
+                || normalized.contains("副坦")
+                || normalized.contains("二仇")
+                || normalized.contains("off tank")
+                || normalized.contains("off-tank")
+                || normalized.contains("offtank");
     }
 
     static RiskLevel risk(PlanSnapshot.MechanicType type, long damageAfterMitigation) {

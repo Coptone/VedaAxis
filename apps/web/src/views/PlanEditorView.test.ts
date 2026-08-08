@@ -146,7 +146,9 @@ describe('PlanEditorView', () => {
     await flushPromises()
 
     expect(wrapper.get('.assignment-editor-modal').attributes('role')).toBe('dialog')
-    expect(wrapper.findAll('.assignment-editor-controls input[type="range"]')).toHaveLength(4)
+    expect(wrapper.findAll('.assignment-editor-controls input[type="range"]')).toHaveLength(3)
+    expect(wrapper.get('.assignment-editor-fixed-time').text()).toContain('不可拖动或手动修改')
+    expect(wrapper.get('.assignment-marker.impact').attributes('title')).toContain('不可调整')
     expect(wrapper.get('.assignment-editor-cancel').text()).toBe('取消')
   })
 
@@ -221,10 +223,10 @@ describe('PlanEditorView', () => {
     await wrapper.get('.assignment-edit-button').trigger('click')
     await flushPromises()
 
-    const impactInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[3]!
-    const originalImpact = Number((impactInput.element as HTMLInputElement).value)
-    await impactInput.setValue(String(originalImpact + 1_000))
-    expect(Number((impactInput.element as HTMLInputElement).value)).toBe(originalImpact + 1_000)
+    const latestInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[2]!
+    const originalLatest = Number((latestInput.element as HTMLInputElement).value)
+    await latestInput.setValue(String(originalLatest - 1_000))
+    expect(Number((latestInput.element as HTMLInputElement).value)).toBe(originalLatest - 1_000)
 
     await wrapper.get('.assignment-editor-cancel').trigger('click')
     await flushPromises()
@@ -232,8 +234,8 @@ describe('PlanEditorView', () => {
 
     await wrapper.get('.assignment-edit-button').trigger('click')
     await flushPromises()
-    const revertedImpactInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[3]!
-    expect(Number((revertedImpactInput.element as HTMLInputElement).value)).toBe(originalImpact)
+    const revertedLatestInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[2]!
+    expect(Number((revertedLatestInput.element as HTMLInputElement).value)).toBe(originalLatest)
   })
 
   it('updates assignment timing by dragging a marker on the timeline', async () => {
@@ -264,15 +266,16 @@ describe('PlanEditorView', () => {
         toJSON: () => ({}),
       }),
     })
-    const impactInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[3]!
-    const originalImpact = Number((impactInput.element as HTMLInputElement).value)
+    const earliestInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[1]!
+    const originalEarliest = Number((earliestInput.element as HTMLInputElement).value)
 
-    await wrapper.get('.assignment-marker.impact').trigger('pointerdown', { clientX: 100, pointerId: 1 })
+    await wrapper.get('.assignment-marker.release').trigger('pointerdown', { clientX: 100, pointerId: 1 })
     window.dispatchEvent(new MouseEvent('pointermove', { clientX: 850 }))
     window.dispatchEvent(new MouseEvent('pointerup', { clientX: 850 }))
     await flushPromises()
 
-    expect(Number((impactInput.element as HTMLInputElement).value)).not.toBe(originalImpact)
+    const updatedEarliestInput = wrapper.findAll('.assignment-editor-controls input[type="number"]')[1]!
+    expect(Number((updatedEarliestInput.element as HTMLInputElement).value)).not.toBe(originalEarliest)
   })
 
   it('blocks adding a duplicate ability when the current placement window is on cooldown', async () => {

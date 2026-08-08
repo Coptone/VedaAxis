@@ -127,7 +127,7 @@ const READY_COOLDOWN: AbilityCooldownState = {
   label: '',
 }
 
-type AssignmentTimeField = 'highlightAtMs' | 'earliestUseAtMs' | 'latestUseAtMs' | 'impactAtMs'
+type AssignmentTimeField = 'highlightAtMs' | 'earliestUseAtMs' | 'latestUseAtMs'
 
 interface AbilityCooldownState {
   blocked: boolean
@@ -163,7 +163,6 @@ const ASSIGNMENT_TIME_FIELDS: Array<{ key: AssignmentTimeField; label: string }>
   { key: 'highlightAtMs', label: '开始亮起' },
   { key: 'earliestUseAtMs', label: '最早释放' },
   { key: 'latestUseAtMs', label: '最晚释放' },
-  { key: 'impactAtMs', label: '机制判定' },
 ]
 
 const DEFAULT_PHASES: TimelinePhase[] = cloneData(defaultPlan.phases)
@@ -1196,10 +1195,6 @@ function normalizeSelectedAssignmentTimes(changedField: AssignmentTimeField) {
     assignment.highlightAtMs = Math.min(assignment.highlightAtMs, assignment.earliestUseAtMs)
     return
   }
-  if (changedField === 'impactAtMs' && !canSitAfterImpact) {
-    assignment.latestUseAtMs = Math.min(assignment.latestUseAtMs, assignment.impactAtMs)
-    assignment.earliestUseAtMs = Math.min(assignment.earliestUseAtMs, assignment.latestUseAtMs)
-  }
   assignment.highlightAtMs = Math.min(assignment.highlightAtMs, assignment.earliestUseAtMs)
 }
 
@@ -1866,13 +1861,11 @@ function fallbackAbilities(): AbilityDefinition[] {
               title="拖动设置最晚释放时间"
               @pointerdown="startAssignmentTimelineDrag('latestUseAtMs', $event)"
             ><b>最晚</b></button>
-            <button
-              type="button"
-              :class="['assignment-marker', 'impact', { dragging: draggingAssignmentField === 'impactAtMs' }]"
+            <span
+              class="assignment-marker impact fixed"
               :style="{ left: assignmentTimelinePercent(selectedAssignment.impactAtMs) }"
-              title="拖动设置机制判定时间"
-              @pointerdown="startAssignmentTimelineDrag('impactAtMs', $event)"
-            ><b>判定</b></button>
+              title="机制判定时间来自副本时间轴，不可调整"
+            ><b>判定</b></span>
             <div class="assignment-axis">
               <span>{{ formatTime(selectedAssignmentTimelineStartMs) }}</span>
               <span>{{ formatTime(selectedAssignmentTimelineEndMs) }}</span>
@@ -1900,6 +1893,13 @@ function fallbackAbilities(): AbilityDefinition[] {
                 @input="setSelectedAssignmentTime(field.key, eventValue($event))"
               />
             </label>
+            <div class="assignment-editor-fixed-time">
+              <span>
+                <b>机制判定</b>
+                <em>{{ displayMs(selectedAssignment.impactAtMs) }}</em>
+              </span>
+              <small>来自当前机制时间轴，不可拖动或手动修改。</small>
+            </div>
           </div>
 
           <label class="assignment-editor-target">

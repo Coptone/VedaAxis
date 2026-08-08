@@ -548,6 +548,8 @@ a { color: inherit; text-decoration: none; }
 .assignment-marker.release { color: var(--cyan); }
 .assignment-marker.latest { color: #a2e7d3; }
 .assignment-marker.impact { color: #ffd36f; }
+.assignment-marker.fixed { cursor: default; touch-action: auto; }
+.assignment-marker.fixed b { border-color: rgba(255,211,111,.3); background: rgba(255,211,111,.1); }
 .assignment-axis { position: absolute; left: 24px; right: 24px; bottom: 16px; display: flex; justify-content: space-between; color: var(--muted); font: 800 10px ui-monospace, monospace; }
 .assignment-editor-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .assignment-editor-controls label { margin: 0; padding: 10px; display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px 10px; align-items: center; border: 1px solid var(--border-soft); border-radius: 10px; background: rgba(5,17,26,.45); }
@@ -556,6 +558,9 @@ a { color: inherit; text-decoration: none; }
 .assignment-editor-controls em { color: var(--cyan); font-style: normal; font: 800 10px ui-monospace, monospace; }
 .assignment-editor-controls input[type='range'] { width: 100%; accent-color: var(--cyan); }
 .assignment-editor-controls input[type='number'] { height: 31px; padding: 0 8px; color: var(--text); border: 1px solid var(--border); border-radius: 7px; background: rgba(5,17,26,.75); font: 800 10px ui-monospace, monospace; }
+.assignment-editor-fixed-time { margin: 0; padding: 10px; display: grid; gap: 8px; align-items: center; border: 1px dashed rgba(255,211,111,.32); border-radius: 10px; background: rgba(255,211,111,.055); }
+.assignment-editor-fixed-time > span { display: flex; justify-content: space-between; gap: 10px; }
+.assignment-editor-fixed-time small { color: var(--muted); font-size: 10px; line-height: 1.5; }
 .assignment-editor-target { margin: 12px 0 0; display: grid; gap: 6px; color: var(--muted); font-size: 10px; }
 .assignment-editor-target select { height: 35px; }
 .assignment-editor-panel footer { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }

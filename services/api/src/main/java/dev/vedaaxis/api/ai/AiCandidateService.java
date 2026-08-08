@@ -153,7 +153,10 @@ public class AiCandidateService {
                     Never modify or delete locked=true assignments.
                     Never create new tracks or mechanics.
                     Only use actionId values from the available ability catalog.
-                    All times are milliseconds and must satisfy highlightAtMs <= earliestUseAtMs <= latestUseAtMs <= impactAtMs.
+                    All times are milliseconds and must satisfy highlightAtMs <= earliestUseAtMs <= latestUseAtMs.
+                    impactAtMs is the immutable adjudication time already present in the plan context; preserve it on UPDATE and never move impactAtMs to optimize an assignment.
+                    For ADD operations, copy the adjudication time from the selected mechanic or existing same-mechanic context instead of inventing a new impactAtMs.
+                    Direct mitigation, shields, max-HP effects, and invulnerability must cover impactAtMs. Pure post-impact healing/recovery support may use a latestUseAtMs after impactAtMs, but it must not be counted as pre-hit mitigation.
                     Optimize mitigation, shield, healing and healing-buff utilization: prioritize RED/YELLOW risks, use long-duration skills to cover multiple mechanics, and avoid cooldown conflicts on the same track.
                     Preserve targetTrackId for single-target mitigation.
                     Do not add pure healing, healing buffs, resource skills, or unmodeled shields to GREEN mechanics unless there is a clear sustained-pressure gap.
@@ -662,6 +665,12 @@ public class AiCandidateService {
                 if (!existing.equals(candidateById.get(existing.assignmentId()))) {
                     throw invalidResponse("AI 修改或删除了现有任务 " + existing.assignmentId());
                 }
+            }
+        }
+        for (PlanSnapshot.Assignment existing : base.assignments()) {
+            PlanSnapshot.Assignment candidateAssignment = candidateById.get(existing.assignmentId());
+            if (candidateAssignment != null && candidateAssignment.impactAtMs() != existing.impactAtMs()) {
+                throw invalidResponse("AI 修改了机制判定时间 " + existing.assignmentId());
             }
         }
 

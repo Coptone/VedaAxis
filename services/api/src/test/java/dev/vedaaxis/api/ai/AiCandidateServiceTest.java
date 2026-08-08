@@ -131,6 +131,33 @@ class AiCandidateServiceTest {
     }
 
     @Test
+    void rejectsUpdatesThatMoveImmutableImpactTime() {
+        UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
+        UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");
+        PlanSnapshot.Assignment original = assignment(
+                UUID.fromString("30000000-0000-4000-8000-000000000001"), mechanicId, trackId, 100);
+        PlanSnapshot.Assignment movedImpact = new PlanSnapshot.Assignment(
+                original.assignmentId(), original.mechanicId(), original.trackId(),
+                original.actionId(), original.anchorId(), original.highlightAtMs(), original.earliestUseAtMs(),
+                original.latestUseAtMs(), original.impactAtMs() + 1_000,
+                original.locked(), original.confirmationStrategy(), original.fallbacks(), original.targetTrackId());
+        PlanSnapshot snapshot = snapshot(
+                List.of(track(trackId, TrackSlot.H2)),
+                List.of(mechanic(mechanicId)),
+                List.of(original));
+        AiCandidateService service = serviceWithCatalog(Map.of(100L, directAbility(100)), List.of());
+
+        assertThatThrownBy(() -> service.enforceSafety(
+                snapshot,
+                List.of(movedImpact),
+                AiCandidateService.OptimizationMode.GLOBAL,
+                null,
+                new AiCandidateService.AiSafetyOptions(false, true)))
+                .isInstanceOfSatisfying(ApiException.class,
+                        exception -> assertThat(exception.code()).isEqualTo("AI_RESPONSE_INVALID"));
+    }
+
+    @Test
     void disallowGcdActionsRejectsNewGcdAssignments() {
         UUID trackId = UUID.fromString("10000000-0000-4000-8000-000000000001");
         UUID mechanicId = UUID.fromString("20000000-0000-4000-8000-000000000001");

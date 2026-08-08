@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.14.0",
+    "AssemblyVersion": "0.1.15.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "计划同步改为直接刷新并选择当前账号的已发布计划列表，支持按计划 ID 精确同步；旧版方案标签匹配折叠为高级兜底。",
+    "Changelog": "修复执行记录上传遇到旧计划/旧版本 404 时无限重试的问题：不可恢复的旧批次会被隔离并在诊断信息中显示，不再持续刷失败。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786198056,
+    "LastUpdate": 1786199341,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

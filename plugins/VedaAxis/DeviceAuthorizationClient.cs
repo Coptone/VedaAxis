@@ -149,7 +149,11 @@ internal sealed class DeviceAuthorizationClient : IDisposable
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         request.Content = JsonContent.Create(batch, options: jsonOptions);
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw ApiRequestException.FromResponse(response.StatusCode, body);
+        }
     }
 
     private sealed record DeviceCodeResponse(
@@ -161,6 +165,62 @@ internal sealed class DeviceAuthorizationClient : IDisposable
     private sealed record DeviceTokenResponse(string Status, Guid? DeviceId, TokenPair? Tokens);
 
     private sealed record RuntimePlanResponse(PlanSnapshot Snapshot, DateTimeOffset PublishedAt);
+}
+
+internal sealed class ApiRequestException : Exception
+{
+    private ApiRequestException(HttpStatusCode statusCode, string? apiCode, string message, string responseBody)
+        : base(message)
+    {
+        StatusCode = statusCode;
+        ApiCode = apiCode;
+        ResponseBody = responseBody;
+    }
+
+    public HttpStatusCode StatusCode { get; }
+    public string? ApiCode { get; }
+    public string ResponseBody { get; }
+
+    public static ApiRequestException FromResponse(HttpStatusCode statusCode, string body)
+    {
+        var code = TryReadString(body, "code");
+        var message = TryReadString(body, "message");
+        var summary = !string.IsNullOrWhiteSpace(message)
+            ? message!
+            : string.IsNullOrWhiteSpace(body)
+                ? $"HTTP {(int)statusCode}"
+                : body.Length > 240
+                    ? body[..240] + "..."
+                    : body;
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            summary = $"{summary}（{code}）";
+        }
+        return new ApiRequestException(statusCode, code, summary, body);
+    }
+
+    private static string? TryReadString(string body, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return null;
+        }
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty(propertyName, out var property)
+                && property.ValueKind == JsonValueKind.String)
+            {
+                return property.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        return null;
+    }
 }
 
 internal sealed record DeviceAuthorizationResult(Guid DeviceId, TokenPair Tokens);

@@ -2,7 +2,7 @@
 
 > 最近更新：2026-08-08
 >
-> 当前测试版：`0.1.14`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
+> 当前测试版：`0.1.15`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
 >
 > 进度口径：`已完成` 表示已有可复现的验证证据；`进行中` 表示代码或样板已存在，但仍缺少 PRD 要求的完整验收；`待开始` 表示尚未进入实现。
 
@@ -20,6 +20,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 2026-08-08 继续补充换 T 语义：Web 在平 A/死刑机制标题下新增“单体承伤目标”下拉，可选择默认当前一仇（MT/T1）、指定当前一仇为 MT/ST/T1，或标记为双坦/一二仇；计划内部兼容编码为 `当前一仇:ST` 等，不新增数据库列或破坏旧快照。Web 本地预计伤害和 API `/damage-estimates/preview` 均优先读取该机制级目标，换 T 后可把后续平 A/单体死刑切到 ST，使“最危险轨道”和减伤计算按新的当前一仇重算。验证通过 Web 42 项相关测试、`pnpm check:web`、`pnpm build:web`、API 55 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-DKLeYi4t.js` 与 `assets/index-BUywlb4g.css`，API JAR SHA-256 为 `b82210062e87ce45bbef5e1dba457ef8a46922f53c6d99ed79a731ea671e1da4`，内部 `/actuator/health` 为 `UP`，公网未登录计划接口返回 401，`pluginmaster.json` 与 `release/latest/VedaAxis.zip` 继续返回 200；本次未更新 Dalamud 插件 ZIP，部署备份位于 `/opt/vedaaxis/backups/20260808-154939-current-enmity-target`。
 
+2026-08-08 发布插件 `0.1.15` 上传队列热修：线上 Nginx 日志显示插件上传请求命中的是正确路径 `POST /VedaAxis/api/v1/fight-executions`，但返回 404/401 交替；公网未登录同一路径返回 401，证明不是 Nginx 路由或接口缺失。代码排查确认 404 来自 API 业务层：本地待上传执行批次引用的 `planId` 在当前账号下不存在、已删除或属于旧绑定账号，`FightExecutionService.upload` 中的 `planService.get` 返回 `PLAN_NOT_FOUND`；旧插件把该 404 当成可重试网络错误，导致同一旧批次无限重试。`0.1.15` 改为读取上传错误体，401 仍刷新令牌重试，400/404/422 这类不可恢复旧批次移动到插件本地 `failed-executions` 隔离目录，并在控制台显示“待上传执行批次/已隔离旧批次”和上传状态，不再持续刷失败。验证通过 Dalamud Release 构建 0 警告 0 错误、Core 34 项测试；公网插件 ZIP SHA-256 为 `707d2fac28bbd2bbc81ec5ddae9d18cb6e2362ddfbff08aa6953679ba3ef95ed`。本次未更新 API JAR 或 Web 静态资源。
 2026-08-08 发布插件 `0.1.14` 并部署配套 API：插件“计划同步”页主流程改为刷新当前账号的已发布计划列表、下拉选择具体计划并按计划 ID 精确同步；旧版 Territory/方案标签/轨道模式自动匹配保留为折叠的高级兜底。API 新增 `GET /api/v1/runtime/plans` 返回当前账号 ACTIVE 发布计划摘要，以及 `GET /api/v1/runtime/plans/{planId}/published` 精确返回该发布快照。验证通过 API 全量 57 项测试、Core 34 项测试、Dalamud Release 构建 0 警告 0 错误、API JAR 构建和 `git diff --check`。公网 `pluginmaster.json` 为 `0.1.14.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200 且 SHA-256 为 `5b6f36436bcff6c7bd7412ece0d6db32a32dc4352ae88a11e9bc7d235e4bd865`；API JAR SHA-256 为 `31fe8941ed2a227524e56882421b3a8b1bb23ac7791fd2c38f4a1ce559c5284c`，内部 `/actuator/health` 为 `UP`，公网未登录 `GET /VedaAxis/api/v1/runtime/plans` 返回 401。生产数据库只读核对显示所有者账号存在 1 个 ACTIVE 发布计划（Territory 1363、`DMU-P1P2`、`EIGHT`、v5），部署备份位于 `/opt/vedaaxis/backups/20260808-2208-runtime-plan-list`。
 
 `0.1.8` 已增加 Territory 755、`O8S-POC` 八轨云端联调模板，Web 新建后由 API 初始化同一份规范快照，插件提供 O8S 快速配置并按 Territory/策略/轨道精确匹配。模板的 10 秒坚角清汁和 20 秒整体论仅为联调探针，不代表真实 O8S 时间轴。设备授权改为每台游戏电脑首次绑定一次，插件在非战斗启动阶段主动轮换刷新令牌，网页提供已绑定设备列表和撤销入口。Web 22 项、API 30 项、Python 9 项、Core 29 项及 Dalamud Release 构建已通过；GitHub/Gitee、Release 与公网部署均已完成，服务器和管理端已验证，游戏电脑的 O8S 完整闭环仍待实机完成。

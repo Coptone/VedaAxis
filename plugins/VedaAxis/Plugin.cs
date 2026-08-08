@@ -279,7 +279,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 _ = SyncPublishedPlanAsync();
             }
-            ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
+            ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}，已隔离旧批次：{executionUploadQueue.FailedCount}");
             ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
         }
         else if (ImGui.Button("连接 VedaAxis 账户"))
@@ -395,7 +395,7 @@ public sealed class Plugin : IDalamudPlugin
                             _ = SyncPublishedPlanAsync();
                         }
                     }
-                    ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
+                    ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}，已隔离旧批次：{executionUploadQueue.FailedCount}");
                     ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
                 }
                 else if (ImGui.Button("连接 VedaAxis 账户"))
@@ -439,7 +439,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 ImGui.TextWrapped($"计划文件：{planStore.Path}");
                 ImGui.TextWrapped($"状态：{status}");
-                ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}");
+                ImGui.TextDisabled($"待上传执行批次：{executionUploadQueue.PendingCount}，已隔离旧批次：{executionUploadQueue.FailedCount}");
                 ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
                 DrawCombatDiagnostic();
                 ImGui.Separator();
@@ -1537,29 +1537,29 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             var uploaded = 0;
+            var quarantined = 0;
             foreach (var pending in executionUploadQueue.ReadPending())
             {
                 try
                 {
-                    await deviceAuthorizationClient.UploadExecutionAsync(
-                        configuration.ApiBaseUrl, configuration.AccessToken, pending.Batch, CancellationToken.None);
+                    await UploadPendingExecutionAsync(pending, CancellationToken.None);
                     executionUploadQueue.Complete(pending);
                     uploaded++;
                 }
-                catch (HttpRequestException exception) when (exception.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                catch (ApiRequestException exception) when (IsPermanentExecutionUploadFailure(exception))
                 {
-                    var tokens = await deviceAuthorizationClient.RefreshAsync(
-                        configuration.ApiBaseUrl, configuration.RefreshToken, CancellationToken.None);
-                    configuration.AccessToken = tokens.AccessToken;
-                    configuration.RefreshToken = tokens.RefreshToken;
-                    SaveConfiguration();
-                    await deviceAuthorizationClient.UploadExecutionAsync(
-                        configuration.ApiBaseUrl, tokens.AccessToken, pending.Batch, CancellationToken.None);
-                    executionUploadQueue.Complete(pending);
-                    uploaded++;
+                    executionUploadQueue.Fail(
+                        pending,
+                        $"HTTP {(int)exception.StatusCode} {exception.ApiCode ?? string.Empty}: {exception.Message}");
+                    quarantined++;
                 }
             }
-            if (uploaded > 0)
+            if (quarantined > 0)
+            {
+                lastExecutionUploadStatus =
+                    $"已上传 {uploaded} 个执行批次，隔离 {quarantined} 个旧/无效批次（{DateTimeOffset.Now:HH:mm:ss}）";
+            }
+            if (uploaded > 0 && quarantined == 0)
             {
                 lastExecutionUploadStatus = $"已上传 {uploaded} 个执行批次（{DateTimeOffset.Now:HH:mm:ss}）";
             }
@@ -1574,6 +1574,32 @@ public sealed class Plugin : IDalamudPlugin
         {
             executionUploadLock.Release();
         }
+    }
+
+    private async Task UploadPendingExecutionAsync(PendingExecution pending, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await deviceAuthorizationClient.UploadExecutionAsync(
+                configuration.ApiBaseUrl, configuration.AccessToken!, pending.Batch, cancellationToken);
+        }
+        catch (ApiRequestException exception) when (exception.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var tokens = await deviceAuthorizationClient.RefreshAsync(
+                configuration.ApiBaseUrl, configuration.RefreshToken!, cancellationToken);
+            configuration.AccessToken = tokens.AccessToken;
+            configuration.RefreshToken = tokens.RefreshToken;
+            SaveConfiguration();
+            await deviceAuthorizationClient.UploadExecutionAsync(
+                configuration.ApiBaseUrl, tokens.AccessToken, pending.Batch, cancellationToken);
+        }
+    }
+
+    private static bool IsPermanentExecutionUploadFailure(ApiRequestException exception)
+    {
+        return exception.StatusCode is System.Net.HttpStatusCode.BadRequest
+            or System.Net.HttpStatusCode.NotFound
+            or System.Net.HttpStatusCode.UnprocessableEntity;
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]

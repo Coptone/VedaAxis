@@ -41,7 +41,7 @@ public class AbilityEffectCatalog {
             // Tank role and paladin
             Map.entry(7531L, direct(SELF, 20, 0, 0, "", "仅施法者自身；强化铁壁的受治疗提高不计入伤害数字。")),
             Map.entry(7535L, direct(ENEMY_AREA, 10, 0, 0, "", "敌方需处于范围内。")),
-            Map.entry(17L, direct(SELF, 30, 0, 0, "", "92 级后会升级为守护者；仅施法者自身。")),
+            Map.entry(17L, direct(SELF, 30, 0, 0, "", "92 级后会升级为极致防御；仅施法者自身。")),
             Map.entry(36920L, mixed(SELF, 40, 0, 0, 0, 1000, "", "92 级升级技能；1000 威力护盾取决于实际治疗量换算，未计入数值。")),
             Map.entry(22L, noDirect(SELF, "", "提高格挡/格挡率，实际减伤取决于可否格挡和格挡强度，暂不计入数字。")),
             Map.entry(3542L, direct(SELF, 15, 0, 0, "", "消耗 50 忠义；仅按基础 15% 计入。")),
@@ -53,13 +53,13 @@ public class AbilityEffectCatalog {
             Map.entry(30L, invulnerability(SELF, "", "多数攻击无效；特殊处决/机制仍须人工确认。")),
 
             // Warrior
-            Map.entry(44L, direct(SELF, 30, 0, 0, "", "92 级后会升级为戕戮；仅施法者自身。")),
+            Map.entry(44L, direct(SELF, 30, 0, 0, "", "92 级后会升级为戮罪；仅施法者自身。")),
             Map.entry(36923L, direct(SELF, 40, 0, 0, "", "92 级升级技能；到期/受击后的治疗不计入伤害数字。")),
             Map.entry(40L, maxHpIncrease(SELF, 20, "", "提高最大生命并恢复等量生命；受治疗提高不计入伤害数字。")),
             Map.entry(3551L, direct(SELF, 10, 0, 0, "", "82 级后会升级为原初的血气；武器技能回血不计入伤害数字。")),
             Map.entry(25751L, direct(SELF, 10, 0, 0, "", "后续 Stem the Flow 4 秒额外 10% 与护盾需按施放时点复核。")),
             Map.entry(16464L, direct(TARGET, 10, 0, 0, "", "目标获得 Nascent Glint/Stem the Flow；回血和 400 威力护盾未计入。")),
-            Map.entry(7388L, maxHpBarrier(PARTY, 15, "", "可消耗战栗/戕戮/原初的血气，每层额外增加 2% 护盾。")),
+            Map.entry(7388L, maxHpBarrier(PARTY, 15, "", "可消耗战栗/戮罪/原初的血气，每层额外增加 2% 护盾。")),
             Map.entry(43L, invulnerability(SELF, "", "多数攻击不会使生命低于 1；特殊处决/机制仍须人工确认。")),
 
             // Dark knight
@@ -139,9 +139,9 @@ public class AbilityEffectCatalog {
             Map.entry(37034L, potencyBarrier(PARTY, 360, SCH_SGE_BARRIER, "均衡预后 II 与鼓舞/均衡诊断不可叠加；数值取决于实际治疗量。")),
             Map.entry(24294L, noDirect(TARGET, "", "拯救强化关照治疗，通常作用于关照目标；不直接减少命中伤害。")),
             Map.entry(24296L, noDirect(TARGET, "", "灵橡清汁是单体即时治疗，不直接减少命中伤害。")),
-            Map.entry(24298L, direct(PARTY, 10, 0, 0, SGE_GALL, "不能与坚角清汁叠加；队友需处于范围内。")),
+            Map.entry(24298L, direct(PARTY, 10, 0, 0, SGE_GALL, "不能与白牛清汁叠加；队友需处于范围内。")),
             Map.entry(24299L, noDirect(PARTY, "", "寄生清汁是范围即时治疗，不直接减少命中伤害。")),
-            Map.entry(24303L, direct(TARGET, 10, 0, 0, SGE_GALL, "不能与白牛清汁叠加。")),
+            Map.entry(24303L, direct(TARGET, 10, 0, 0, SGE_GALL, "不能与坚角清汁叠加。")),
             Map.entry(24310L, mixed(PARTY, 10, 0, 0, 0, 300, "", "魔法障壁取决于实际治疗量；队友需处于范围内。")),
             Map.entry(24311L, potencyBarrier(PARTY, 200, "", "最多 5 层，受击破盾才消耗一层；需按命中段数和治疗属性计算。")),
             Map.entry(24305L, potencyBarrier(TARGET, 300, "", "最多 5 层，受击破盾才消耗一层；需按命中段数和治疗属性计算。")),

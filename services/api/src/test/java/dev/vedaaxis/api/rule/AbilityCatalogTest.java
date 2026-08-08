@@ -105,4 +105,24 @@ class AbilityCatalogTest {
                 .allSatisfy(ability -> assertThat(ability.castCategory())
                         .isEqualTo(AbilityDefinition.CastCategory.GCD));
     }
+
+    @Test
+    void usesCurrentChineseClientNamesForKnownRenamedOrConfusingActions() {
+        Map<Long, String> expectedNames = Map.ofEntries(
+                Map.entry(2887L, "武装解除 / Dismantle"),
+                Map.entry(16543L, "异想的祥光 / Fey Blessing"),
+                Map.entry(24298L, "坚角清汁 / Kerachole"),
+                Map.entry(24303L, "白牛清汁 / Taurochole"),
+                Map.entry(34686L, "油性坦培拉涂层 / Tempera Grassa"),
+                Map.entry(36920L, "极致防御 / Guardian"),
+                Map.entry(36923L, "戮罪 / Damnation"),
+                Map.entry(37014L, "炽天附体 / Seraphism"),
+                Map.entry(37031L, "太阳星座 / Sun Sign"));
+
+        var abilitiesById = catalog.all().stream()
+                .collect(java.util.stream.Collectors.toMap(AbilityDefinition::actionId, AbilityDefinition::name));
+
+        expectedNames.forEach((actionId, name) -> assertThat(abilitiesById)
+                .containsEntry(actionId, name));
+    }
 }

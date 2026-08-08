@@ -2,7 +2,7 @@
 
 > 最近更新：2026-08-08
 >
-> 当前测试版：`0.1.18`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
+> 当前测试版：`0.1.19`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
 >
 > 进度口径：`已完成` 表示已有可复现的验证证据；`进行中` 表示代码或样板已存在，但仍缺少 PRD 要求的完整验收；`待开始` 表示尚未进入实现。
 
@@ -19,6 +19,8 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 2026-08-08 追加 Web/API 热修：预计伤害计算现在以任务自己的 `impactAtMs` 作为同机制内的真实命中点，提前覆盖到该命中点的减伤会计入“已建模减伤”和“减伤后预计伤害”；跨机制提前覆盖仍按被查看机制的 `plannedAtMs` 计算。平 A/“当前一仇”类机制默认只按 MT/T1 主坦轨道计算，只有目标文本明确为“一二仇/双坦/MT-ST”等双坦目标时才同时纳入 ST，明确为“ST/副坦/二仇”时只计算副坦轨道。验证通过 Web 40 项测试、`pnpm check:web`、`pnpm build:web`、API 54 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-LJPDRlZ1.js` 与 `assets/index-Co42ICas.css`，API JAR SHA-256 为 `5e8a8f5b72fd89279a477ca3f66c76df5114b5939a78283f631acd3cb95032c9`，内部 `/actuator/health` 为 `UP`，公网未登录计划接口返回 401，`pluginmaster.json` 与 `release/latest/VedaAxis.zip` 继续返回 200；本次未更新 Dalamud 插件 ZIP，部署备份位于 `/opt/vedaaxis/backups/20260808-153511-damage-impact-target`。
 
 2026-08-08 继续补充换 T 语义：Web 在平 A/死刑机制标题下新增“单体承伤目标”下拉，可选择默认当前一仇（MT/T1）、指定当前一仇为 MT/ST/T1，或标记为双坦/一二仇；计划内部兼容编码为 `当前一仇:ST` 等，不新增数据库列或破坏旧快照。Web 本地预计伤害和 API `/damage-estimates/preview` 均优先读取该机制级目标，换 T 后可把后续平 A/单体死刑切到 ST，使“最危险轨道”和减伤计算按新的当前一仇重算。验证通过 Web 42 项相关测试、`pnpm check:web`、`pnpm build:web`、API 55 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-DKLeYi4t.js` 与 `assets/index-BUywlb4g.css`，API JAR SHA-256 为 `b82210062e87ce45bbef5e1dba457ef8a46922f53c6d99ed79a731ea671e1da4`，内部 `/actuator/health` 为 `UP`，公网未登录计划接口返回 401，`pluginmaster.json` 与 `release/latest/VedaAxis.zip` 继续返回 200；本次未更新 Dalamud 插件 ZIP，部署备份位于 `/opt/vedaaxis/backups/20260808-154939-current-enmity-target`。
+
+2026-08-09 发布插件 `0.1.19` 并部署 API 技能目录修正：使用本地国服 `0a0000.win32` Action 表审计 118 个规划技能，结果为 `missing=0`、`rsv=0`；计划引用的 ActionId 均存在于技能目录。插件侧补齐高等级升级/替换技能热键栏等价绑定：预警/极致防御、复仇/戮罪、暗影墙/暗影卫、星云/大星云、盾阵/圣盾阵、原初的直觉/原初的血气、石之心/刚玉之心，并保留 0.1.18 的均衡预后/均衡预后 II；明确不把神爱抚、太阳星座、油性坦培拉涂层等条件派生技能作为等价技能，避免未满足条件时误亮。API Flyway v9 修正 9 个国服显示名：武装解除、异想的祥光、坚角清汁、白牛清汁、油性坦培拉涂层、极致防御、戮罪、炽天附体、太阳星座。验证通过 Core 52 项测试、API 58 项测试、Dalamud Release 构建 0 警告 0 错误、API JAR 构建和 `git diff --check`；生产库回读 Flyway 版本为 9，9 个技能名已回读正确；公网 `pluginmaster.json` 为 `0.1.19.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `3c885309be70df47d7fae043dc626a6b9b3d9363a97f990532dcc5fea222d1c0`，API JAR SHA-256 为 `cee6d200b57a512315969534ebd7d91cf3b0d54d730c5cd723de7a612463ae2c`，部署备份位于 `/opt/vedaaxis/backups/20260809-0019-skill-binding-audit`。本次未更新 Web 静态资源。
 
 2026-08-08 发布插件 `0.1.18` 运行时确认与升级技能热键栏热修：确认 `PlanRuntime.ObserveAction` 会把一次 ActionEffect 分发给同轨所有同 ActionId 任务，导致后续 P2 同技能任务提前进入 `EARLY/LATE` 终态，实战中表现为后半段技能不再亮起。核心运行时现在只会确认已经进入亮起窗口、且仍在最晚释放/命中后 3 秒宽限内的一个最相关任务；补充 `ActionEquivalence`，让均衡预后与均衡预后 II 在确认、可用性判断和原生热键栏描边时互相等价，避免升级技能按清单 ActionId 安排但热键槽报告基础 ActionId 时不亮。验证通过 Core 40 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`；公网 `pluginmaster.json` 为 `0.1.18.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `98abc1803358bab6a4e7d6a8166d95c9a41b35c50426008537f056721cdf8b22`，部署备份位于 `/opt/vedaaxis/backups/20260808-vedaaxis-plugin-0.1.18`。本次未更新 API JAR 或 Web 静态资源。
 

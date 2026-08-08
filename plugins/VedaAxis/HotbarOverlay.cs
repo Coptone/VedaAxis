@@ -30,11 +30,14 @@ internal sealed unsafe class HotbarOverlay
     public bool IsActionAvailable(uint actionId)
     {
         var manager = ActionManager.Instance();
-        return manager != null && manager->GetActionStatus(ActionType.Action, actionId) == 0;
+        return manager != null
+            && ActionEquivalence.Expand(actionId).Any(equivalentActionId =>
+                manager->GetActionStatus(ActionType.Action, equivalentActionId) == 0);
     }
 
     public bool HasVisibleSlot(uint actionId)
     {
+        var equivalentActionIds = ActionEquivalence.Expand(actionId).ToHashSet();
         foreach (var addonName in AddonNames)
         {
             var addon = gameGui.GetAddonByName<AddonActionBarBase>(addonName);
@@ -48,7 +51,8 @@ internal sealed unsafe class HotbarOverlay
             }
             for (var index = 0; index < slots.Length; index++)
             {
-                if ((uint)Math.Max(0, slots[index].ActionId) == actionId && slots[index].ComponentDragDrop != null)
+                if (equivalentActionIds.Contains((uint)Math.Max(0, slots[index].ActionId))
+                    && slots[index].ComponentDragDrop != null)
                 {
                     return true;
                 }
@@ -63,7 +67,9 @@ internal sealed unsafe class HotbarOverlay
         var emphasis = OverlayPresentation.Parse(overlayStyle);
         var visibleStates = assignments
             .Where(item => item.ShouldDrawOverlay(elapsedMs))
-            .GroupBy(item => item.Assignment.ActionId)
+            .SelectMany(item => ActionEquivalence.Expand(item.Assignment.ActionId)
+                .Select(actionId => (ActionId: actionId, item.State)))
+            .GroupBy(item => item.ActionId)
             .ToDictionary(group => group.Key, group => group.Last().State);
         if (visibleStates.Count == 0)
         {

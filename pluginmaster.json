@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.17.0",
+    "AssemblyVersion": "0.1.18.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "修复单体减伤队友列表目标框错位：目标框不再用 PartyList 行号兜底匹配原生队伍列表，只按队友名字匹配，避免白牛、混合等目标应为 MT 时错误框到队伍列表第一位。",
+    "Changelog": "修复同 ActionId 技能一次释放会误确认后续任务的问题，避免 P2 后续技能提前进入 Early/Late 后不再显示；补充均衡预后/均衡预后 II 热键栏等价匹配，升级技能也能正确描边。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786201330,
+    "LastUpdate": 1786204770,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

@@ -51,7 +51,7 @@ public sealed class AssignmentRuntime
 
     public bool Observe(uint actionId, long elapsedMs)
     {
-        if (actionId != Assignment.ActionId || State is AssignmentState.Cancelled or AssignmentState.Invalid)
+        if (!CanObserve(actionId, elapsedMs))
         {
             return false;
         }
@@ -64,6 +64,25 @@ public sealed class AssignmentRuntime
                 : AssignmentState.Late;
         return true;
     }
+
+    public bool CanObserve(uint actionId, long elapsedMs)
+    {
+        if (!ActionEquivalence.Matches(Assignment.ActionId, actionId)
+            || State is AssignmentState.Success or AssignmentState.Early or AssignmentState.Late
+                or AssignmentState.Cancelled or AssignmentState.Invalid)
+        {
+            return false;
+        }
+
+        if (elapsedMs < Assignment.HighlightAtMs)
+        {
+            return false;
+        }
+
+        return elapsedMs <= ObservationDeadlineMs;
+    }
+
+    public long ObservationDeadlineMs => Math.Max(Assignment.ImpactAtMs, Assignment.LatestUseAtMs) + 3_000;
 
     public void Invalidate(string reason)
     {

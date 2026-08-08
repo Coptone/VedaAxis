@@ -63,7 +63,14 @@ public sealed class PlanRuntime
         }
 
         var elapsed = Clock.ElapsedMilliseconds(observedAt);
-        return assignments.Count(assignment => assignment.Observe(actionId, elapsed));
+        var candidate = assignments
+            .Where(assignment => assignment.CanObserve(actionId, elapsed))
+            .OrderBy(assignment => ObservationPriority(assignment.Assignment, elapsed))
+            .ThenBy(assignment => Math.Abs(elapsed - assignment.Assignment.EarliestUseAtMs))
+            .ThenBy(assignment => assignment.Assignment.HighlightAtMs)
+            .FirstOrDefault();
+
+        return candidate?.Observe(actionId, elapsed) == true ? 1 : 0;
     }
 
     public TimelineAnchor? ObserveAnchor(uint actionId, AnchorKind kind, DateTimeOffset observedAt)
@@ -97,5 +104,20 @@ public sealed class PlanRuntime
         {
             assignment.Reset();
         }
+    }
+
+    private static int ObservationPriority(Assignment assignment, long elapsedMs)
+    {
+        if (elapsedMs >= assignment.EarliestUseAtMs && elapsedMs <= assignment.LatestUseAtMs)
+        {
+            return 0;
+        }
+
+        if (elapsedMs > assignment.LatestUseAtMs)
+        {
+            return 1;
+        }
+
+        return 2;
     }
 }

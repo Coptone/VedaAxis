@@ -33,6 +33,37 @@ public sealed class AssignmentRuntimeTests
     }
 
     [Fact]
+    public void DoesNotObserveBeforeHighlightWindow()
+    {
+        var runtime = new AssignmentRuntime(TestAssignment());
+
+        Assert.False(runtime.Observe(7535, 999));
+        Assert.Equal(AssignmentState.Waiting, runtime.State);
+        Assert.Null(runtime.ObservedAtMs);
+    }
+
+    [Fact]
+    public void DoesNotObserveAfterLateGraceWindow()
+    {
+        var runtime = new AssignmentRuntime(TestAssignment());
+        runtime.Advance(7_001, false);
+
+        Assert.False(runtime.Observe(7535, 7_001));
+        Assert.Equal(AssignmentState.Missed, runtime.State);
+        Assert.Null(runtime.ObservedAtMs);
+    }
+
+    [Fact]
+    public void TreatsEquivalentUpgradedActionsAsSameAction()
+    {
+        var runtime = new AssignmentRuntime(TestAssignment(actionId: 37034));
+        runtime.Advance(2_500, true);
+
+        Assert.True(runtime.Observe(24292, 2_500));
+        Assert.Equal(AssignmentState.Success, runtime.State);
+    }
+
+    [Fact]
     public void ResetClearsTerminalState()
     {
         var runtime = new AssignmentRuntime(TestAssignment());
@@ -68,8 +99,8 @@ public sealed class AssignmentRuntimeTests
         Assert.False(runtime.ShouldDrawOverlay(13_001));
     }
 
-    private static Assignment TestAssignment() => new(
-        Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 7535, null,
+    private static Assignment TestAssignment(uint actionId = 7535) => new(
+        Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), actionId, null,
         1_000, 2_000, 3_000, 4_000, false,
         ConfirmationStrategy.ActionEffect, []);
 }

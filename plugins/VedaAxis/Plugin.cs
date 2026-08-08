@@ -23,6 +23,11 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandName = "/vedaaxis";
     private static readonly string[] FourTrackSlots = ["T1", "H1", "D1", "D2"];
     private static readonly string[] EightTrackSlots = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
+    private static readonly HashSet<uint> TankJobs = [1, 3, 19, 21, 32, 37];
+    private static readonly HashSet<uint> HealerJobs = [6, 24, 28, 33, 40];
+    private static readonly HashSet<uint> MeleeJobs = [2, 4, 20, 22, 29, 30, 34, 39, 41];
+    private static readonly HashSet<uint> PhysicalRangedJobs = [5, 23, 31, 38];
+    private static readonly HashSet<uint> CasterJobs = [7, 25, 26, 27, 35, 36, 42];
 
     [PluginService] private static IDalamudPluginInterface PluginInterface { get; set; } = null!;
     [PluginService] private static ICommandManager CommandManager { get; set; } = null!;
@@ -58,11 +63,14 @@ public sealed class Plugin : IDalamudPlugin
     private string customStrategyTagInput = string.Empty;
     private string lastExecutionUploadStatus = "暂无执行上传";
     private string publishedPlanListStatus = "尚未刷新已发布计划列表";
+    private string localSlotInferenceStatus = "尚未识别本机轨道";
     private IReadOnlyList<RuntimePlanSummary> publishedPlans = Array.Empty<RuntimePlanSummary>();
     private bool refreshingPublishedPlans;
     private HashSet<(uint EntityId, uint ActionId)> activeCasts = [];
     private readonly Dictionary<Guid, uint> manualPartyTargets = [];
     private bool forceMissingActionWindowPosition;
+    private bool localSlotAutoSelected;
+    private uint lastObservedLocalJobId;
 
     public Plugin()
     {
@@ -303,11 +311,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         ImGui.Separator();
         ImGui.Text("当前轨道任务");
-        foreach (var item in runtime.Assignments)
-        {
-            ImGui.BulletText($"Action {item.Assignment.ActionId} · {item.State} · "
-                             + $"{item.Assignment.EarliestUseAtMs / 1000f:0.0}s–{item.Assignment.LatestUseAtMs / 1000f:0.0}s");
-        }
+        DrawRuntimeAssignmentsList();
 
         ImGui.End();
     }
@@ -444,11 +448,7 @@ public sealed class Plugin : IDalamudPlugin
                 DrawCombatDiagnostic();
                 ImGui.Separator();
                 ImGui.Text("当前轨道任务");
-                foreach (var item in runtime.Assignments)
-                {
-                    ImGui.BulletText($"Action {item.Assignment.ActionId} · {item.State} · "
-                                     + $"{item.Assignment.EarliestUseAtMs / 1000f:0.0}s–{item.Assignment.LatestUseAtMs / 1000f:0.0}s");
-                }
+                DrawRuntimeAssignmentsList();
                 ImGui.EndTabItem();
             }
 
@@ -457,6 +457,18 @@ public sealed class Plugin : IDalamudPlugin
 
         ImGui.End();
         return true;
+    }
+
+    private void DrawRuntimeAssignmentsList()
+    {
+        var tracks = runtime.Plan?.Tracks.ToDictionary(track => track.TrackId)
+                     ?? new Dictionary<Guid, ExecutionTrack>();
+        var partyMembers = ReadPartyMembers();
+        foreach (var item in runtime.Assignments)
+        {
+            ImGui.BulletText($"Action {item.Assignment.ActionId}{AssignmentTargetText(item.Assignment, tracks, partyMembers)} · {item.State} · "
+                             + $"{item.Assignment.EarliestUseAtMs / 1000f:0.0}s–{item.Assignment.LatestUseAtMs / 1000f:0.0}s");
+        }
     }
 
     private void DrawMissingActionWindowSettings()
@@ -518,12 +530,25 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawLocalSlotSelector()
     {
+        var autoSelectLocalSlot = configuration.AutoSelectLocalSlot;
+        if (ImGui.Checkbox("按当前职业自动选择本机轨道", ref autoSelectLocalSlot))
+        {
+            configuration.AutoSelectLocalSlot = autoSelectLocalSlot;
+            SaveConfiguration();
+            ReloadPlan();
+        }
+        ImGui.TextDisabled(localSlotInferenceStatus);
+
         var slots = string.Equals(configuration.TrackMode, "FOUR", StringComparison.OrdinalIgnoreCase)
             ? FourTrackSlots
             : EightTrackSlots;
         var selectedSlot = slots.Contains(configuration.LocalSlot, StringComparer.OrdinalIgnoreCase)
             ? configuration.LocalSlot.ToUpperInvariant()
             : slots[0];
+        if (configuration.AutoSelectLocalSlot && localSlotAutoSelected)
+        {
+            ImGui.BeginDisabled();
+        }
         if (ImGui.BeginCombo("本机轨道", selectedSlot))
         {
             foreach (var slot in slots)
@@ -541,6 +566,11 @@ public sealed class Plugin : IDalamudPlugin
                 }
             }
             ImGui.EndCombo();
+        }
+        if (configuration.AutoSelectLocalSlot && localSlotAutoSelected)
+        {
+            ImGui.EndDisabled();
+            ImGui.TextDisabled("已由当前职业唯一匹配；如需强制改轨，请先取消上方自动选择。");
         }
     }
 
@@ -860,6 +890,9 @@ public sealed class Plugin : IDalamudPlugin
         if (ImGui.Begin("VedaAxis 技能槽提醒###VedaAxisMissingActions", flags))
         {
             ImGui.TextColored(new Vector4(1f, 0.48f, 0.35f, 1f), "未找到技能槽");
+            var tracks = runtime.Plan?.Tracks.ToDictionary(track => track.TrackId)
+                         ?? new Dictionary<Guid, ExecutionTrack>();
+            var partyMembers = ReadPartyMembers();
             foreach (var item in missing)
             {
                 var row = DataManager.GetExcelSheet<GameAction>().GetRowOrDefault(item.Assignment.ActionId);
@@ -881,7 +914,7 @@ public sealed class Plugin : IDalamudPlugin
                         Log.Verbose(exception, "Unable to render action icon {ActionId}", item.Assignment.ActionId);
                     }
                 }
-                ImGui.Text($"{name} · {item.State}");
+                ImGui.Text($"{name}{AssignmentTargetText(item.Assignment, tracks, partyMembers)} · {item.State}");
             }
 
             if (!configuration.MissingActionWindowLocked && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
@@ -996,6 +1029,30 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private string AssignmentTargetText(
+        Assignment assignment,
+        IReadOnlyDictionary<Guid, ExecutionTrack> tracks,
+        IReadOnlyList<PartyMemberSnapshot> partyMembers)
+    {
+        if (assignment.TargetTrackId is not { } targetTrackId)
+        {
+            return string.Empty;
+        }
+
+        if (!tracks.TryGetValue(targetTrackId, out var targetTrack))
+        {
+            return " · 目标轨道未知";
+        }
+
+        var resolution = PartyTargetResolver.Resolve(targetTrack, partyMembers, manualPartyTargets);
+        if (resolution.Resolved && resolution.Member is not null)
+        {
+            return $" · 给 {targetTrack.Slot}/{resolution.Member.DisplayName}";
+        }
+
+        return $" · 给 {targetTrack.Slot}（{PartyTargetResolutionText(resolution.Reason)}）";
+    }
+
     private static string PartyTargetResolutionText(string reason) => reason switch
     {
         "NO_PARTY_MEMBERS" => "未读取到队伍",
@@ -1061,17 +1118,135 @@ public sealed class Plugin : IDalamudPlugin
         {
             var plan = planStore.LoadOrCreateExample();
             manualPartyTargets.Clear();
-            var track = plan.Tracks.FirstOrDefault(item =>
-                            string.Equals(item.Slot, configuration.LocalSlot, StringComparison.OrdinalIgnoreCase))
-                        ?? plan.Tracks.First();
+            var track = SelectLocalTrack(plan);
             runtime.Load(plan, track.TrackId);
-            status = $"已加载 {plan.StrategyTag} v{plan.PlanVersion} · {track.Slot} · {runtime.Assignments.Count} 项";
+            status = $"已加载 {plan.StrategyTag} v{plan.PlanVersion} · {TrackDisplay(track)} · {runtime.Assignments.Count} 项";
         }
         catch (Exception exception)
         {
             status = $"计划加载失败：{exception.Message}";
             Log.Error(exception, "Unable to load active plan");
         }
+    }
+
+    private ExecutionTrack SelectLocalTrack(PlanSnapshot plan)
+    {
+        var configuredTrack = plan.Tracks.FirstOrDefault(item =>
+            string.Equals(item.Slot, configuration.LocalSlot, StringComparison.OrdinalIgnoreCase));
+        var fallbackTrack = configuredTrack ?? plan.Tracks.First();
+        localSlotAutoSelected = false;
+
+        var localJobId = CurrentLocalJobId();
+        lastObservedLocalJobId = localJobId;
+        if (!configuration.AutoSelectLocalSlot)
+        {
+            localSlotInferenceStatus = $"手动本机轨道：{TrackDisplay(fallbackTrack)}";
+            return fallbackTrack;
+        }
+
+        if (localJobId == 0)
+        {
+            localSlotInferenceStatus = $"暂未读取到当前职业，沿用本机轨道：{TrackDisplay(fallbackTrack)}";
+            return fallbackTrack;
+        }
+
+        var exactMatches = plan.Tracks
+            .Where(track => track.AllowedJobIds.Contains(localJobId))
+            .ToList();
+        if (exactMatches.Count == 1)
+        {
+            var matchedTrack = exactMatches[0];
+            localSlotAutoSelected = true;
+            localSlotInferenceStatus = $"已按当前职业 Job {localJobId} 自动选择：{TrackDisplay(matchedTrack)}";
+            if (!string.Equals(configuration.LocalSlot, matchedTrack.Slot, StringComparison.OrdinalIgnoreCase))
+            {
+                configuration.LocalSlot = matchedTrack.Slot;
+                SaveConfiguration();
+            }
+            return matchedTrack;
+        }
+
+        if (exactMatches.Count > 1)
+        {
+            var candidateSlots = string.Join(" / ", exactMatches.Select(track => track.Slot));
+            localSlotInferenceStatus = $"当前职业 Job {localJobId} 同时匹配 {candidateSlots}，请手动选择本机轨道";
+            if (configuredTrack is not null && exactMatches.Any(track =>
+                    string.Equals(track.Slot, configuredTrack.Slot, StringComparison.OrdinalIgnoreCase)))
+            {
+                return configuredTrack;
+            }
+            return SelectAmbiguousFallback(exactMatches);
+        }
+
+        var roleMatches = plan.Tracks
+            .Where(track => TrackRoleAllowsJob(track.Slot, localJobId))
+            .ToList();
+        if (roleMatches.Count == 1)
+        {
+            var matchedTrack = roleMatches[0];
+            localSlotAutoSelected = true;
+            localSlotInferenceStatus = $"当前职业 Job {localJobId} 未命中精确职业，已按角色组选择：{TrackDisplay(matchedTrack)}";
+            if (!string.Equals(configuration.LocalSlot, matchedTrack.Slot, StringComparison.OrdinalIgnoreCase))
+            {
+                configuration.LocalSlot = matchedTrack.Slot;
+                SaveConfiguration();
+            }
+            return matchedTrack;
+        }
+
+        if (roleMatches.Count > 1)
+        {
+            var candidateSlots = string.Join(" / ", roleMatches.Select(track => track.Slot));
+            localSlotInferenceStatus = $"当前职业 Job {localJobId} 可作为 {candidateSlots}，已临时预选；请手动确认本机轨道";
+            if (configuredTrack is not null && roleMatches.Any(track =>
+                    string.Equals(track.Slot, configuredTrack.Slot, StringComparison.OrdinalIgnoreCase)))
+            {
+                return configuredTrack;
+            }
+            return SelectAmbiguousFallback(roleMatches);
+        }
+
+        localSlotInferenceStatus = $"当前职业 Job {localJobId} 未匹配计划轨道，沿用本机轨道：{TrackDisplay(fallbackTrack)}";
+        return fallbackTrack;
+    }
+
+    private ExecutionTrack SelectAmbiguousFallback(IReadOnlyList<ExecutionTrack> candidates)
+    {
+        var fallback = candidates[0];
+        if (!string.Equals(configuration.LocalSlot, fallback.Slot, StringComparison.OrdinalIgnoreCase))
+        {
+            configuration.LocalSlot = fallback.Slot;
+            SaveConfiguration();
+        }
+        return fallback;
+    }
+
+    private static bool TrackRoleAllowsJob(string slot, uint jobId)
+    {
+        return slot.ToUpperInvariant() switch
+        {
+            "T1" or "MT" or "ST" => TankJobs.Contains(jobId),
+            "H1" or "H2" => HealerJobs.Contains(jobId),
+            "D1" or "D2" => MeleeJobs.Contains(jobId),
+            "D3" => PhysicalRangedJobs.Contains(jobId),
+            "D4" => CasterJobs.Contains(jobId),
+            _ => false,
+        };
+    }
+
+    private static string TrackDisplay(ExecutionTrack track) =>
+        string.IsNullOrWhiteSpace(track.DisplayName)
+            ? track.Slot
+            : $"{track.Slot} · {track.DisplayName}";
+
+    private static uint CurrentLocalJobId()
+    {
+        if (!PlayerState.IsLoaded)
+        {
+            return 0;
+        }
+
+        return PlayerState.ClassJob.RowId;
     }
 
     private void OnCommand(string command, string arguments)
@@ -1140,6 +1315,15 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
+        var localJobId = CurrentLocalJobId();
+        if (!Condition[ConditionFlag.InCombat]
+            && configuration.AutoSelectLocalSlot
+            && localJobId != 0
+            && localJobId != lastObservedLocalJobId)
+        {
+            ReloadPlan();
+        }
+
         if (Condition[ConditionFlag.InCombat] && !combatLifecycle.IsActive)
         {
             TryStartAutomaticFight();

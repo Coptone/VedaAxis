@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.15.0",
+    "AssemblyVersion": "0.1.16.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "修复执行记录上传遇到旧计划/旧版本 404 时无限重试的问题：不可恢复的旧批次会被隔离并在诊断信息中显示，不再持续刷失败。",
+    "Changelog": "改善本机轨道与单体目标提示：插件会在非战斗状态下按当前职业唯一匹配本机轨道；技能提醒与诊断列表会显示单减目标轨道/队友，避免把“需要我释放”误解为“都给自己”。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786199341,
+    "LastUpdate": 1786200370,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

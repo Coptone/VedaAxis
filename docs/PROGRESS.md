@@ -1,6 +1,6 @@
 # VedaAxis 项目进度
 
-> 最近更新：2026-08-08
+> 最近更新：2026-08-10
 >
 > 当前测试版：`0.1.19`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
 >
@@ -21,6 +21,8 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 2026-08-08 继续补充换 T 语义：Web 在平 A/死刑机制标题下新增“单体承伤目标”下拉，可选择默认当前一仇（MT/T1）、指定当前一仇为 MT/ST/T1，或标记为双坦/一二仇；计划内部兼容编码为 `当前一仇:ST` 等，不新增数据库列或破坏旧快照。Web 本地预计伤害和 API `/damage-estimates/preview` 均优先读取该机制级目标，换 T 后可把后续平 A/单体死刑切到 ST，使“最危险轨道”和减伤计算按新的当前一仇重算。验证通过 Web 42 项相关测试、`pnpm check:web`、`pnpm build:web`、API 55 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-DKLeYi4t.js` 与 `assets/index-BUywlb4g.css`，API JAR SHA-256 为 `b82210062e87ce45bbef5e1dba457ef8a46922f53c6d99ed79a731ea671e1da4`，内部 `/actuator/health` 为 `UP`，公网未登录计划接口返回 401，`pluginmaster.json` 与 `release/latest/VedaAxis.zip` 继续返回 200；本次未更新 Dalamud 插件 ZIP，部署备份位于 `/opt/vedaaxis/backups/20260808-154939-current-enmity-target`。
 
 2026-08-09 发布插件 `0.1.19` 并部署 API 技能目录修正：使用本地国服 `0a0000.win32` Action 表审计 118 个规划技能，结果为 `missing=0`、`rsv=0`；计划引用的 ActionId 均存在于技能目录。插件侧补齐高等级升级/替换技能热键栏等价绑定：预警/极致防御、复仇/戮罪、暗影墙/暗影卫、星云/大星云、盾阵/圣盾阵、原初的直觉/原初的血气、石之心/刚玉之心，并保留 0.1.18 的均衡预后/均衡预后 II；明确不把神爱抚、太阳星座、油性坦培拉涂层等条件派生技能作为等价技能，避免未满足条件时误亮。API Flyway v9 修正 9 个国服显示名：武装解除、异想的祥光、坚角清汁、白牛清汁、油性坦培拉涂层、极致防御、戮罪、炽天附体、太阳星座。验证通过 Core 52 项测试、API 58 项测试、Dalamud Release 构建 0 警告 0 错误、API JAR 构建和 `git diff --check`；生产库回读 Flyway 版本为 9，9 个技能名已回读正确；公网 `pluginmaster.json` 为 `0.1.19.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `3c885309be70df47d7fae043dc626a6b9b3d9363a97f990532dcc5fea222d1c0`，API JAR SHA-256 为 `cee6d200b57a512315969534ebd7d91cf3b0d54d730c5cd723de7a612463ae2c`，部署备份位于 `/opt/vedaaxis/backups/20260809-0019-skill-binding-audit`。本次未更新 Web 静态资源。
+
+2026-08-10 已将所有者提供的 `p1-4.xlsx` 导入并部署为 DMU P1-P4 八轨默认计划：P1/P2 保留原有 76 个机制、108 次提醒和 59 个 FFLogs P95 `damageProfile`；P3/P4 新增 124 个机制和 101 次可发布提醒，当前完整默认计划为 200 个机制、209 次提醒、20 个单体目标标记。P3 按所有者说明标为 `RELATIVE`，P1/P2/P4 标为 `ABSOLUTE`；P3/P4 伤害先采用 Excel 峰值并标 `POC_PENDING`，等待后续 FFLogs/实机校准。新增 `tools/import_dmu_p1_p4_xlsx.py` 作为可复用导入器，导入时继承 P1/P2 既有冷却状态；冷却冲突和无时间变量机制写入 `unresolvedCells`，TLB 与“拉蓝色/拉黄色”按所有者确认写入 `ignoredCells`，不作为减伤待办。白魔 `狂喜之心 / Afflatus Rapture`、`安慰之心 / Afflatus Solace` 与 `神名 / Tetragrammaton` 作为治疗提醒进入默认计划，但不参与命中前减伤数字。D3 默认轨道放宽为远敏位，以兼容新表中的机工“策动/扳手”。本地验证通过结构唯一性、轨道引用、窗口顺序、冷却复算、Python 工具 9 项测试、Web 42 项测试、`pnpm check:web`、`pnpm build:web` 和 `git diff --check`；服务器 Java 21 环境通过 API 58 项测试和 API JAR 构建。公网 API JAR SHA-256 为 `a2965593bee65ac0f2f245235cc147f9df77a89c90ffadd9551378efd0ba8efd`，Flyway 已迁移到 v10，生产库回读白魔 `神名` 2 层、`安慰之心`/`狂喜之心` GCD 条目正确；公网 Web 入口为 `assets/index-CNRblJG1.js` 与 `assets/index-BUywlb4g.css`，均返回 HTTP 200。已把 `727577622@qq.com` 当前唯一计划替换为 v8 ACTIVE（200 个机制、209 次提醒、分享码 `_I_CTVccun3zPJGo`），旧 v7 保留为 SUPERSEDED；部署备份位于 `/opt/vedaaxis/backups/20260810-2211-p1p4-default-plan`。本次未更新 Dalamud 插件 ZIP。
 
 2026-08-08 发布插件 `0.1.18` 运行时确认与升级技能热键栏热修：确认 `PlanRuntime.ObserveAction` 会把一次 ActionEffect 分发给同轨所有同 ActionId 任务，导致后续 P2 同技能任务提前进入 `EARLY/LATE` 终态，实战中表现为后半段技能不再亮起。核心运行时现在只会确认已经进入亮起窗口、且仍在最晚释放/命中后 3 秒宽限内的一个最相关任务；补充 `ActionEquivalence`，让均衡预后与均衡预后 II 在确认、可用性判断和原生热键栏描边时互相等价，避免升级技能按清单 ActionId 安排但热键槽报告基础 ActionId 时不亮。验证通过 Core 40 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`；公网 `pluginmaster.json` 为 `0.1.18.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `98abc1803358bab6a4e7d6a8166d95c9a41b35c50426008537f056721cdf8b22`，部署备份位于 `/opt/vedaaxis/backups/20260808-vedaaxis-plugin-0.1.18`。本次未更新 API JAR 或 Web 静态资源。
 
@@ -59,7 +61,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 2. 从独立游戏电脑连接已部署的 HTTPS 环境，完成设备授权、计划同步、实机执行上传与网页复盘闭环；特别核对插件设置中的“执行上传状态”和本地待上传队列，确认 404/401 后是否能刷新令牌并重试成功。
 3. 完成 `POC-02` 原生热键栏高亮实机矩阵和 `POC-01` 国服 Dalamud 事件链验证，保存诊断、截图或录像和版本信息。
 4. 用 FFLogs 和插件事件校验 M-Spec/DMU 候选的机制时间、阶段定义与 Action ID，验证后才能提升置信状态。
-5. 对已生成的 59 个 P1/P2 多报告 `damageProfile` 做实机命中交叉验证，重点核对平 A `xN` 是否完整覆盖以及 P2 互斥组合动作的目标分支；治疗属性护盾与无敌保持单独提示，不混入减伤后伤害数字。
+5. 对已生成的 59 个 P1/P2 多报告 `damageProfile` 做实机命中交叉验证，并为 P3/P4 追加 Action ID 与 FFLogs/实机伤害校准；重点核对平 A `xN` 是否完整覆盖、P2 互斥组合动作目标分支、P3 相对阶段起点和 P4 固定阶段边界；治疗属性护盾与无敌保持单独提示，不混入减伤后伤害数字。
 
 ## 下一开发迭代：MVP-1 自动战斗与在线计划闭环
 
@@ -72,7 +74,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 | M1-05 | P0 | 测试环境端到端验收 | 公网基础链路和设备授权 API 级闭环已通过；`0.1.6` 将新安装和旧 localhost 默认配置迁移到公网 API，尚待独立游戏电脑实测 | 插件仅在非战斗阶段联网并成功绑定、同步不可变快照；断网时继续使用本地快照；战斗结束异步上传，失败进入队列并在恢复后重试；网页能够查看个人执行结果 |
 | M1-06 | P2 | 用户倒计时触发 | 尚未设计，且会涉及倒计时来源、重复触发、取消和队长/队员一致性 | 不进入首版；首版自动触发稳定后再设计，不能影响 `InCombat` 主触发和手动调试兜底 |
 | M1-07 | P1 | 外部时间轴候选导入 | `0.1.5` 已支持受控 M-Spec URL、Boss 阶段/机制、匿名减伤窗口预览和人工应用；计划契约 1.2 持久化阶段与机制 | 用管理端导入一次真实轴，确认替换提示、旧锚点/任务清理和不自动发布；再用 FFLogs/插件实机校验机制时间与 Action ID |
-| M1-08 | P1 | DMU P1/P2 默认计划与单体目标 | `0.1.7` 已生成 P1/P2 绝对时间默认计划，API 无个人计划时可按 Territory 1363/DMU-P1P2 回退；插件可自动或手动解析目标轨道并只读高亮队友列表 | 在国服 DMU 中验证 0:00 起点、P1→P2 固定边界、技能窗口、MT/ST 目标定位和重复职业手动映射；保存版本、诊断与录像 |
+| M1-08 | P1 | DMU P1-P4 默认计划与单体目标 | `0.1.7` 已生成 P1/P2 绝对时间默认计划；2026-08-10 已由 `p1-4.xlsx` 扩展并部署为 P1-P4，包含 200 个机制、209 次提醒和 P3 `RELATIVE` 阶段；所有者账号当前唯一 ACTIVE 计划已替换为 v8。API 无个人计划时仍按 Territory 1363/DMU-P1P2 回退以兼容插件；插件可自动或手动解析目标轨道并只读高亮队友列表 | 在国服 DMU 中验证 0:00 起点、P1→P2 固定边界、P2 后 P3/P4 技能窗口、MT/ST 目标定位、P3 相对阶段漂移和重复职业手动映射；保存版本、诊断与录像 |
 | M1-09 | P0 | 机制伤害与减伤承伤模型 | 已完成 59 个直接伤害行的匿名 P95 校准和 17 个非伤害标记拆分，覆盖平 A、AOE、死刑、分摊/踩塔/点名与 P2 互斥组合动作；跨时间轴行减伤计算、AOE/死刑色带和自动检查已有基线。治疗威力护盾与无敌不从伤害数字中扣除 | 每个进入公共模板的伤害行均有版本化 Action ID/动作组、伤害属性、目标模式、可追溯伤害口径和样本/公式证据；用实机命中交叉验证数值，误差和未计入项可见，不输出无证据的 100% 保证 |
 
 由于管理端与游戏电脑不在同一网络，HTTPS 环境已按所有者决定提前部署。当前顺序调整为 `M1-04 剩余运维项 → M1-03/M1-05 跨网闭环 → M1-01/M1-02 证据补齐`，并行继续 M1-07 的真实轴校验。当前 Web 是计划、账户、设备授权和复盘入口，并不存在必须先建设的独立运营后台；运营管理功能可按真实需要另列后续范围。

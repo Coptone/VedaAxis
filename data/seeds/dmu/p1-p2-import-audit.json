@@ -1,19 +1,122 @@
 {
-  "source": "attachment:p1-2.xlsx",
-  "generatedAt": "2026-08-06",
+  "source": "attachment:p1-4.xlsx",
+  "generatedAt": "2026-08-10",
   "workbookSheets": [
     "P1",
-    "P2"
+    "P2",
+    "P3",
+    "P4"
   ],
-  "mechanicCount": 76,
-  "rawAssignmentCount": 112,
-  "assignmentCount": 108,
-  "targetAssignmentCount": 15,
-  "unresolvedCells": [],
+  "mechanicCount": 200,
+  "newMechanicCount": 124,
+  "assignmentCount": 209,
+  "newAssignmentCount": 101,
+  "targetAssignmentCount": 20,
+  "unresolvedCells": [
+    {
+      "sheet": "P3",
+      "row": 7,
+      "slot": "H2",
+      "text": "拯救混合MT",
+      "actionId": 24317,
+      "reason": "cooldown-conflict",
+      "availableAtMs": 435000,
+      "earliestUseAtMs": 432000
+    },
+    {
+      "sheet": "P3",
+      "row": 28,
+      "slot": "ST",
+      "text": "血仇卡奥斯",
+      "actionId": 7535,
+      "reason": "cooldown-conflict",
+      "availableAtMs": 508000,
+      "earliestUseAtMs": 505000
+    },
+    {
+      "sheet": "P3",
+      "row": 41,
+      "slot": "MT",
+      "text": "雪仇",
+      "actionId": 7535,
+      "reason": "cooldown-conflict",
+      "availableAtMs": 548000,
+      "earliestUseAtMs": 542000
+    },
+    {
+      "sheet": "P3",
+      "row": 63,
+      "slot": "H2",
+      "text": "群盾+罩子+泛输血",
+      "actionId": 24298,
+      "reason": "cooldown-conflict",
+      "availableAtMs": 625000,
+      "earliestUseAtMs": 607000
+    },
+    {
+      "sheet": "P3",
+      "row": 63,
+      "slot": "H2",
+      "text": "群盾+罩子+泛输血",
+      "actionId": 24311,
+      "reason": "cooldown-conflict",
+      "availableAtMs": 625000,
+      "earliestUseAtMs": 607000
+    },
+    {
+      "sheet": "P4",
+      "row": 6,
+      "slot": "H1",
+      "text": "翅膀",
+      "actionId": 16536,
+      "reason": "cooldown-conflict",
+      "availableAtMs": 768000,
+      "earliestUseAtMs": 760000
+    },
+    {
+      "sheet": "P4",
+      "row": 25,
+      "slot": "ST",
+      "text": "雪仇",
+      "reason": "missing-time-or-mechanic"
+    },
+    {
+      "sheet": "P4",
+      "row": 25,
+      "slot": "H2",
+      "text": "群盾+罩子",
+      "reason": "missing-time-or-mechanic"
+    }
+  ],
+  "ignoredCells": [
+    {
+      "sheet": "P3",
+      "row": 2,
+      "slot": "MT",
+      "text": "拉蓝色",
+      "reason": "boss-position-note"
+    },
+    {
+      "sheet": "P3",
+      "row": 2,
+      "slot": "ST",
+      "text": "拉黄色",
+      "reason": "boss-position-note"
+    },
+    {
+      "sheet": "P3",
+      "row": 28,
+      "slot": "MT",
+      "text": "TLB",
+      "reason": "tank-limit-break"
+    }
+  ],
   "notes": [
+    "P1/P2 mechanics, assignments, action IDs and FFLogs damage calibration are preserved from the previous reviewed seed.",
+    "P3 is marked RELATIVE because the owner noted that phase-end timing can shift with boss kill time.",
+    "P3/P4 damage profiles use owner supplied peak-damage cells and remain POC_PENDING until FFLogs calibration is added.",
     "MT1 is treated as the MT personal-mitigation subcolumn, not a ninth execution track.",
-    "The source text 白牛青汁MT is mapped to Taurochole because the cell describes a single-target tank action; this remains POC_PENDING.",
-    "Ambiguous or non-action instructions are retained in unresolvedCells and are not converted into fake Action IDs.",
-    "One sustained effect is scheduled once when it covers multiple adjacent source mechanics; cooldown windows use effective level-100 recasts."
+    "Cooldown-conflicting generated assignments are omitted and listed in unresolvedCells instead of making the default plan unpublishable.",
+    "Tank limit break and boss-position instructions are preserved in ignoredCells because the owner confirmed they are outside the mitigation-reminder scope."
   ]
 }

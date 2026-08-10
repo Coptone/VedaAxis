@@ -8,11 +8,11 @@ FFLogs 样板校验已命中全部 7 个锚点 Action ID，但暴露出 P3 以�
 
 `manifest.json` 记录了上游修订、生成文件哈希、事件数量和阶段起点，后续导入器必须先核对哈希；真实数据提升置信度时，需要保留游戏版本、区域、实战记录与验证人。
 
-## P1/P2 默认计划（0.1.7）
+## P1-P4 默认计划（2026-08-10）
 
-`p1-p2-default-plan.json` 来自所有者提供的 `p1-2.xlsx`。P1 使用附件 `P1!A1:O47`，P2 使用 `P2!A1:P31`；Excel 时间显示按“分:秒”解释，P1 为 0:00–3:23，P2 的全局时间为 3:28–6:27。两个阶段均标为 `ABSOLUTE`，全表保留 `POC_PENDING`。
+`p1-p2-default-plan.json` 已由所有者提供的 `p1-4.xlsx` 扩展到 P1/P2/P3/P4。P1/P2 沿用 `p1-2.xlsx` 导入结果和后续 FFLogs 校准；P3/P4 来自附件中的新 sheet。Excel 时间显示继续按“分:秒”解释，P3 使用 6:26–12:13 的全局时间，P4 使用 12:13–14:26 的全局时间。P1/P2/P4 标为 `ABSOLUTE`，P3 按所有者说明标为 `RELATIVE`，全表保留 `POC_PENDING`。
 
-种子包含 76 个机制、108 次施放提醒和 15 个 `targetTrackId`。原始 112 个技能标记中，有 4 个是同一持续效果覆盖相邻机制，生成时合并为一次施放；`p1-p2-import-audit.json` 保存数量、未映射项和特殊解释。MT1 是 MT 的个人减伤子列，不是第九条执行轨道。
+种子当前包含 200 个机制、209 次施放提醒和 20 个 `targetTrackId`。P3/P4 的新提醒由 `tools/import_dmu_p1_p4_xlsx.py` 生成；脚本会继承 P1/P2 既有冷却状态，跳过无法按当前目录发布的冷却冲突项。`p1-p2-import-audit.json` 中的 `unresolvedCells` 只保留冷却冲突和缺少时间的可变机制；TLB 与“拉蓝色/拉黄色”按所有者确认写入 `ignoredCells`，不作为当前减伤项目待办。MT1 仍被视为 MT 的个人减伤子列，不是第九条执行轨道。D3 默认轨道放宽为远敏位，以兼容新表中的机工“策动/扳手”安排。白魔 `狂喜之心 / Afflatus Rapture`、`安慰之心 / Afflatus Solace` 与 `神名 / Tetragrammaton` 作为治疗提醒进入默认计划，但不参与命中前减伤数字。
 
 ## P1/P2 伤害校准（2026-08-06）
 

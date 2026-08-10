@@ -23,26 +23,30 @@ class DefaultPlanProviderTest {
     private DamageEstimateAnalysisService damageEstimateAnalysisService;
 
     @Test
-    void loadsTheDmuP1P2EightTrackTemplate() {
+    void loadsTheDmuP1P4EightTrackTemplate() {
         PlanSnapshot snapshot = provider.create(UUID.randomUUID());
 
         assertThat(snapshot.schemaVersion()).isEqualTo("1.3");
-        assertThat(snapshot.minimumPluginVersion()).isEqualTo("0.1.7");
+        assertThat(snapshot.minimumPluginVersion()).isEqualTo("0.1.19");
         assertThat(snapshot.territoryId()).isEqualTo(1363);
         assertThat(snapshot.phases()).extracting(PlanSnapshot.TimelinePhase::timingMode)
-                .containsOnly(PlanSnapshot.TimingMode.ABSOLUTE);
-        assertThat(snapshot.mechanics()).hasSize(76);
-        assertThat(snapshot.mechanics()).filteredOn(mechanic -> mechanic.damageProfile() != null).hasSize(59);
-        assertThat(snapshot.assignments()).hasSize(108);
-        assertThat(snapshot.assignments()).filteredOn(assignment -> assignment.targetTrackId() != null).hasSize(15);
+                .containsExactly(
+                        PlanSnapshot.TimingMode.ABSOLUTE,
+                        PlanSnapshot.TimingMode.ABSOLUTE,
+                        PlanSnapshot.TimingMode.RELATIVE,
+                        PlanSnapshot.TimingMode.ABSOLUTE);
+        assertThat(snapshot.mechanics()).hasSize(200);
+        assertThat(snapshot.mechanics()).filteredOn(mechanic -> mechanic.damageProfile() != null).hasSize(137);
+        assertThat(snapshot.assignments()).hasSize(209);
+        assertThat(snapshot.assignments()).filteredOn(assignment -> assignment.targetTrackId() != null).hasSize(20);
     }
 
     @Test
     void previewsPostMitigationDamageForEveryCalibratedDefaultMechanic() {
         var estimates = damageEstimateAnalysisService.preview(provider.create(UUID.randomUUID()));
 
-        assertThat(estimates).hasSize(76);
-        assertThat(estimates).filteredOn(estimate -> estimate.damageAfterMitigation() != null).hasSize(59);
+        assertThat(estimates).hasSize(200);
+        assertThat(estimates).filteredOn(estimate -> estimate.damageAfterMitigation() != null).hasSize(137);
         assertThat(estimates)
                 .filteredOn(estimate -> estimate.damageAfterMitigation() != null)
                 .allMatch(estimate -> estimate.baselineDamage() >= estimate.damageAfterMitigation());
@@ -56,7 +60,7 @@ class DefaultPlanProviderTest {
         assertThat(provider.match(1363, "DMU-P1P2", TrackMode.EIGHT)).isPresent();
         assertThat(provider.match(755, "O8S-POC", TrackMode.EIGHT)).isPresent();
         assertThat(provider.minimumPluginVersion(1363, "DMU-P1P2", TrackMode.EIGHT, "fallback"))
-                .isEqualTo("0.1.7");
+                .isEqualTo("0.1.19");
         assertThat(provider.minimumPluginVersion(755, "O8S-POC", TrackMode.EIGHT, "fallback"))
                 .isEqualTo("0.1.8");
         assertThat(provider.match(1363, "OTHER", TrackMode.EIGHT)).isEmpty();
@@ -74,7 +78,7 @@ class DefaultPlanProviderTest {
         assertThat(snapshot.trackMode()).isEqualTo(TrackMode.FOUR);
         assertThat(snapshot.strategyTag()).isEqualTo("DMU-P1P2-FOUR");
         assertThat(snapshot.tracks()).hasSize(4);
-        assertThat(snapshot.mechanics()).hasSize(76);
+        assertThat(snapshot.mechanics()).hasSize(200);
         assertThat(snapshot.assignments()).isEmpty();
     }
 

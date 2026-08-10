@@ -15,8 +15,8 @@ internal static class ExamplePlan
     {
         using var stream = typeof(ExamplePlan).Assembly.GetManifestResourceStream(
                                "VedaAxis.DefaultPlans.dmu-p1-p2-eight.json")
-                           ?? throw new InvalidOperationException("DMU P1/P2 default plan resource is missing");
+                           ?? throw new InvalidOperationException("DMU P1-P4 default plan resource is missing");
         return JsonSerializer.Deserialize<PlanSnapshot>(stream, Options)
-               ?? throw new InvalidDataException("DMU P1/P2 default plan is empty");
+               ?? throw new InvalidDataException("DMU P1-P4 default plan is empty");
     }
 }

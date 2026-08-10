@@ -72,7 +72,7 @@ const route = useRoute()
 const router = useRouter()
 const planId = ref(typeof route.params.planId === 'string' ? route.params.planId : '')
 const preferredJobId = Number(route.query.jobId ?? 0)
-const name = ref('妖星乱舞 P1/P2 默认减伤表')
+const name = ref('妖星乱舞 P1-P4 默认减伤表')
 const abilities = ref<AbilityDefinition[]>([])
 const defaultPlan = dmuP1P2DefaultPlan()
 
@@ -738,7 +738,7 @@ function makeSnapshot(mode: TrackMode): PlanSnapshot {
 function changeMode(mode: TrackMode) {
   if (planId.value || snapshot.value.trackMode === mode) return
   snapshot.value = makeSnapshot(mode)
-  name.value = mode === 'EIGHT' ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞四轨扩展草稿'
+  name.value = mode === 'EIGHT' ? '妖星乱舞 P1-P4 默认减伤表' : '妖星乱舞四轨扩展草稿'
   selectedTrackId.value = snapshot.value.tracks[0]?.trackId ?? ''
 }
 
@@ -1327,7 +1327,7 @@ function fallbackAbilities(): AbilityDefinition[] {
         <button :class="{ active: snapshot.trackMode === 'FOUR' }" :disabled="Boolean(planId)" type="button" @click="changeMode('FOUR')"><Grid2X2 :size="15" />4 轨</button>
         <button :class="{ active: snapshot.trackMode === 'EIGHT' }" :disabled="Boolean(planId)" type="button" @click="changeMode('EIGHT')"><Grid3X3 :size="15" />8 轨</button>
       </div>
-      <span><Clock3 :size="14" />P1/P2 绝对时间＋Action 锚点</span>
+      <span><Clock3 :size="14" />P1/P2/P4 绝对时间＋P3 相对时间＋Action 锚点</span>
       <span>Territory {{ snapshot.territoryId }}</span>
       <span class="status-badge warning"><CircleDashed :size="13" />{{ snapshot.source.confidence }}</span>
       <span>计划 v{{ snapshot.planVersion }} · 时间轴 v{{ snapshot.timelineVersion }}</span>

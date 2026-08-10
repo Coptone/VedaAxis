@@ -244,7 +244,7 @@ public sealed class Plugin : IDalamudPlugin
             ReloadPlan();
         }
         ImGui.SameLine();
-        if (ImGui.Button("载入 DMU P1/P2 默认计划"))
+        if (ImGui.Button("载入 DMU P1-P4 默认计划"))
         {
             var plan = ExamplePlan.Create();
             planStore.Save(plan);
@@ -349,7 +349,7 @@ public sealed class Plugin : IDalamudPlugin
                     ReloadPlan();
                 }
                 ImGui.SameLine();
-                if (ImGui.Button("载入 DMU P1/P2 默认计划"))
+                if (ImGui.Button("载入 DMU P1-P4 默认计划"))
                 {
                     var plan = ExamplePlan.Create();
                     planStore.Save(plan);
@@ -762,15 +762,15 @@ public sealed class Plugin : IDalamudPlugin
             DrawCustomStrategyInput();
             return;
         }
-        if (ImGui.Selectable("DMU P1/P2 默认计划（8 轨）", string.Equals(configuration.StrategyTag, "DMU-P1P2", StringComparison.OrdinalIgnoreCase)))
+        if (ImGui.Selectable("DMU P1-P4 默认计划（8 轨）", string.Equals(configuration.StrategyTag, "DMU-P1P2", StringComparison.OrdinalIgnoreCase)))
         {
             ApplyPlanPreset("DMU-P1P2", "EIGHT");
-            status = "已选择 DMU P1/P2；请在 Territory 1363 脱战同步";
+            status = "已选择 DMU P1-P4；请在 Territory 1363 脱战同步";
         }
-        if (ImGui.Selectable("DMU P1/P2 四轨扩展", string.Equals(configuration.StrategyTag, "DMU-P1P2-FOUR", StringComparison.OrdinalIgnoreCase)))
+        if (ImGui.Selectable("DMU P1-P4 四轨扩展", string.Equals(configuration.StrategyTag, "DMU-P1P2-FOUR", StringComparison.OrdinalIgnoreCase)))
         {
             ApplyPlanPreset("DMU-P1P2-FOUR", "FOUR");
-            status = "已选择 DMU P1/P2 四轨；请在 Territory 1363 脱战同步";
+            status = "已选择 DMU P1-P4 四轨；请在 Territory 1363 脱战同步";
         }
         if (ImGui.Selectable("O8S 联调计划（8 轨）", string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase)))
         {
@@ -785,11 +785,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (string.Equals(configuration.StrategyTag, "DMU-P1P2", StringComparison.OrdinalIgnoreCase))
         {
-            return "DMU P1/P2 默认计划（8 轨）";
+            return "DMU P1-P4 默认计划（8 轨）";
         }
         if (string.Equals(configuration.StrategyTag, "DMU-P1P2-FOUR", StringComparison.OrdinalIgnoreCase))
         {
-            return "DMU P1/P2 四轨扩展";
+            return "DMU P1-P4 四轨扩展";
         }
         if (string.Equals(configuration.StrategyTag, "O8S-POC", StringComparison.OrdinalIgnoreCase))
         {
@@ -1099,7 +1099,7 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.Text($"当前 Territory：{currentTerritoryId} · 计划 Territory：{planTerritoryId}");
         if (planTerritoryId == 0)
         {
-            ImGui.TextColored(new Vector4(1f, 0.66f, 0.25f, 1f), "旧版计划缺少 Territory；请同步在线计划或载入 DMU P1/P2 默认计划");
+            ImGui.TextColored(new Vector4(1f, 0.66f, 0.25f, 1f), "旧版计划缺少 Territory；请同步在线计划或载入 DMU P1-P4 默认计划");
         }
         else if (planTerritoryId != currentTerritoryId)
         {

@@ -90,7 +90,7 @@ public sealed class PlanSerializationTests
     }
 
     [Fact]
-    public void DeserializesTheVersion13DmuP1P2DefaultPlan()
+    public void DeserializesTheVersion13DmuP1P4DefaultPlan()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "TestData", "p1-p2-default-plan.json");
         var plan = JsonSerializer.Deserialize<PlanSnapshot>(File.ReadAllText(path), Options);
@@ -98,15 +98,13 @@ public sealed class PlanSerializationTests
         Assert.NotNull(plan);
         Assert.Equal("1.3", plan.SchemaVersion);
         Assert.Equal(1363u, plan.TerritoryId);
-        Assert.Equal(2, plan.Phases?.Count);
-        Assert.All(plan.Phases!, phase =>
-        {
-            Assert.Equal(PhaseTimingMode.Absolute, phase.TimingMode);
-            Assert.True(phase.DurationMs > 0);
-        });
-        Assert.Equal(76, plan.Mechanics?.Count);
-        Assert.Equal(108, plan.Assignments.Count);
-        Assert.Equal(15, plan.Assignments.Count(assignment => assignment.TargetTrackId is not null));
+        Assert.Equal(4, plan.Phases?.Count);
+        Assert.Equal([PhaseTimingMode.Absolute, PhaseTimingMode.Absolute, PhaseTimingMode.Relative, PhaseTimingMode.Absolute],
+            plan.Phases!.Select(phase => phase.TimingMode));
+        Assert.All(plan.Phases!, phase => Assert.True(phase.DurationMs > 0));
+        Assert.Equal(200, plan.Mechanics?.Count);
+        Assert.Equal(209, plan.Assignments.Count);
+        Assert.Equal(20, plan.Assignments.Count(assignment => assignment.TargetTrackId is not null));
         Assert.Empty(PlanValidator.Validate(plan));
     }
 

@@ -85,6 +85,8 @@ public class AbilityEffectCatalog {
             Map.entry(140L, noDirect(TARGET, "", "天赐祝福是即时治疗，不直接减少命中伤害。")),
             Map.entry(3570L, noDirect(TARGET, "", "神名是即时治疗，不直接减少命中伤害。")),
             Map.entry(3571L, noDirect(PARTY, "", "法令的治疗不从命中前承伤数字中扣除。")),
+            Map.entry(16531L, noDirect(TARGET, "", "安慰之心是 GCD 即时治疗，不直接减少命中伤害。")),
+            Map.entry(16534L, noDirect(PARTY, "", "狂喜之心是 GCD 范围治疗，不直接减少命中伤害。")),
             Map.entry(7432L, potencyBarrier(TARGET, 500, "", "护盾数值取决于施法者治疗属性与暴击治疗。")),
             Map.entry(25861L, direct(TARGET, 15, 0, 0, "", "可对自身或队友。")),
             Map.entry(3569L, noDirect(GROUND_AREA, "", "庇护所仅提高治疗恢复并提供持续治疗，不直接减少伤害。")),

@@ -46,8 +46,8 @@ type PartyJobSelection = Partial<Record<TrackSlot, number>>
 const ENCOUNTERS: EncounterOption[] = [
   {
     id: 'DMU_P1P2',
-    name: '妖星乱舞 P1/P2',
-    description: '绝欧米茄 P1/P2 固定时间轴；八轨包含默认减伤，四轨仅加载时间轴。',
+    name: '妖星乱舞 P1-P4',
+    description: '绝欧米茄 P1-P4 时间轴；八轨包含默认减伤，四轨仅加载时间轴。',
     encounterId: DMU_ENCOUNTER_ID,
     territoryId: DMU_TERRITORY_ID,
     supportedModes: ['EIGHT', 'FOUR'],
@@ -216,8 +216,8 @@ function strategyTagFor(encounter: EncounterOption, mode: TrackMode): string {
 
 function createPlanName(encounter: EncounterOption, mode: TrackMode, templated: boolean): string {
   if (encounter.id === 'O8S_POC') return 'O8S 游戏与网页联调计划'
-  if (mode === 'FOUR') return templated ? '妖星乱舞 P1/P2 四轨时间轴草稿' : '妖星乱舞四轨空白草稿'
-  return templated ? '妖星乱舞 P1/P2 默认减伤表' : '妖星乱舞八轨空白草稿'
+  if (mode === 'FOUR') return templated ? '妖星乱舞 P1-P4 四轨时间轴草稿' : '妖星乱舞四轨空白草稿'
+  return templated ? '妖星乱舞 P1-P4 默认减伤表' : '妖星乱舞八轨空白草稿'
 }
 
 function syncPlanName(force = false) {
@@ -480,7 +480,7 @@ async function deletePendingPlan() {
         <section class="create-plan-grid">
           <label class="wide-field">
             <span>2 · 减伤计划名称</span>
-            <input v-model="planName" maxlength="80" placeholder="例如：妖星乱舞 P1/P2 固定队减伤" @input="onPlanNameInput" />
+            <input v-model="planName" maxlength="80" placeholder="例如：妖星乱舞 P1-P4 固定队减伤" @input="onPlanNameInput" />
           </label>
           <label>
             <span>3 · 轨道模式</span>

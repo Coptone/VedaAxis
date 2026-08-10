@@ -1,6 +1,6 @@
 # VedaAxis Codex 项目上下文
 
-> 最近整理：2026-08-08
+> 最近整理：2026-08-10
 >
 > 用途：为本地 Codex 与 Codex 云端新任务提供精简、可审查的项目记忆。本文件不是聊天记录，也不得保存任何密钥、个人目录、角色标识或原始诊断数据。
 
@@ -30,6 +30,7 @@
 ## 3. 当前可依赖的已验证事实
 
 - 当前测试版是 `0.1.19`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）。
+- 2026-08-10 附件 `p1-4.xlsx` 已部署为 DMU P1-P4 八轨默认计划：共 200 个机制、209 次施放提醒、20 个单体目标任务。P1/P2 保留既有 FFLogs P95 伤害、ActionId 和安排；P3/P4 从业主表格导入，P3 使用 `RELATIVE`，P1/P2/P4 使用 `ABSOLUTE`，新增伤害仍为 `POC_PENDING`；白魔百合治疗和神名作为治疗提醒导入但不参与命中前减伤数字。导入工具为 `tools/import_dmu_p1_p4_xlsx.py`，审计输出为 `data/seeds/dmu/p1-p2-import-audit.json`；审计中冷却冲突和无时间变量机制为 `unresolvedCells`，TLB 与“拉蓝色/拉黄色”按所有者确认保留在 `ignoredCells`。验证通过 Python 工具测试、Web 测试/类型检查/构建、计划结构/冷却校验、服务器 Java 21 API 58 项测试和 API JAR 构建。公网 API JAR SHA-256 为 `a2965593bee65ac0f2f245235cc147f9df77a89c90ffadd9551378efd0ba8efd`，Flyway 已迁移到 v10；公网 Web 入口为 `assets/index-CNRblJG1.js` 与 `assets/index-BUywlb4g.css`。生产账号 `727577622@qq.com` 当前唯一计划已替换为 v8 ACTIVE（200 个机制、209 次提醒，分享码 `_I_CTVccun3zPJGo`），旧 v7 保留为 SUPERSEDED；部署备份位于 `/opt/vedaaxis/backups/20260810-2211-p1p4-default-plan`。本次未更新 Dalamud 插件 ZIP，本机仍缺 .NET SDK，Core/插件测试需在云端或补装环境后补跑。
 - 2026-08-09 `0.1.19` 插件/API 技能绑定审计：使用本地国服 `0a0000.win32` Action 表审计 118 个规划技能，结果为 `missing=0`、`rsv=0`；计划引用的 ActionId 均存在于技能目录。插件侧补齐高等级升级/替换技能热键栏等价绑定：预警/极致防御、复仇/戮罪、暗影墙/暗影卫、星云/大星云、盾阵/圣盾阵、原初的直觉/原初的血气、石之心/刚玉之心，并保留 0.1.18 的均衡预后/均衡预后 II；明确不把神爱抚、太阳星座、油性坦培拉涂层等条件派生技能作为等价技能，避免未满足条件时误亮。API Flyway v9 修正 9 个国服显示名：武装解除、异想的祥光、坚角清汁、白牛清汁、油性坦培拉涂层、极致防御、戮罪、炽天附体、太阳星座。验证通过 Core 52 项测试、API 58 项测试、Dalamud Release 构建 0 警告 0 错误、API JAR 构建和 `git diff --check`；生产库回读 Flyway 版本为 9，9 个技能名已回读正确；公网 `pluginmaster.json` 为 `0.1.19.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `3c885309be70df47d7fae043dc626a6b9b3d9363a97f990532dcc5fea222d1c0`，API JAR SHA-256 为 `cee6d200b57a512315969534ebd7d91cf3b0d54d730c5cd723de7a612463ae2c`，部署备份位于 `/opt/vedaaxis/backups/20260809-0019-skill-binding-audit`。本次未更新 Web 静态资源。
 - 2026-08-08 `0.1.18` 插件热修：确认 `PlanRuntime.ObserveAction` 会把一次 ActionEffect 分发给同轨所有同 ActionId 任务，导致后续 P2 同技能任务提前进入 `EARLY/LATE` 终态，实战中表现为后半段技能不再亮起。核心运行时现在只会确认已经进入亮起窗口、且仍在最晚释放/命中后 3 秒宽限内的一个最相关任务；补充 `ActionEquivalence`，让均衡预后与均衡预后 II 在确认、可用性判断和原生热键栏描边时互相等价，避免升级技能按清单 ActionId 安排但热键槽报告基础 ActionId 时不亮。验证通过 Core 40 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`；公网 `pluginmaster.json` 为 `0.1.18.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `98abc1803358bab6a4e7d6a8166d95c9a41b35c50426008537f056721cdf8b22`，部署备份位于 `/opt/vedaaxis/backups/20260808-vedaaxis-plugin-0.1.18`。本次未更新 API JAR 或 Web 静态资源。
 - 2026-08-08 `0.1.17` 插件热修：确认 `PartyListOverlay` 在原生队伍列表名字匹配失败时会按行号兜底，而 Dalamud `IPartyList` 顺序与游戏原生队伍列表行号不能可靠等价，导致白牛、混合等目标应为 MT 的单体减伤可能错误框到队伍列表第 1 行（本机玩家）。插件端已移除该行号兜底，目标框只按队友名字匹配；匹配不到时宁可不画，不再错画到其它人。验证通过 Core 34 项测试、Dalamud Release 构建 0 警告 0 错误；公网 `pluginmaster.json` 为 `0.1.17.0`，公网 ZIP SHA-256 为 `5f5fd7db32e83de68266c40dede3bff3e2a45a4fdee6d6b09c7a060c612d0268`。本次未更新 API JAR 或 Web 静态资源。
@@ -58,7 +59,7 @@
 - 2026-08-05 的首个游戏内观察确认匹配技能槽会高亮、超时后会变红，证明覆盖层与提醒状态机主路径可运行；该样本是手动预览，未包含完整诊断矩阵，不能据此关闭 `POC-01` 或 `POC-02`。
 - 项目所有者随后确认 O8S 自动战斗生命周期冒烟验证成功；这证明 `InCombat` 自动启动主路径可用，但没有完整诊断、版本和结束路径矩阵，仍不能关闭 `POC-01`。
 - `0.1.5` 的计划契约 1.2 持久化阶段/机制；管理端可按需读取受支持的 M-Spec URL，匿名聚合减伤窗口并在预览后由用户明确应用。导入数据保持 `POC_PENDING`，不会自动保存或发布。
-- `0.1.7` 的计划契约 1.3 增加阶段持续时间、`ABSOLUTE/RELATIVE` 时间模式和单体任务目标轨道。附件 `p1-2.xlsx` 已转为 DMU P1/P2 默认八轨计划（76 个机制、108 次施放提醒、15 个目标标记），自动测试与规则校验通过；尚待国服实机验证时间与队友列表覆盖位置。
+- `0.1.7` 的计划契约 1.3 增加阶段持续时间、`ABSOLUTE/RELATIVE` 时间模式和单体任务目标轨道。附件 `p1-2.xlsx` 已转为 DMU P1/P2 默认八轨计划（76 个机制、108 次施放提醒、15 个目标标记），自动测试与规则校验通过；尚待国服实机验证时间与队友列表覆盖位置。2026-08-10 附件 `p1-4.xlsx` 已把默认计划扩展到 P1-P4（200 个机制、209 次施放提醒、20 个目标标记）并部署；线上所有者账号当前唯一 ACTIVE 计划已替换为 v8，插件按原 DMU-P1P2/EIGHT 配置同步即可拿到新轴。
 - `0.1.8` 增加与 DMU 明确隔离的 Territory 755、`O8S-POC` 八轨在线计划模板，用两个贤者 ActionEffect 探针验证发布、匹配、自动开始和执行上传；探针不是 O8S 攻略时间轴。设备绑定改为每台游戏电脑首次授权一次，插件启动时在非战斗阶段轮换刷新令牌，网页可列出和撤销设备。Web 22 项、API 30 项、Python 9 项、Core 29 项及 Dalamud Release 构建已通过；提交 `521ee30`、标签和 Release 已同步 GitHub/Gitee，并部署到公网。服务器内部健康检查、Web 新入口和插件包哈希已验证；游戏电脑的 O8S 完整闭环仍需实机完成。
 - `0.1.9` 将计划列表明确标识为账户隔离的云端空间，在页面获得焦点、重新可见和每 30 秒时重新拉取；同一账户在不同电脑应读到同一服务端计划列表。页面在 2K 及更宽显示器自动放大且保留无横向滚动布局。插件默认使用强化热键栏/队友列表框，常用轨道、计划、提示强度和服务地址改为下拉选择；升级不再把已选 O8S 策略标签改回 DMU。当前仍缺少强化框在真实游戏 HUD 上的截图/诊断矩阵，不能据此提升 PoC 状态。
 - 提交 `1042ff5` 已为 Web 编辑器增加本地预计伤害兜底、按轨道职业过滤减伤技能、提前覆盖/冷却冲突可视化、时间轴完整度提示和 AI 指令输入。验证通过：`pnpm check:web`、Web 25 项测试和 `pnpm build:web`。公网静态部署引用 `assets/index-CJJz6yNx.js` 与 `assets/index-D_0ZrUlK.css`，根站、Web、健康检查、插件清单和现有插件 ZIP 均返回 200；仅更新 Web 静态文件，未更新 API JAR 或插件包。

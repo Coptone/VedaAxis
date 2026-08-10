@@ -93,6 +93,8 @@ class AbilityCatalogTest {
         List<Long> expectedGcdActionIds = List.of(
                 185L,   // Adloquium
                 186L,   // Succor
+                16531L, // Afflatus Solace
+                16534L, // Afflatus Rapture
                 24291L, // Eukrasian Diagnosis
                 24292L, // Eukrasian Prognosis
                 24318L, // Pneuma

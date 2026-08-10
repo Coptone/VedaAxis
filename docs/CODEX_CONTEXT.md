@@ -1,6 +1,6 @@
 # VedaAxis Codex 项目上下文
 
-> 最近整理：2026-08-10
+> 最近整理：2026-08-11
 >
 > 用途：为本地 Codex 与 Codex 云端新任务提供精简、可审查的项目记忆。本文件不是聊天记录，也不得保存任何密钥、个人目录、角色标识或原始诊断数据。
 
@@ -29,7 +29,8 @@
 
 ## 3. 当前可依赖的已验证事实
 
-- 当前测试版是 `0.1.19`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）。
+- 当前测试版是 `0.1.20`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）。
+- 2026-08-11 发布插件 `0.1.20`：修复 DMU P1→P2 转场短暂脱战超过 1.5 秒后触发 `ABANDONED` 结算并重置时间轴，导致 P2 绝对时间轴任务不亮的问题。插件现在在 `InCombat` 短暂丢失时保留 20 秒跨阶段宽限；若期间重新进入战斗则继续同一条时间轴。诊断页新增当前快照、时间轴版本、总任务与本轨任务数、本机轨道、当前轴时间、状态统计和下一条任务。验证通过 Core 52 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`；公网 `pluginmaster.json` 为 `0.1.20.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，ZIP SHA-256 为 `10bad1ef5c8e29c00c79f8aa77bd8f7c01bf35d22396244c804479c109bf3857`，部署备份位于 `/opt/vedaaxis/backups/20260811-0007-plugin-0.1.20`。本次未更新 API JAR 或 Web 静态资源。
 - 2026-08-10 附件 `p1-4.xlsx` 已部署为 DMU P1-P4 八轨默认计划：共 200 个机制、209 次施放提醒、20 个单体目标任务。P1/P2 保留既有 FFLogs P95 伤害、ActionId 和安排；P3/P4 从业主表格导入，P3 使用 `RELATIVE`，P1/P2/P4 使用 `ABSOLUTE`，新增伤害仍为 `POC_PENDING`；白魔百合治疗和神名作为治疗提醒导入但不参与命中前减伤数字。导入工具为 `tools/import_dmu_p1_p4_xlsx.py`，审计输出为 `data/seeds/dmu/p1-p2-import-audit.json`；审计中冷却冲突和无时间变量机制为 `unresolvedCells`，TLB 与“拉蓝色/拉黄色”按所有者确认保留在 `ignoredCells`。验证通过 Python 工具测试、Web 测试/类型检查/构建、计划结构/冷却校验、服务器 Java 21 API 58 项测试和 API JAR 构建。公网 API JAR SHA-256 为 `a2965593bee65ac0f2f245235cc147f9df77a89c90ffadd9551378efd0ba8efd`，Flyway 已迁移到 v10；公网 Web 入口为 `assets/index-CNRblJG1.js` 与 `assets/index-BUywlb4g.css`。生产账号 `727577622@qq.com` 当前唯一计划已替换为 v8 ACTIVE（200 个机制、209 次提醒，分享码 `_I_CTVccun3zPJGo`），旧 v7 保留为 SUPERSEDED；部署备份位于 `/opt/vedaaxis/backups/20260810-2211-p1p4-default-plan`。本次未更新 Dalamud 插件 ZIP，本机仍缺 .NET SDK，Core/插件测试需在云端或补装环境后补跑。
 - 2026-08-09 `0.1.19` 插件/API 技能绑定审计：使用本地国服 `0a0000.win32` Action 表审计 118 个规划技能，结果为 `missing=0`、`rsv=0`；计划引用的 ActionId 均存在于技能目录。插件侧补齐高等级升级/替换技能热键栏等价绑定：预警/极致防御、复仇/戮罪、暗影墙/暗影卫、星云/大星云、盾阵/圣盾阵、原初的直觉/原初的血气、石之心/刚玉之心，并保留 0.1.18 的均衡预后/均衡预后 II；明确不把神爱抚、太阳星座、油性坦培拉涂层等条件派生技能作为等价技能，避免未满足条件时误亮。API Flyway v9 修正 9 个国服显示名：武装解除、异想的祥光、坚角清汁、白牛清汁、油性坦培拉涂层、极致防御、戮罪、炽天附体、太阳星座。验证通过 Core 52 项测试、API 58 项测试、Dalamud Release 构建 0 警告 0 错误、API JAR 构建和 `git diff --check`；生产库回读 Flyway 版本为 9，9 个技能名已回读正确；公网 `pluginmaster.json` 为 `0.1.19.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `3c885309be70df47d7fae043dc626a6b9b3d9363a97f990532dcc5fea222d1c0`，API JAR SHA-256 为 `cee6d200b57a512315969534ebd7d91cf3b0d54d730c5cd723de7a612463ae2c`，部署备份位于 `/opt/vedaaxis/backups/20260809-0019-skill-binding-audit`。本次未更新 Web 静态资源。
 - 2026-08-08 `0.1.18` 插件热修：确认 `PlanRuntime.ObserveAction` 会把一次 ActionEffect 分发给同轨所有同 ActionId 任务，导致后续 P2 同技能任务提前进入 `EARLY/LATE` 终态，实战中表现为后半段技能不再亮起。核心运行时现在只会确认已经进入亮起窗口、且仍在最晚释放/命中后 3 秒宽限内的一个最相关任务；补充 `ActionEquivalence`，让均衡预后与均衡预后 II 在确认、可用性判断和原生热键栏描边时互相等价，避免升级技能按清单 ActionId 安排但热键槽报告基础 ActionId 时不亮。验证通过 Core 40 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`；公网 `pluginmaster.json` 为 `0.1.18.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `98abc1803358bab6a4e7d6a8166d95c9a41b35c50426008537f056721cdf8b22`，部署备份位于 `/opt/vedaaxis/backups/20260808-vedaaxis-plugin-0.1.18`。本次未更新 API JAR 或 Web 静态资源。

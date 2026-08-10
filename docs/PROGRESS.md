@@ -1,8 +1,8 @@
 # VedaAxis 项目进度
 
-> 最近更新：2026-08-10
+> 最近更新：2026-08-11
 >
-> 当前测试版：`0.1.19`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
+> 当前测试版：`0.1.20`（公网 Web、API 与插件仓库已部署，API 保持 active/UP）
 >
 > 进度口径：`已完成` 表示已有可复现的验证证据；`进行中` 表示代码或样板已存在，但仍缺少 PRD 要求的完整验收；`待开始` 表示尚未进入实现。
 
@@ -16,6 +16,7 @@ HTTPS 当前部署已包含机制分类和 36 技能效果目录，可区分 AOE
 
 当前版本已按所有者确认的口径直接显示“整段机制对单个目标的原始总伤害 → 当前安排后的预计伤害”，并按 AOE/死刑分别着色；计算会扫描整条计划中在命中时仍有效的提前减伤，不再局限于同一时间轴行。FFLogs 工具链可自动发现近期公开击杀并匿名聚合，6 份不同击杀现已为 P1/P2 的 59 个直接伤害行生成多报告 P95 `damageProfile`，覆盖 AOE、死刑、平 A、分摊、踩塔、点名和 P2 组合机制；另 17 行经事件对照确认是阶段/咏唱/判定标记，界面不再误报“伤害值待校准”。自动检查覆盖连续色带边界、平 A 坦克目标、最危险轨道、跨行持续减伤、多段求和、互斥动作聚合、样本去重和匿名边界；上述数值仍为 `POC_PENDING`，尚待实机命中交叉验证。
 
+2026-08-11 发布插件 `0.1.20`：修复 DMU P1→P2 转场短暂脱战时，插件在 1.5 秒后把战斗结算并重置时间轴，导致 P2 后续绝对时间轴高亮无法出现的问题。插件现在对 `InCombat` 短暂丢失保留 20 秒跨阶段宽限；若期间重新进入战斗，则继续同一条时间轴。诊断页新增当前快照、时间轴版本、总任务与本轨任务数、本机轨道、当前轴时间、状态统计和下一条任务，便于实机确认是否加载到 v8 P1-P4 计划以及 P2 亮灯窗口。验证通过 Core 52 项测试、Dalamud Release 构建 0 警告 0 错误和 `git diff --check`；公网 `pluginmaster.json` 为 `0.1.20.0`，`release/latest/VedaAxis.zip` 与 `repository/VedaAxis.zip` 均返回 HTTP 200，公网 ZIP SHA-256 为 `10bad1ef5c8e29c00c79f8aa77bd8f7c01bf35d22396244c804479c109bf3857`，部署备份位于 `/opt/vedaaxis/backups/20260811-0007-plugin-0.1.20`。本次未更新 API JAR 或 Web 静态资源。
 2026-08-08 追加 Web/API 热修：预计伤害计算现在以任务自己的 `impactAtMs` 作为同机制内的真实命中点，提前覆盖到该命中点的减伤会计入“已建模减伤”和“减伤后预计伤害”；跨机制提前覆盖仍按被查看机制的 `plannedAtMs` 计算。平 A/“当前一仇”类机制默认只按 MT/T1 主坦轨道计算，只有目标文本明确为“一二仇/双坦/MT-ST”等双坦目标时才同时纳入 ST，明确为“ST/副坦/二仇”时只计算副坦轨道。验证通过 Web 40 项测试、`pnpm check:web`、`pnpm build:web`、API 54 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-LJPDRlZ1.js` 与 `assets/index-Co42ICas.css`，API JAR SHA-256 为 `5e8a8f5b72fd89279a477ca3f66c76df5114b5939a78283f631acd3cb95032c9`，内部 `/actuator/health` 为 `UP`，公网未登录计划接口返回 401，`pluginmaster.json` 与 `release/latest/VedaAxis.zip` 继续返回 200；本次未更新 Dalamud 插件 ZIP，部署备份位于 `/opt/vedaaxis/backups/20260808-153511-damage-impact-target`。
 
 2026-08-08 继续补充换 T 语义：Web 在平 A/死刑机制标题下新增“单体承伤目标”下拉，可选择默认当前一仇（MT/T1）、指定当前一仇为 MT/ST/T1，或标记为双坦/一二仇；计划内部兼容编码为 `当前一仇:ST` 等，不新增数据库列或破坏旧快照。Web 本地预计伤害和 API `/damage-estimates/preview` 均优先读取该机制级目标，换 T 后可把后续平 A/单体死刑切到 ST，使“最危险轨道”和减伤计算按新的当前一仇重算。验证通过 Web 42 项相关测试、`pnpm check:web`、`pnpm build:web`、API 55 项测试和 API JAR 构建；公网 Web 入口为 `assets/index-DKLeYi4t.js` 与 `assets/index-BUywlb4g.css`，API JAR SHA-256 为 `b82210062e87ce45bbef5e1dba457ef8a46922f53c6d99ed79a731ea671e1da4`，内部 `/actuator/health` 为 `UP`，公网未登录计划接口返回 401，`pluginmaster.json` 与 `release/latest/VedaAxis.zip` 继续返回 200；本次未更新 Dalamud 插件 ZIP，部署备份位于 `/opt/vedaaxis/backups/20260808-154939-current-enmity-target`。

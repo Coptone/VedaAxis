@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.19.0",
+    "AssemblyVersion": "0.1.20.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "补齐高等级升级技能的热键栏等价绑定：预警/极致防御、复仇/戮罪、暗影墙/暗影卫、星云/大星云、盾阵/圣盾阵、原初的直觉/原初的血气、石之心/刚玉之心，以及均衡预后/均衡预后 II。",
+    "Changelog": "Keep combat clock alive for 20s during short phase-transition combat drops; add diagnostics for loaded snapshot, elapsed timeline time, state counts, and next assignments.",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786205756,
+    "LastUpdate": 1786377878,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

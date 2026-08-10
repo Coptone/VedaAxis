@@ -21,6 +21,7 @@ namespace VedaAxis;
 public sealed class Plugin : IDalamudPlugin
 {
     private const string CommandName = "/vedaaxis";
+    private const int CombatExitFinalizeDelayMs = 20_000;
     private static readonly string[] FourTrackSlots = ["T1", "H1", "D1", "D2"];
     private static readonly string[] EightTrackSlots = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
     private static readonly HashSet<uint> TankJobs = [1, 3, 19, 21, 32, 37];
@@ -310,6 +311,8 @@ public sealed class Plugin : IDalamudPlugin
             ImGui.TextDisabled("首次在网页“插件绑定”确认即可；成功后本机会自动续期，令牌可在网页撤销。");
         }
         ImGui.Separator();
+        DrawRuntimeSnapshotDiagnostic();
+        ImGui.Separator();
         ImGui.Text("当前轨道任务");
         DrawRuntimeAssignmentsList();
 
@@ -447,6 +450,8 @@ public sealed class Plugin : IDalamudPlugin
                 ImGui.TextDisabled($"执行上传状态：{lastExecutionUploadStatus}");
                 DrawCombatDiagnostic();
                 ImGui.Separator();
+                DrawRuntimeSnapshotDiagnostic();
+                ImGui.Separator();
                 ImGui.Text("当前轨道任务");
                 DrawRuntimeAssignmentsList();
                 ImGui.EndTabItem();
@@ -468,6 +473,28 @@ public sealed class Plugin : IDalamudPlugin
         {
             ImGui.BulletText($"Action {item.Assignment.ActionId}{AssignmentTargetText(item.Assignment, tracks, partyMembers)} · {item.State} · "
                              + $"{item.Assignment.EarliestUseAtMs / 1000f:0.0}s–{item.Assignment.LatestUseAtMs / 1000f:0.0}s");
+        }
+    }
+
+    private static string FormatTimelineTime(long milliseconds)
+    {
+        var time = TimeSpan.FromMilliseconds(Math.Max(0, milliseconds));
+        return time.TotalHours >= 1
+            ? $"{(int)time.TotalHours}:{time.Minutes:00}:{time.Seconds:00}"
+            : $"{(int)time.TotalMinutes}:{time.Seconds:00}";
+    }
+
+    private static string ActionDisplayName(uint actionId)
+    {
+        try
+        {
+            var row = DataManager.GetExcelSheet<GameAction>().GetRowOrDefault(actionId);
+            var name = row?.Name.ExtractText();
+            return string.IsNullOrWhiteSpace(name) ? $"Action {actionId}" : $"{name} / Action {actionId}";
+        }
+        catch
+        {
+            return $"Action {actionId}";
         }
     }
 
@@ -1112,6 +1139,59 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.TextDisabled($"战斗状态：{(inCombat ? "InCombat" : "Idle")} · 时间轴：{(combatLifecycle.IsActive ? "Auto" : runtime.Clock.IsRunning ? "Manual" : "Stopped")}");
     }
 
+    private void DrawRuntimeSnapshotDiagnostic()
+    {
+        var plan = runtime.Plan;
+        if (plan is null)
+        {
+            ImGui.TextDisabled("当前没有加载计划快照");
+            return;
+        }
+
+        var elapsed = runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow);
+        var track = runtime.TrackId is { } trackId
+            ? plan.Tracks.FirstOrDefault(item => item.TrackId == trackId)
+            : null;
+        var trackText = track is null ? "未选择轨道" : TrackDisplay(track);
+        ImGui.Text($"当前快照：{plan.StrategyTag} v{plan.PlanVersion} · 时间轴 v{plan.TimelineVersion} · {plan.Assignments.Count} 总任务 / 本轨 {runtime.Assignments.Count} 项");
+        ImGui.TextDisabled($"本机轨道：{trackText} · 当前轴时间：{FormatTimelineTime(elapsed)} · 跨阶段脱战宽限：{CombatExitFinalizeDelayMs / 1000}s");
+
+        var stateCounts = runtime.Assignments
+            .GroupBy(item => item.State)
+            .OrderBy(group => group.Key.ToString())
+            .Select(group => $"{group.Key}={group.Count()}");
+        ImGui.TextDisabled("状态统计：" + string.Join(" · ", stateCounts));
+
+        var mechanics = plan.Mechanics?.ToDictionary(item => item.MechanicId)
+                        ?? new Dictionary<Guid, TimelineMechanic>();
+        var nextAssignments = runtime.Assignments
+            .Where(item => item.Assignment.ImpactAtMs >= elapsed - 3_000
+                           && item.State is not AssignmentState.Success
+                               and not AssignmentState.Early
+                               and not AssignmentState.Late
+                               and not AssignmentState.Cancelled
+                               and not AssignmentState.Invalid)
+            .OrderBy(item => item.Assignment.HighlightAtMs)
+            .Take(5)
+            .ToList();
+
+        if (nextAssignments.Count == 0)
+        {
+            ImGui.TextDisabled("下一条任务：当前轨道没有剩余未完成任务");
+            return;
+        }
+
+        ImGui.Text("下一条任务");
+        foreach (var item in nextAssignments)
+        {
+            mechanics.TryGetValue(item.Assignment.MechanicId, out var mechanic);
+            var mechanicText = mechanic is null
+                ? item.Assignment.MechanicId.ToString("N")[..8]
+                : $"{mechanic.Phase} {mechanic.Name}";
+            ImGui.BulletText($"{FormatTimelineTime(item.Assignment.HighlightAtMs)} 亮 · {ActionDisplayName(item.Assignment.ActionId)} · {mechanicText} · {item.State}");
+        }
+    }
+
     private void ReloadPlan()
     {
         try
@@ -1292,6 +1372,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         else if (combatLifecycle.IsActive)
         {
+            status = $"检测到短暂脱战，等待 {CombatExitFinalizeDelayMs / 1000}s 后再结算；若很快进入下一阶段，时间轴会继续保留";
             _ = FinalizeAfterCombatExitAsync();
         }
     }
@@ -1675,7 +1756,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private async Task FinalizeAfterCombatExitAsync()
     {
-        await Task.Delay(1_500);
+        await Task.Delay(CombatExitFinalizeDelayMs);
         if (Condition[ConditionFlag.InCombat] || !combatLifecycle.IsActive)
         {
             return;

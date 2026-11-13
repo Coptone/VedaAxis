@@ -3,11 +3,11 @@
     "Author": "Coptone",
     "Name": "VedaAxis",
     "InternalName": "VedaAxis",
-    "AssemblyVersion": "0.1.20.0",
+    "AssemblyVersion": "0.1.21.0",
     "TestingAssemblyVersion": null,
     "Punchline": "把减伤计划对齐到原生热键栏，并记录真实执行结果。",
     "Description": "VedaAxis MVP：4/8 轨计划运行时、时间锚点、ActionEffect 确认与原生热键栏描边。",
-    "Changelog": "Keep combat clock alive for 20s during short phase-transition combat drops; add diagnostics for loaded snapshot, elapsed timeline time, state counts, and next assignments.",
+    "Changelog": "基于新版国服 Dalamud 15.0.4.0 构建。技能状态接口未解析时仍可运行定时提醒；新增技能事件、热键栏和描边槽数诊断。",
     "ApplicableVersion": "any",
     "Tags": [
       "mitigation",
@@ -15,7 +15,7 @@
       "utility"
     ],
     "DalamudApiLevel": 15,
-    "LastUpdate": 1786377878,
+    "LastUpdate": 1794581284,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,

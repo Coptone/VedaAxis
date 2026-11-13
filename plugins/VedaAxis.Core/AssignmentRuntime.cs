@@ -14,6 +14,8 @@ public enum AssignmentState
 
 public sealed class AssignmentRuntime
 {
+    private bool sampledAvailability;
+
     public AssignmentRuntime(Assignment assignment)
     {
         Assignment = assignment;
@@ -29,7 +31,7 @@ public sealed class AssignmentRuntime
 
     public string? Reason { get; private set; }
 
-    public void Advance(long elapsedMs, bool actionAvailable)
+    public void Advance(long elapsedMs, bool? actionAvailable)
     {
         if (State is AssignmentState.Success or AssignmentState.Early or AssignmentState.Late
             or AssignmentState.Invalid or AssignmentState.Cancelled)
@@ -43,10 +45,25 @@ public sealed class AssignmentRuntime
             return;
         }
 
-        AvailableAtHighlight ??= actionAvailable;
+        if (!sampledAvailability)
+        {
+            AvailableAtHighlight = actionAvailable;
+            sampledAvailability = true;
+        }
         State = elapsedMs <= Assignment.LatestUseAtMs
             ? AssignmentState.Highlighting
             : AssignmentState.Missed;
+    }
+
+    internal void Advance(long elapsedMs, Func<uint, bool?> readAvailability)
+    {
+        // Read the game only once, when the task first reaches its reminder window.
+        // Missing native data must not stop the clock or suppress the reminder.
+        var actionAvailable = !sampledAvailability && elapsedMs >= Assignment.HighlightAtMs
+            && State is AssignmentState.Waiting or AssignmentState.Highlighting or AssignmentState.Missed
+            ? readAvailability(Assignment.ActionId)
+            : null;
+        Advance(elapsedMs, actionAvailable);
     }
 
     public bool Observe(uint actionId, long elapsedMs)
@@ -106,6 +123,7 @@ public sealed class AssignmentRuntime
         State = AssignmentState.Waiting;
         ObservedAtMs = null;
         AvailableAtHighlight = null;
+        sampledAvailability = false;
         Reason = null;
     }
 

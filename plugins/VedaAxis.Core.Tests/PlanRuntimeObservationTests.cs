@@ -5,6 +5,53 @@ namespace VedaAxis.Core.Tests;
 public sealed class PlanRuntimeObservationTests
 {
     [Fact]
+    public void SamplesAvailabilityOnlyAtHighlightAndKeepsRunningWhenNativeStatusIsUnknown()
+    {
+        var trackId = Guid.NewGuid();
+        var runtime = new PlanRuntime(new TimelineClock());
+        var startedAt = DateTimeOffset.UtcNow;
+        var reads = new List<uint>();
+
+        bool? ReadUnavailableNativeStatus(uint actionId)
+        {
+            reads.Add(actionId);
+            return null;
+        }
+
+        runtime.Load(TestPlan(trackId, [TestAssignment(trackId, 10_000), TestAssignment(trackId, 220_000)]), trackId);
+        runtime.Start(startedAt);
+        runtime.Advance(startedAt.AddMilliseconds(4_999), ReadUnavailableNativeStatus);
+        Assert.Empty(reads);
+
+        runtime.Advance(startedAt.AddSeconds(5), ReadUnavailableNativeStatus);
+        Assert.Equal(AssignmentState.Highlighting, runtime.Assignments[0].State);
+        Assert.Null(runtime.Assignments[0].AvailableAtHighlight);
+        runtime.Advance(startedAt.AddSeconds(6), ReadUnavailableNativeStatus);
+        runtime.Advance(startedAt.AddSeconds(13), ReadUnavailableNativeStatus);
+        Assert.Equal(AssignmentState.Missed, runtime.Assignments[0].State);
+        Assert.Equal(AssignmentState.Waiting, runtime.Assignments[1].State);
+        Assert.Equal(new uint[] { 24298 }, reads);
+
+        runtime.Start(startedAt.AddMinutes(1));
+        runtime.Advance(startedAt.AddSeconds(65), ReadUnavailableNativeStatus);
+        Assert.Equal(2, reads.Count);
+    }
+
+    [Fact]
+    public void DoesNotSampleAvailabilityAfterActionIsAlreadyConfirmed()
+    {
+        var trackId = Guid.NewGuid();
+        var runtime = new PlanRuntime(new TimelineClock());
+        var startedAt = DateTimeOffset.UtcNow;
+        runtime.Load(TestPlan(trackId, [TestAssignment(trackId, 10_000)]), trackId);
+        runtime.Start(startedAt);
+
+        Assert.Equal(1, runtime.ObserveAction(24298, startedAt.AddSeconds(11)));
+        runtime.Advance(startedAt.AddSeconds(11), _ => throw new InvalidOperationException("Terminal task was sampled"));
+        Assert.Equal(AssignmentState.Success, runtime.Assignments[0].State);
+    }
+
+    [Fact]
     public void ObservesOnlyOneMatchingAssignmentWithinCurrentWindow()
     {
         var trackId = Guid.NewGuid();

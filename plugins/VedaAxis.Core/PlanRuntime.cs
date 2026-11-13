@@ -41,7 +41,7 @@ public sealed class PlanRuntime
         Clock.Stop();
     }
 
-    public void Advance(DateTimeOffset now, Func<uint, bool> isActionAvailable)
+    public void Advance(DateTimeOffset now, Func<uint, bool?> readAvailability)
     {
         if (!Clock.IsRunning)
         {
@@ -51,7 +51,7 @@ public sealed class PlanRuntime
         var elapsed = Clock.ElapsedMilliseconds(now);
         foreach (var assignment in assignments)
         {
-            assignment.Advance(elapsed, isActionAvailable(assignment.Assignment.ActionId));
+            assignment.Advance(elapsed, readAvailability);
         }
     }
 

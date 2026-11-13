@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Command;
 using Dalamud.Game.ClientState.Conditions;
@@ -54,7 +53,10 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DeviceAuthorizationClient deviceAuthorizationClient = new();
     private readonly ExecutionUploadQueue executionUploadQueue;
     private readonly SemaphoreSlim executionUploadLock = new(1, 1);
-    private Hook<ReceiveActionEffectDelegate>? actionEffectHook;
+    private Hook<ActionEffectHandler.Delegates.Receive>? actionEffectHook;
+    private string actionEffectStatus = "尚未初始化";
+    private long actionEffectsReceived;
+    private long localActionEffectsReceived;
     private CancellationTokenSource? deviceAuthorizationCancellation;
     private bool showConfig;
     private string status = "尚未加载计划";
@@ -145,14 +147,25 @@ public sealed class Plugin : IDalamudPlugin
     {
         try
         {
-            actionEffectHook = Interop.HookFromAddress<ReceiveActionEffectDelegate>(
-                ActionEffectHandler.Addresses.Receive.Value, OnReceiveActionEffect);
+            var address = ActionEffectHandler.Addresses.Receive.Value;
+            if (address == 0)
+            {
+                actionEffectStatus = "当前游戏版本未解析到接收入口";
+                Log.Warning("ActionEffect receive address is unavailable; timed reminders remain enabled");
+                return;
+            }
+
+            actionEffectHook = Interop.HookFromAddress<ActionEffectHandler.Delegates.Receive>(
+                address, OnReceiveActionEffect);
             actionEffectHook.Enable();
+            actionEffectStatus = "已启用";
             Log.Information("ActionEffect confirmation hook enabled");
         }
         catch (Exception exception)
         {
-            status = "ActionEffect 钩子初始化失败；高亮仍可预览";
+            actionEffectHook?.Dispose();
+            actionEffectHook = null;
+            actionEffectStatus = $"初始化失败（{exception.GetType().Name}）";
             Log.Error(exception, "Unable to install ActionEffect confirmation hook");
         }
     }
@@ -170,6 +183,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             return;
         }
+        Interlocked.Increment(ref actionEffectsReceived);
         var observedAt = DateTimeOffset.UtcNow;
         var anchor = runtime.ObserveAnchor(header->ActionId, AnchorKind.ActionEffect, observedAt);
         if (anchor is not null)
@@ -178,6 +192,7 @@ public sealed class Plugin : IDalamudPlugin
         }
         if (PlayerState.IsLoaded && PlayerState.EntityId == casterEntityId)
         {
+            Interlocked.Increment(ref localActionEffectsReceived);
             var matched = runtime.ObserveAction(header->ActionId, observedAt);
             if (matched > 0)
             {
@@ -190,7 +205,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (configuration.Enabled)
         {
-            runtime.Advance(DateTimeOffset.UtcNow, overlay.IsActionAvailable);
+            runtime.Advance(DateTimeOffset.UtcNow, overlay.ReadActionAvailability);
             overlay.Draw(
                 runtime.Assignments,
                 runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow),
@@ -1141,6 +1156,17 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawRuntimeSnapshotDiagnostic()
     {
+        var pluginVersion = typeof(Plugin).Assembly.GetName().Version;
+        ImGui.TextDisabled($"VedaAxis {pluginVersion} · Dalamud {PluginInterface.GetDalamudVersion().Version}");
+        ImGui.TextWrapped($"技能事件：{actionEffectStatus} · 本次加载收到 {Interlocked.Read(ref actionEffectsReceived)} 次（本人 {Interlocked.Read(ref localActionEffectsReceived)} 次）");
+        ImGui.TextDisabled(HotbarOverlay.CanReadActionStatus ? "技能可用状态接口：已解析" : "技能可用状态接口：未解析，定时提醒仍可运行");
+        var elapsed = runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow);
+        if (configuration.Enabled && runtime.Clock.IsRunning
+            && runtime.Assignments.Any(item => item.ShouldDrawOverlay(elapsed)))
+        {
+            ImGui.TextDisabled($"当前可读取热键栏：{overlay.VisibleAddonCount} · 实际描边槽数：{overlay.DrawnSlotCount}");
+        }
+
         var plan = runtime.Plan;
         if (plan is null)
         {
@@ -1148,7 +1174,6 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        var elapsed = runtime.Clock.ElapsedMilliseconds(DateTimeOffset.UtcNow);
         var track = runtime.TrackId is { } trackId
             ? plan.Tracks.FirstOrDefault(item => item.TrackId == trackId)
             : null;
@@ -1866,13 +1891,4 @@ public sealed class Plugin : IDalamudPlugin
             or System.Net.HttpStatusCode.NotFound
             or System.Net.HttpStatusCode.UnprocessableEntity;
     }
-
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private unsafe delegate void ReceiveActionEffectDelegate(
-        uint casterEntityId,
-        Character* caster,
-        Vector3* targetPosition,
-        ActionEffectHandler.Header* header,
-        ActionEffectHandler.TargetEffects* effects,
-        GameObjectId* targetEntityIds);
 }

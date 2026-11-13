@@ -29,7 +29,7 @@ internal sealed unsafe class PartyListOverlay
         }
 
         var addon = gameGui.GetAddonByName<AddonPartyList>("_PartyList");
-        if (addon == null || !((AtkUnitBase*)addon)->IsVisible)
+        if (addon == null || !addon->AtkUnitBase.IsReady || !addon->AtkUnitBase.IsVisible)
         {
             return;
         }

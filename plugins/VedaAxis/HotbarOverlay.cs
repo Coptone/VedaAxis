@@ -27,11 +27,23 @@ internal sealed unsafe class HotbarOverlay
         this.log = log;
     }
 
-    public bool IsActionAvailable(uint actionId)
+    public int VisibleAddonCount { get; private set; }
+    public int DrawnSlotCount { get; private set; }
+
+    public static bool CanReadActionStatus =>
+        ActionManager.Addresses.Instance.Value != 0 && ActionManager.Addresses.GetActionStatus.Value != 0;
+
+    public bool? ReadActionAvailability(uint actionId)
     {
+        if (!CanReadActionStatus)
+        {
+            return null;
+        }
+
         var manager = ActionManager.Instance();
-        return manager != null
-            && ActionEquivalence.Expand(actionId).Any(equivalentActionId =>
+        return manager == null
+            ? null
+            : ActionEquivalence.Expand(actionId).Any(equivalentActionId =>
                 manager->GetActionStatus(ActionType.Action, equivalentActionId) == 0);
     }
 
@@ -41,7 +53,7 @@ internal sealed unsafe class HotbarOverlay
         foreach (var addonName in AddonNames)
         {
             var addon = gameGui.GetAddonByName<AddonActionBarBase>(addonName);
-            if (addon == null || !((AtkUnitBase*)addon)->IsVisible)
+            if (!IsVisibleAndReady(addon))
             {
                 continue;
             }
@@ -52,7 +64,7 @@ internal sealed unsafe class HotbarOverlay
             for (var index = 0; index < slots.Length; index++)
             {
                 if (equivalentActionIds.Contains((uint)Math.Max(0, slots[index].ActionId))
-                    && slots[index].ComponentDragDrop != null)
+                    && TryGetSlotBounds(in slots[index], out _, out _))
                 {
                     return true;
                 }
@@ -63,6 +75,8 @@ internal sealed unsafe class HotbarOverlay
 
     public void Draw(IReadOnlyList<AssignmentRuntime> assignments, long elapsedMs, float opacity, string overlayStyle)
     {
+        VisibleAddonCount = 0;
+        DrawnSlotCount = 0;
         opacity = OverlaySafety.NormalizeOpacity(opacity);
         var emphasis = OverlayPresentation.Parse(overlayStyle);
         var visibleStates = assignments
@@ -80,7 +94,7 @@ internal sealed unsafe class HotbarOverlay
         foreach (var addonName in AddonNames)
         {
             var addon = gameGui.GetAddonByName<AddonActionBarBase>(addonName);
-            if (addon == null || !((AtkUnitBase*)addon)->IsVisible)
+            if (!IsVisibleAndReady(addon))
             {
                 continue;
             }
@@ -89,38 +103,44 @@ internal sealed unsafe class HotbarOverlay
             {
                 continue;
             }
+            VisibleAddonCount++;
             for (var index = 0; index < slots.Length; index++)
             {
                 ref var slot = ref slots[index];
                 if (slot.ActionId <= 0 || !visibleStates.TryGetValue((uint)slot.ActionId, out var state)
-                    || slot.ComponentDragDrop == null)
+                    || !TryGetSlotBounds(in slot, out var start, out var end))
                 {
                     continue;
                 }
 
-                var ownerNode = slot.ComponentDragDrop->AtkComponentBase.OwnerNode;
-                if (ownerNode == null)
-                {
-                    continue;
-                }
-
-                var node = &ownerNode->AtkResNode;
-                if (!node->IsVisible())
-                {
-                    continue;
-                }
-
-                var start = new Vector2(node->ScreenX, node->ScreenY);
-                var end = start + new Vector2(node->GetWidth(), node->GetHeight());
-                if (!float.IsFinite(start.X) || !float.IsFinite(start.Y)
-                    || !float.IsFinite(end.X) || !float.IsFinite(end.Y)
-                    || end.X <= start.X || end.Y <= start.Y)
-                {
-                    continue;
-                }
                 OverlayPresentation.DrawFrame(drawList, start, end, ColorFor(state, opacity), state, emphasis);
+                DrawnSlotCount++;
             }
         }
+    }
+
+    private static bool IsVisibleAndReady(AddonActionBarBase* addon) =>
+        addon != null && addon->AtkUnitBase.IsReady && addon->AtkUnitBase.IsVisible;
+
+    private static bool TryGetSlotBounds(in ActionBarSlot slot, out Vector2 start, out Vector2 end)
+    {
+        start = end = default;
+        if (slot.ComponentDragDrop == null || slot.ComponentDragDrop->AtkComponentBase.OwnerNode == null)
+        {
+            return false;
+        }
+
+        var node = &slot.ComponentDragDrop->AtkComponentBase.OwnerNode->AtkResNode;
+        if (!node->IsVisible())
+        {
+            return false;
+        }
+
+        start = new Vector2(node->ScreenX, node->ScreenY);
+        end = start + new Vector2(node->GetWidth(), node->GetHeight());
+        return float.IsFinite(start.X) && float.IsFinite(start.Y)
+            && float.IsFinite(end.X) && float.IsFinite(end.Y)
+            && end.X > start.X && end.Y > start.Y;
     }
 
     private bool TryGetSlots(AddonActionBarBase* addon, string addonName, out Span<ActionBarSlot> slots)
@@ -135,7 +155,15 @@ internal sealed unsafe class HotbarOverlay
                 return false;
             }
 
-            slots = addon->ActionBarSlotVector.AsSpan(0, slotCount);
+            var vector = addon->ActionBarSlotVector;
+            if (vector.First == null || vector.LongCount < slotCount || vector.LongCount > vector.LongCapacity
+                || !OverlaySafety.IsValidSlotCount(vector.LongCount))
+            {
+                LogInvalidAddonOnce(addonName, "hotbar slot vector is not initialized or has an invalid length");
+                return false;
+            }
+
+            slots = vector.AsSpan(0, slotCount);
             return true;
         }
         catch (Exception exception) when (exception is OverflowException or ArgumentOutOfRangeException)
